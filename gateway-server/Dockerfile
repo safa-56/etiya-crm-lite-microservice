@@ -20,7 +20,13 @@ WORKDIR /workspace
 # Bu katman, kaynak kod değişse bile POM'lar değişmedikçe cache'lenir
 # ve tekrar tekrar dependency indirilmesini engeller.
 COPY pom.xml ./
+# Parent POM tüm modülleri listeler; reactor'ın aggregator'ı parse edebilmesi
+# için TÜM modül pom.xml'leri kopyalanmalı (aksi halde "Child module ... does
+# not exist" hatası). Yalnızca ilgili modülün src'si aşağıda kopyalanır.
+COPY config-server/pom.xml config-server/pom.xml
+COPY eureka-server/pom.xml eureka-server/pom.xml
 COPY gateway-server/pom.xml gateway-server/pom.xml
+COPY customer-service/pom.xml customer-service/pom.xml
 RUN mvn -B -pl gateway-server -am dependency:go-offline
 
 # Şimdi kaynak kodu kopyalayıp yalnızca gateway-server modülünü paketliyoruz.

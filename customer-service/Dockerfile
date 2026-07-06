@@ -14,6 +14,12 @@ WORKDIR /workspace
 
 # Önce POM'ları kopyalayıp bağımlılıkları indiriyoruz (katman cache'i için).
 COPY pom.xml ./
+# Parent POM tüm modülleri listeler; reactor'ın aggregator'ı parse edebilmesi
+# için TÜM modül pom.xml'leri kopyalanmalı (aksi halde "Child module ... does
+# not exist" hatası). Yalnızca ilgili modülün src'si aşağıda kopyalanır.
+COPY config-server/pom.xml config-server/pom.xml
+COPY eureka-server/pom.xml eureka-server/pom.xml
+COPY gateway-server/pom.xml gateway-server/pom.xml
 COPY customer-service/pom.xml customer-service/pom.xml
 RUN mvn -B -pl customer-service -am dependency:go-offline
 
