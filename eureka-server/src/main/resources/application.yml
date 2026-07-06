@@ -1,24 +1,26 @@
-server:
-  # Eureka sunucusunun standart portu
-  port: 8761
-
 spring:
   application:
     name: eureka-server
+  profiles:
+    # Dışarıdan SPRING_PROFILES_ACTIVE verilmezse geliştirme profili aktif olur.
+    # Docker imajı bu değişkeni 'docker' olarak set eder (bkz. Dockerfile).
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+server:
+  # Eureka sunucusunun standart portu (gerekirse SERVER_PORT ile override edilir)
+  port: ${SERVER_PORT:8761}
 
 eureka:
   instance:
     # Konteyner ortamında hostname yerine IP kullanmak kayıt/keşifte daha güvenilirdir
     prefer-ip-address: true
   client:
-    # Bu uygulama registry'nin KENDİSİ olduğu için kendini bir client'a
-    # kayıt etmez ve registry'yi çekmez (tekil/standalone kurulum).
-    # Yüksek erişilebilirlik (HA) için birden fazla peer kullanılacaksa
-    # bu iki değer true yapılıp defaultZone peer URL'leri ile doldurulmalıdır.
+    # Bu uygulama registry'nin KENDİSİ olduğu için (standalone) kendini bir
+    # client'a kayıt etmez ve registry'yi çekmez. Yüksek erişilebilirlik (HA)
+    # için birden fazla peer kullanılacaksa bu iki değer prod profilinde true
+    # yapılıp defaultZone peer URL'leri ile doldurulmalıdır.
     register-with-eureka: false
     fetch-registry: false
-    service-url:
-      defaultZone: http://localhost:${server.port}/eureka/
 
 management:
   endpoints:

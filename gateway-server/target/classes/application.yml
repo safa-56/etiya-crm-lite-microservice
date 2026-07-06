@@ -1,0 +1,46 @@
+server:
+  # API Gateway'in dış dünyaya açıldığı standart port
+  port: 8080
+
+spring:
+  application:
+    name: gateway-server
+  cloud:
+    gateway:
+      # Reaktif (WebFlux) sunucu tarafı gateway ayarları
+      server:
+        webflux:
+          discovery:
+            locator:
+              # Eureka'ya kayıtlı servisler için otomatik route üretir:
+              #   http://gateway:8080/CUSTOMER-SERVICE/**  ->  lb://CUSTOMER-SERVICE
+              # Servis id'lerini büyük/küçük harf duyarsız eşlemek için lower-case.
+              # Üretimde açık (explicit) route tanımları tercih edilir; bu ayar
+              # geliştirme sırasında yeni servisleri sıfır konfigürasyonla açar.
+              enabled: true
+              lower-case-service-id: true
+
+eureka:
+  instance:
+    # Konteyner ortamında hostname yerine IP kullanmak kayıt/keşifte daha güvenilirdir
+    prefer-ip-address: true
+  client:
+    # Gateway bir client'tır: kendini registry'ye kaydeder ve registry'yi çeker.
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      # Eureka sunucusunun adresi. Konteyner/compose ortamında host adı
+      # (ör. http://eureka-server:8761/eureka/) EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE
+      # ortam değişkeni ile override edilmelidir.
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health probe'ları ve gateway route teşhisi için ilgili endpoint'ler açık
+        include: health,info,gateway
+  endpoint:
+    health:
+      probes:
+        enabled: true

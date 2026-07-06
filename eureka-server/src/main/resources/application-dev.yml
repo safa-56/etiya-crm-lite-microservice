@@ -1,0 +1,15 @@
+# =============================================================================
+# dev profili - yerel geliştirme
+# Tek makinede localhost üzerinde standalone Eureka.
+# =============================================================================
+eureka:
+  client:
+    service-url:
+      # Standalone kurulumda kendi adresini gösterir (client davranışı kapalı olsa da
+      # bu URL, dashboard ve replikasyon altyapısı için referans olarak kullanılır).
+      defaultZone: http://localhost:${server.port}/eureka/
+
+logging:
+  level:
+    com.netflix.eureka: INFO
+    com.netflix.discovery: INFO

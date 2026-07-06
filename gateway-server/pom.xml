@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Parent olarak kök aggregator POM'u miras alıyoruz.
+        Böylece Java sürümü, encoding, Spring Boot BOM, plugin management ve
+        ortak bağımlılıklar (lombok, test vb.) buraya otomatik iner.
+        relativePath ile üst dizindeki pom.xml işaret ediliyor.
+    -->
+    <parent>
+        <groupId>etiya.com</groupId>
+        <artifactId>crm-lite</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>gateway-server</artifactId>
+    <packaging>jar</packaging>
+
+    <name>gateway-server</name>
+    <description>Etiya CRM Lite - API Gateway (Spring Cloud Gateway) sunucusu</description>
+
+    <properties>
+        <!--
+            Spring Cloud release train'i Spring Boot sürümüyle uyumlu olmalıdır.
+            Spring Boot 4.x, Spring Cloud 2025.1.x (Oakwood) ile eşleşir.
+            Boot sürümü yükseltilirse bu değeri de uyumlu train ile güncelleyin.
+            eureka-server ile aynı train'de kalınmalıdır.
+        -->
+        <spring-cloud.version>2025.1.0</spring-cloud.version>
+    </properties>
+
+    <dependencies>
+        <!--
+            Spring Cloud Gateway - reaktif (WebFlux) tabanlı API gateway.
+            2024.x itibarıyla starter adı 'spring-cloud-starter-gateway-server-webflux'
+            olarak yeniden adlandırıldı (eski 'spring-cloud-starter-gateway').
+            Reactor Netty sunucusunu ve reaktif route altyapısını getirir.
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
+        </dependency>
+
+        <!--
+            Eureka client - gateway kendini registry'ye kaydeder ve arka
+            servisleri logical service id ile keşfeder. DiscoveryClient tabanlı
+            otomatik route'lar (lb://SERVICE-ID) bu bağımlılık ile mümkün olur.
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+
+        <!--
+            Client-side load balancing - lb:// şemalı route'ların çözümü için.
+            Eureka client ile birlikte gelir ancak açıkça belirtmek nettir.
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
+        <!--
+            Actuator - health/readiness probe'ları ve operasyonel endpoint'ler.
+            Dockerfile'daki HEALTHCHECK bu endpoint'e dayanır. Gateway'e özel
+            'gateway' actuator endpoint'i de buradan gelir.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+
+    <!--
+        Spring Cloud BOM importu: Cloud bağımlılıklarının versiyonlarını
+        merkezi olarak yönetir. Böylece yukarıda tekil versiyon yazmayız.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <!--
+            Çalıştırılabilir (executable) fat-jar üretmek için Spring Boot plugin.
+            Versiyon ve konfigürasyon parent'taki pluginManagement'tan gelir.
+        -->
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

@@ -1,0 +1,25 @@
+# =============================================================================
+# prod profili - üretim ortamı
+# Adresler ortam değişkenleri ile dışarıdan verilir; otomatik route kapatılır.
+# =============================================================================
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              # Üretimde keşif tabanlı otomatik route KAPALI. Yalnızca açıkça
+              # tanımlanmış (predicate + filter) route'lar dışarıya açılır;
+              # bu, istenmeyen servislerin gateway üzerinden sızmasını önler.
+              enabled: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_ZONE:http://eureka-server:8761/eureka/}
+
+logging:
+  level:
+    root: WARN
+    com.etiya: INFO

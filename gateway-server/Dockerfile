@@ -1,12 +1,12 @@
 # =============================================================================
-# Etiya CRM Lite - Eureka Server
+# Etiya CRM Lite - Gateway Server
 # Multi-stage Dockerfile
 #
 # 1. Aşama (build) : Maven ile bağımlılıkları çeker ve fat-jar üretir.
 # 2. Aşama (runtime): Yalnızca JRE + üretilen jar; küçük ve güvenli imaj.
 #
 # Build context olarak REPO KÖKÜ kullanılmalıdır (parent pom.xml gerekli):
-#   docker build -f eureka-server/Dockerfile -t etiya/eureka-server:1.0.0 .
+#   docker build -f gateway-server/Dockerfile -t etiya/gateway-server:1.0.0 .
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -20,12 +20,12 @@ WORKDIR /workspace
 # Bu katman, kaynak kod değişse bile POM'lar değişmedikçe cache'lenir
 # ve tekrar tekrar dependency indirilmesini engeller.
 COPY pom.xml ./
-COPY eureka-server/pom.xml eureka-server/pom.xml
-RUN mvn -B -pl eureka-server -am dependency:go-offline
+COPY gateway-server/pom.xml gateway-server/pom.xml
+RUN mvn -B -pl gateway-server -am dependency:go-offline
 
-# Şimdi kaynak kodu kopyalayıp yalnızca eureka-server modülünü paketliyoruz.
-COPY eureka-server/src eureka-server/src
-RUN mvn -B -pl eureka-server -am clean package -DskipTests
+# Şimdi kaynak kodu kopyalayıp yalnızca gateway-server modülünü paketliyoruz.
+COPY gateway-server/src gateway-server/src
+RUN mvn -B -pl gateway-server -am clean package -DskipTests
 
 # -----------------------------------------------------------------------------
 # Stage 2: Runtime
@@ -38,18 +38,18 @@ WORKDIR /app
 RUN groupadd --system spring && useradd --system --gid spring spring
 
 # Build aşamasında üretilen çalıştırılabilir jar'ı kopyalıyoruz.
-COPY --from=build /workspace/eureka-server/target/eureka-server-*.jar app.jar
+COPY --from=build /workspace/gateway-server/target/gateway-server-*.jar app.jar
 
 # Sahipliği spring kullanıcısına ver ve ona geç.
 RUN chown spring:spring app.jar
 USER spring:spring
 
-# Eureka'nın dinlediği port (dokümantasyon amaçlı; publish gerekir).
-EXPOSE 8761
+# Gateway'in dinlediği port (dokümantasyon amaçlı; publish gerekir).
+EXPOSE 8080
 
 # Actuator health endpoint'ine dayalı konteyner sağlık kontrolü.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:8761/actuator/health || exit 1
+    CMD wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1
 
 # Konteyner ortamına uygun JVM bayrakları (memory-aware) dışarıdan verilebilir.
 ENV JAVA_OPTS=""

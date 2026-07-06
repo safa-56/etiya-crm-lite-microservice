@@ -1,0 +1,28 @@
+# =============================================================================
+# test profili - otomatik testler (CI / mvn test)
+# Registry'ye bağımlı olmadan context yüklenebilsin diye Eureka kapatılır.
+# =============================================================================
+server:
+  # 0 => işletim sistemi boş bir port atar; paralel testlerde çakışmayı önler.
+  port: 0
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              # DiscoveryClient olmadan otomatik route üretmeye çalışmasın.
+              enabled: false
+
+eureka:
+  client:
+    # Test ortamında registry bağlantısı kurma; başlatmayı hızlandırır ve izole eder.
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

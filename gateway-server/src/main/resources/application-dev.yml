@@ -1,0 +1,14 @@
+# =============================================================================
+# dev profili - yerel geliştirme
+# Eureka ve arka servisler localhost üzerinde çalışır.
+# =============================================================================
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+logging:
+  level:
+    # Route eşleşmelerini ve filtre zincirini görmek için ayrıntılı log.
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: INFO

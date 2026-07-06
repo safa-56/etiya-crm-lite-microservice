@@ -1,0 +1,8 @@
+# =============================================================================
+# docker profili - konteyner / docker-compose ortamı
+# Eureka, compose ağı içinde 'eureka-server' host adıyla çözümlenir.
+# =============================================================================
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
