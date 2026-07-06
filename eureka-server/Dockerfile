@@ -57,5 +57,8 @@ ENV JAVA_OPTS=""
 # İmaj varsayılan olarak 'docker' profili ile çalışır; compose/k8s'te override edilebilir.
 ENV SPRING_PROFILES_ACTIVE="docker"
 
+# Merkezi config server adresi (compose ağındaki servis adı). Override edilebilir.
+ENV CONFIG_SERVER_URL="http://config-server:8888"
+
 # exec formu: JVM PID 1 olur, sinyalleri (SIGTERM) doğru alır ve düzgün kapanır.
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

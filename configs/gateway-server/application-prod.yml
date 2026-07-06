@@ -1,7 +1,3 @@
-# =============================================================================
-# prod profili - üretim ortamı
-# Adresler ortam değişkenleri ile dışarıdan verilir; otomatik route kapatılır.
-# =============================================================================
 spring:
   cloud:
     gateway:

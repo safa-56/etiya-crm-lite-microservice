@@ -1,7 +1,3 @@
-# =============================================================================
-# dev profili - yerel geliştirme
-# Eureka ve arka servisler localhost üzerinde çalışır.
-# =============================================================================
 eureka:
   client:
     service-url:

@@ -1,0 +1,18 @@
+# Üretim profili.
+#
+# Git backend URL'i, label ve private repo kimlik bilgileri dışarıdan
+# (CONFIG_GIT_URI, CONFIG_GIT_LABEL, CONFIG_GIT_USERNAME, CONFIG_GIT_PASSWORD)
+# ortam değişkenleri ile verilmelidir; hassas bilgiler imaja gömülmez.
+spring:
+  cloud:
+    config:
+      server:
+        git:
+          clone-on-start: true
+          force-pull: true
+
+logging:
+  level:
+    root: WARN
+    com.etiya: INFO
+    org.springframework.cloud.config: INFO

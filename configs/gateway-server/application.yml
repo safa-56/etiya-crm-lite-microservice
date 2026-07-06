@@ -1,0 +1,44 @@
+# =============================================================================
+# gateway-server - ORTAK (profil bağımsız) konfigürasyon
+# Merkezi config server üzerinden sunulur (configs/gateway-server/).
+# Servisin yereldeki application.yml'i yalnızca bootstrap (isim, aktif profil,
+# config server importu) bilgisini tutar; asıl ayarlar burada yaşar.
+# =============================================================================
+spring:
+  cloud:
+    gateway:
+      # Reaktif (WebFlux) sunucu tarafı gateway ayarları
+      server:
+        webflux:
+          discovery:
+            locator:
+              # Eureka'ya kayıtlı servisler için otomatik route üretir:
+              #   http://gateway:8080/CUSTOMER-SERVICE/**  ->  lb://CUSTOMER-SERVICE
+              # Servis id'lerini büyük/küçük harf duyarsız eşlemek için lower-case.
+              # Üretimde açık (explicit) route tanımları tercih edilir (bkz. prod profili).
+              enabled: true
+              lower-case-service-id: true
+
+server:
+  # API Gateway'in dış dünyaya açıldığı standart port (SERVER_PORT ile override)
+  port: ${SERVER_PORT:8080}
+
+eureka:
+  instance:
+    # Konteyner ortamında hostname yerine IP kullanmak kayıt/keşifte daha güvenilirdir
+    prefer-ip-address: true
+  client:
+    # Gateway bir client'tır: kendini registry'ye kaydeder ve registry'yi çeker.
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health probe'ları ve gateway route teşhisi için ilgili endpoint'ler açık
+        include: health,info,gateway
+  endpoint:
+    health:
+      probes:
+        enabled: true

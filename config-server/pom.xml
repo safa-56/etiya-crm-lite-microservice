@@ -18,36 +18,30 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>eureka-server</artifactId>
+    <artifactId>config-server</artifactId>
     <packaging>jar</packaging>
 
-    <name>eureka-server</name>
-    <description>Etiya CRM Lite - Service Discovery (Netflix Eureka) sunucusu</description>
+    <name>config-server</name>
+    <description>Etiya CRM Lite - Merkezi Konfigürasyon (Spring Cloud Config) sunucusu</description>
 
     <properties>
         <!--
             Spring Cloud release train'i Spring Boot sürümüyle uyumlu olmalıdır.
             Spring Boot 4.1.x, Spring Cloud 2025.1.x (Oakwood) ile eşleşir.
-            Boot sürümü yükseltilirse bu değeri de uyumlu train ile güncelleyin.
+            eureka-server / gateway-server ile aynı train'de kalınmalıdır.
         -->
         <spring-cloud.version>2025.1.0</spring-cloud.version>
     </properties>
 
     <dependencies>
-        <!-- Netflix Eureka Server - service registry -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
-        </dependency>
-
         <!--
-            Spring Cloud Config Client - açılışta konfigürasyonu merkezi
-            config server'dan (configs/eureka-server/) çeker. Bağlantı
-            application.yml içindeki 'spring.config.import' ile kurulur.
+            Spring Cloud Config Server - merkezi konfigürasyon dağıtımı.
+            @EnableConfigServer ile birlikte, arka planda bir Git deposunu
+            (veya native dosya sistemini) property source olarak sunar.
         -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-config</artifactId>
+            <artifactId>spring-cloud-config-server</artifactId>
         </dependency>
 
         <!--

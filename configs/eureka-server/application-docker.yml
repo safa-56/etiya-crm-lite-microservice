@@ -1,0 +1,7 @@
+eureka:
+  instance:
+    # Compose ağındaki diğer servislerin çözebileceği sabit host adı.
+    hostname: eureka-server
+  client:
+    service-url:
+      defaultZone: http://eureka-server:${server.port}/eureka/

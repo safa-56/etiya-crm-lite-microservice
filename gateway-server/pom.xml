@@ -47,6 +47,16 @@
         </dependency>
 
         <!--
+            Spring Cloud Config Client - açılışta konfigürasyonu merkezi
+            config server'dan (configs/gateway-server/) çeker. Bağlantı
+            application.yml içindeki 'spring.config.import' ile kurulur.
+        -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+
+        <!--
             Eureka client - gateway kendini registry'ye kaydeder ve arka
             servisleri logical service id ile keşfeder. DiscoveryClient tabanlı
             otomatik route'lar (lb://SERVICE-ID) bu bağımlılık ile mümkün olur.

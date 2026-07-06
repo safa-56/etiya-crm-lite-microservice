@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: config-server
+  profiles:
+    # Dışarıdan SPRING_PROFILES_ACTIVE verilmezse geliştirme profili aktif olur.
+    # Docker imajı bu değişkeni 'docker' olarak set eder (bkz. Dockerfile).
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  cloud:
+    config:
+      server:
+        # -----------------------------------------------------------------
+        # Git backend: konfigürasyonlar bu reponun kökündeki configs/
+        # klasöründen sunulur. Her servis kendi alt klasörüne sahiptir:
+        #   configs/<application>/application-<profile>.yml
+        # search-paths içindeki {application} placeholder'ı, istek yapan
+        # servisin adına (spring.application.name) göre çözülür; böylece
+        # config server yalnızca ilgili servisin klasörüne bakar.
+        #
+        # ÖNEMLİ: Git backend uzak depoyu (remote) klonlar. configs/ altındaki
+        # değişiklikler config server tarafından görülebilmesi için commit +
+        # push edilmelidir. Yerelde push'suz çalışmak için 'native' backend
+        # kullanan dev profiline bakınız (application-dev.yml).
+        # -----------------------------------------------------------------
+        git:
+          uri: ${CONFIG_GIT_URI:https://github.com/safa-56/etiya-crm-lite-microservice.git}
+          default-label: ${CONFIG_GIT_LABEL:main}
+          search-paths: configs/{application}
+          # Başlangıçta klonla: ilk isteğin gecikmesini önler, hataları erken yakalar.
+          clone-on-start: true
+          # Her istekte remote'tan güncelle; yerel klon eskimişse zorla senkronize et.
+          force-pull: true
+          timeout: 10
+          # Private repo için kimlik bilgileri (env ile verilir; public repoda boş kalır).
+          username: ${CONFIG_GIT_USERNAME:}
+          password: ${CONFIG_GIT_PASSWORD:}
+
+server:
+  # Config server'ın standart portu (gerekirse SERVER_PORT ile override edilir).
+  port: ${SERVER_PORT:8888}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health probe'ları için actuator health endpoint'i açık.
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

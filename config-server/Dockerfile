@@ -1,12 +1,12 @@
 # =============================================================================
-# Etiya CRM Lite - Gateway Server
+# Etiya CRM Lite - Config Server
 # Multi-stage Dockerfile
 #
 # 1. Aşama (build) : Maven ile bağımlılıkları çeker ve fat-jar üretir.
 # 2. Aşama (runtime): Yalnızca JRE + üretilen jar; küçük ve güvenli imaj.
 #
 # Build context olarak REPO KÖKÜ kullanılmalıdır (parent pom.xml gerekli):
-#   docker build -f gateway-server/Dockerfile -t etiya/gateway-server:1.0.0 .
+#   docker build -f config-server/Dockerfile -t etiya/config-server:1.0.0 .
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -20,12 +20,12 @@ WORKDIR /workspace
 # Bu katman, kaynak kod değişse bile POM'lar değişmedikçe cache'lenir
 # ve tekrar tekrar dependency indirilmesini engeller.
 COPY pom.xml ./
-COPY gateway-server/pom.xml gateway-server/pom.xml
-RUN mvn -B -pl gateway-server -am dependency:go-offline
+COPY config-server/pom.xml config-server/pom.xml
+RUN mvn -B -pl config-server -am dependency:go-offline
 
-# Şimdi kaynak kodu kopyalayıp yalnızca gateway-server modülünü paketliyoruz.
-COPY gateway-server/src gateway-server/src
-RUN mvn -B -pl gateway-server -am clean package -DskipTests
+# Şimdi kaynak kodu kopyalayıp yalnızca config-server modülünü paketliyoruz.
+COPY config-server/src config-server/src
+RUN mvn -B -pl config-server -am clean package -DskipTests
 
 # -----------------------------------------------------------------------------
 # Stage 2: Runtime
@@ -38,18 +38,18 @@ WORKDIR /app
 RUN groupadd --system spring && useradd --system --gid spring spring
 
 # Build aşamasında üretilen çalıştırılabilir jar'ı kopyalıyoruz.
-COPY --from=build /workspace/gateway-server/target/gateway-server-*.jar app.jar
+COPY --from=build /workspace/config-server/target/config-server-*.jar app.jar
 
 # Sahipliği spring kullanıcısına ver ve ona geç.
 RUN chown spring:spring app.jar
 USER spring:spring
 
-# Gateway'in dinlediği port (dokümantasyon amaçlı; publish gerekir).
-EXPOSE 8080
+# Config server'ın dinlediği port (dokümantasyon amaçlı; publish gerekir).
+EXPOSE 8888
 
 # Actuator health endpoint'ine dayalı konteyner sağlık kontrolü.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+    CMD wget --quiet --tries=1 --spider http://localhost:8888/actuator/health || exit 1
 
 # Konteyner ortamına uygun JVM bayrakları (memory-aware) dışarıdan verilebilir.
 ENV JAVA_OPTS=""
@@ -57,8 +57,8 @@ ENV JAVA_OPTS=""
 # İmaj varsayılan olarak 'docker' profili ile çalışır; compose/k8s'te override edilebilir.
 ENV SPRING_PROFILES_ACTIVE="docker"
 
-# Merkezi config server adresi (compose ağındaki servis adı). Override edilebilir.
-ENV CONFIG_SERVER_URL="http://config-server:8888"
+# Git backend adresi/kimlik bilgileri gerekirse compose/k8s'te override edilir:
+#   CONFIG_GIT_URI, CONFIG_GIT_LABEL, CONFIG_GIT_USERNAME, CONFIG_GIT_PASSWORD
 
 # exec formu: JVM PID 1 olur, sinyalleri (SIGTERM) doğru alır ve düzgün kapanır.
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

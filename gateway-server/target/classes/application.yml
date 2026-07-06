@@ -1,46 +1,13 @@
-server:
-  # API Gateway'in dış dünyaya açıldığı standart port
-  port: 8080
-
 spring:
   application:
+    # Config server, konfigürasyonu bu isme göre çözer: configs/gateway-server/
     name: gateway-server
-  cloud:
-    gateway:
-      # Reaktif (WebFlux) sunucu tarafı gateway ayarları
-      server:
-        webflux:
-          discovery:
-            locator:
-              # Eureka'ya kayıtlı servisler için otomatik route üretir:
-              #   http://gateway:8080/CUSTOMER-SERVICE/**  ->  lb://CUSTOMER-SERVICE
-              # Servis id'lerini büyük/küçük harf duyarsız eşlemek için lower-case.
-              # Üretimde açık (explicit) route tanımları tercih edilir; bu ayar
-              # geliştirme sırasında yeni servisleri sıfır konfigürasyonla açar.
-              enabled: true
-              lower-case-service-id: true
-
-eureka:
-  instance:
-    # Konteyner ortamında hostname yerine IP kullanmak kayıt/keşifte daha güvenilirdir
-    prefer-ip-address: true
-  client:
-    # Gateway bir client'tır: kendini registry'ye kaydeder ve registry'yi çeker.
-    register-with-eureka: true
-    fetch-registry: true
-    service-url:
-      # Eureka sunucusunun adresi. Konteyner/compose ortamında host adı
-      # (ör. http://eureka-server:8761/eureka/) EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE
-      # ortam değişkeni ile override edilmelidir.
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        # Health probe'ları ve gateway route teşhisi için ilgili endpoint'ler açık
-        include: health,info,gateway
-  endpoint:
-    health:
-      probes:
-        enabled: true
+  profiles:
+    # Dışarıdan SPRING_PROFILES_ACTIVE verilmezse geliştirme profili aktif olur.
+    # Docker imajı bu değişkeni 'docker' olarak set eder (bkz. Dockerfile).
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    # Merkezi konfigürasyon importu. 'optional:' öneki, config server erişilemezse
+    # uygulamanın yereldeki ayarlarla açılmasına izin verir (dayanıklılık).
+    # Adres CONFIG_SERVER_URL ile override edilir (docker/prod ortamları için).
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}

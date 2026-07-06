@@ -1,0 +1,8 @@
+# Docker/Compose profili.
+#
+# Git backend URL'i, label ve (gerekiyorsa) kimlik bilgileri kök application.yml
+# içindeki ortam değişkenleri (CONFIG_GIT_URI, CONFIG_GIT_LABEL,
+# CONFIG_GIT_USERNAME/PASSWORD) üzerinden compose/k8s'te verilebilir.
+logging:
+  level:
+    org.springframework.cloud.config: INFO

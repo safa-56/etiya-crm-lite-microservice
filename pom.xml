@@ -145,6 +145,9 @@
         Alt servisler (module'lar). Yeni servisler eklendikçe buraya kaydedilir.
     -->
     <modules>
+        <!-- Config-server ilk sırada: diğer servisler açılışta buradan
+             konfigürasyonlarını çeker (foundational servis). -->
+        <module>config-server</module>
         <module>eureka-server</module>
         <module>gateway-server</module>
     </modules>

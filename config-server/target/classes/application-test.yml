@@ -1,0 +1,18 @@
+server:
+  # 0 => işletim sistemi boş bir port atar; paralel testlerde çakışmayı önler.
+  port: 0
+
+spring:
+  cloud:
+    config:
+      server:
+        git:
+          # Test sırasında bağlam yüklenirken uzak Git deposuna erişmeyelim;
+          # başlatmayı hızlandırır, ağdan bağımsız (hermetik) test sağlar.
+          # Git'e yalnızca gerçek bir /{application}/{profile} isteğinde erişilir.
+          clone-on-start: false
+          force-pull: false
+
+logging:
+  level:
+    org.springframework.cloud.config: WARN
