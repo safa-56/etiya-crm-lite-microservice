@@ -40,6 +40,12 @@ RUN mvn -B -pl config-server -am clean package -DskipTests
 FROM eclipse-temurin:25-jre AS runtime
 WORKDIR /app
 
+# HEALTHCHECK için curl kurulur (temurin JRE imajında wget/curl gelmez; bu yüzden
+# eski wget tabanlı healthcheck komutu "not found" ile hep başarısız oluyordu).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Güvenlik: uygulamayı root olmayan bir kullanıcı ile çalıştırıyoruz.
 RUN groupadd --system spring && useradd --system --gid spring spring
 
@@ -54,8 +60,10 @@ USER spring:spring
 EXPOSE 8888
 
 # Actuator health endpoint'ine dayalı konteyner sağlık kontrolü.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:8888/actuator/health || exit 1
+# config-server açılışta git backend'i klonlar (clone-on-start); ilk açılış
+# yavaş olabileceğinden start-period yüksek tutulur.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=10 \
+    CMD curl -fsS http://localhost:8888/actuator/health || exit 1
 
 # Konteyner ortamına uygun JVM bayrakları (memory-aware) dışarıdan verilebilir.
 ENV JAVA_OPTS=""

@@ -34,6 +34,12 @@ FROM eclipse-temurin:25-jre AS runtime
 WORKDIR /app
 
 # Güvenlik: root olmayan kullanıcı ile çalıştır.
+# HEALTHCHECK için curl kurulur (temurin JRE imajında wget/curl gelmez; eski
+# wget tabanlı healthcheck "not found" ile hep başarısız oluyordu).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system spring && useradd --system --gid spring spring
 
 COPY --from=build /workspace/customer-service/target/customer-service-*.jar app.jar
@@ -42,8 +48,8 @@ USER spring:spring
 
 EXPOSE 8081
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:8081/actuator/health || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=10 \
+    CMD curl -fsS http://localhost:8081/actuator/health || exit 1
 
 ENV JAVA_OPTS=""
 ENV SPRING_PROFILES_ACTIVE="docker"

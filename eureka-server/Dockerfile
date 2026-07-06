@@ -41,6 +41,12 @@ FROM eclipse-temurin:25-jre AS runtime
 WORKDIR /app
 
 # Güvenlik: uygulamayı root olmayan bir kullanıcı ile çalıştırıyoruz.
+# HEALTHCHECK için curl kurulur (temurin JRE imajında wget/curl gelmez; eski
+# wget tabanlı healthcheck "not found" ile hep başarısız oluyordu).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system spring && useradd --system --gid spring spring
 
 # Build aşamasında üretilen çalıştırılabilir jar'ı kopyalıyoruz.
@@ -54,8 +60,8 @@ USER spring:spring
 EXPOSE 8761
 
 # Actuator health endpoint'ine dayalı konteyner sağlık kontrolü.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:8761/actuator/health || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=10 \
+    CMD curl -fsS http://localhost:8761/actuator/health || exit 1
 
 # Konteyner ortamına uygun JVM bayrakları (memory-aware) dışarıdan verilebilir.
 ENV JAVA_OPTS=""
