@@ -1,0 +1,32 @@
+server:
+  # Eureka sunucusunun standart portu
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+
+eureka:
+  instance:
+    # Konteyner ortamında hostname yerine IP kullanmak kayıt/keşifte daha güvenilirdir
+    prefer-ip-address: true
+  client:
+    # Bu uygulama registry'nin KENDİSİ olduğu için kendini bir client'a
+    # kayıt etmez ve registry'yi çekmez (tekil/standalone kurulum).
+    # Yüksek erişilebilirlik (HA) için birden fazla peer kullanılacaksa
+    # bu iki değer true yapılıp defaultZone peer URL'leri ile doldurulmalıdır.
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:${server.port}/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health probe'ları için actuator health endpoint'i açık
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

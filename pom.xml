@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Spring Boot starter parent'tan miras alıyoruz.
+        Böylece Spring Boot'un dependency management BOM'u, plugin management'ı
+        ve mantıklı varsayılan konfigürasyonları tüm alt servislere iner.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <!-- Spring Cloud 2025.1.x release train'i ile uyumlu olacak şekilde
+             4.0.x kullanıyoruz. Boot 4.1.x'e geçmek istenirse, 4.1 ile eşleşen
+             bir Spring Cloud train yayınlanana kadar beklenmelidir. -->
+        <version>4.0.0</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <groupId>etiya.com</groupId>
+    <artifactId>crm-lite</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <!--
+        Parent / aggregator POM olduğu için packaging 'pom' olmalıdır.
+        Alt servisler (child module'lar) 'jar' olarak paketlenir.
+        Maven, parent olarak kullanılan bir artifact'ın 'jar' olmasına izin vermez.
+    -->
+    <packaging>pom</packaging>
+
+    <name>crm-lite</name>
+    <description>Etiya CRM Lite - mikroservisler için ortak parent POM</description>
+
+    <properties>
+        <!-- Java 25 -->
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Ortak bağımlılık versiyonları burada merkezi olarak yönetilir -->
+        <springdoc.version>2.7.0</springdoc.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <!-- Java 25 desteği için 1.18.40+ gerekir; eski sürümler javac ile
+             ExceptionInInitializerError / TypeTag UNKNOWN hatası verir. -->
+        <lombok.version>1.18.40</lombok.version>
+    </properties>
+
+    <!--
+        Alt servislerin ortak olarak kullanacağı bağımlılıklar.
+        Spring Boot BOM ile yönetilenlere versiyon yazmıyoruz;
+        yalnızca BOM dışındaki bağımlılıklara versiyon veriyoruz.
+    -->
+    <dependencies>
+        <!-- Konfigürasyon işleme (application.yml için metadata) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Lombok - boilerplate azaltma -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!--
+        BOM dışındaki bağımlılıklar için merkezi versiyon yönetimi.
+        Alt servisler bu artifact'ları versiyon yazmadan kullanabilir.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <!--
+            pluginManagement: alt servislerin kullanacağı plugin versiyon ve
+            konfigürasyonlarını merkezileştirir. Alt POM'da yalnızca plugin'in
+            groupId/artifactId'sini yazmak yeterli olur.
+        -->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <release>${java.version}</release>
+                        <!-- Lombok + MapStruct annotation processor sıralaması -->
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.mapstruct</groupId>
+                                <artifactId>mapstruct-processor</artifactId>
+                                <version>${mapstruct.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <!--
+        Alt servisler (module'lar). Yeni servisler eklendikçe buraya kaydedilir.
+    -->
+    <modules>
+        <module>eureka-server</module>
+    </modules>
+
+</project>
