@@ -1,0 +1,334 @@
+# =============================================================================
+# Etiya CRM Lite - Tam Yığın (full-stack) Compose dosyası
+# -----------------------------------------------------------------------------
+# Altyapı servisleri:
+#   - PostgreSQL            : servisin ilişkisel veritabanı (CDC için logical WAL)
+#   - Redis                 : cacheleme (Spring Cache abstraction)
+#   - RedisInsight          : Redis üzerindeki cache'leri görsel takip
+#   - Kafka (KRaft)         : asenkron iletişim broker'ı (LOCAL container, tek node)
+#   - Kafka UI              : topic/mesajları görsel izleme
+#   - Debezium (Kafka Connect): Transactional Outbox Pattern için CDC worker
+#
+# Uygulama servisleri (dockerize) ve BAŞLATMA SIRASI (depends_on + healthcheck):
+#   1) config-server   (8888) : merkezi konfigürasyon (diğerleri buradan çeker)
+#   2) eureka-server   (8761) : servis keşfi           (config-server sağlıklı olunca)
+#   3) gateway-server  (8080) : API gateway            (eureka sağlıklı olunca)
+#      customer-service (8081): müşteri servisi        (config+eureka+postgres+redis+kafka sağlıklı olunca)
+#
+# Kafka LOCAL container'dır (Zookeeper'sız KRaft). Uygulama Spring Cloud Stream
+# (Kafka binder) ile bağlanır; Debezium outbox olaylarını bu broker'a yazar.
+#
+# ÖNEMLİ (config-server git backend): config-server, konfigürasyonları uzak
+# GitHub reposundan (main) çeker. Bu nedenle `configs/**` altındaki değişiklikler
+# (ör. customer-service profilleri) container'lar bunları görebilsin diye
+# COMMIT + PUSH edilmelidir. Yerelde push'suz denemek için config-server'ı
+# native backend'e alan bir profil gerekir.
+#
+# Kullanım:
+#   1) infra/.env.example -> infra/.env (opsiyonel; default'lar çalışır).
+#   2) docker compose -f infra/docker-compose.yml up -d --build
+#   3) Debezium connector'ı kaydedin (bkz. infra/README.md).
+# =============================================================================
+
+name: etiya-crm-lite-infra
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL - customer-service veritabanı
+  # Debezium CDC'nin çalışabilmesi için wal_level=logical zorunludur.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: crm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-customerdb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    # Logical replication + Debezium'un ihtiyaç duyduğu replication slot ayarları
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-customerdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # Redis - cacheleme
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: crm-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # RedisInsight - Redis'teki cache'leri görsel olarak izleme aracı
+  # UI: http://localhost:5540  (ilk açılışta redis:6379 host'unu ekleyin)
+  # ---------------------------------------------------------------------------
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: crm-redisinsight
+    restart: unless-stopped
+    ports:
+      - "${REDISINSIGHT_PORT:-5540}:5540"
+    volumes:
+      - redisinsight-data:/data
+    depends_on:
+      - redis
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # Kafka (KRaft modu - Zookeeper YOK) - asenkron iletişim broker'ı (tek node)
+  #
+  # İki listener yayınlanır:
+  #   - PLAINTEXT://kafka:29092   -> konteyner içi erişim (debezium, app-container)
+  #   - EXTERNAL://localhost:9092 -> host üzerinden erişim (yerel dev app)
+  # Tek node olduğu için tüm replication factor'ler 1'dir.
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.8.0
+    container_name: crm-kafka
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_EXTERNAL_PORT:-9092}:9092"
+    environment:
+      # --- KRaft (broker + controller aynı node) ---
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Sabit cluster id (ilk açılışta storage format'ı için)
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+
+      # --- Listener'lar ---
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # --- Tek node ayarları ---
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # Kafka UI - topic/mesaj/consumer group görsel izleme
+  # UI: http://localhost:8090
+  # ---------------------------------------------------------------------------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: crm-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "${KAFKAUI_PORT:-8090}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: crm-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://debezium-connect:8083
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # Debezium (Kafka Connect) - Transactional Outbox Pattern CDC worker
+  # Postgres'teki `outbox_events` tablosunu izler, EventRouter SMT ile olayları
+  # LOCAL Kafka broker'ına yönlendirir (ghost event problemini çözer: DB commit'i
+  # ile olay yayını aynı transaction'a bağlanır).
+  # ---------------------------------------------------------------------------
+  debezium-connect:
+    image: debezium/connect:3.0.0.Final
+    container_name: crm-debezium-connect
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "${CONNECT_PORT:-8083}:8083"
+    environment:
+      # --- Local Kafka broker (konteyner içi listener) ---
+      BOOTSTRAP_SERVERS: kafka:29092
+
+      # --- Connect worker kimliği / dahili topic isimleri ---
+      GROUP_ID: crm-connect-cluster
+      CONFIG_STORAGE_TOPIC: crm_connect_configs
+      OFFSET_STORAGE_TOPIC: crm_connect_offsets
+      STATUS_STORAGE_TOPIC: crm_connect_statuses
+      # Tek node broker olduğu için replication factor = 1
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+
+      # --- Converter'lar (şemasız JSON) ---
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    networks:
+      - crm-net
+
+  # ===========================================================================
+  # UYGULAMA SERVİSLERİ (dockerize) - başlatma sırası depends_on + healthcheck
+  # ile zorlanır. Tüm imajlar REPO KÖKÜ (context: ..) build context'i ile
+  # multi-stage Dockerfile'lardan üretilir.
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1) config-server (8888) - merkezi konfigürasyon. İlk açılan uygulamadır;
+  #    diğer servisler konfigürasyonlarını buradan çeker. Git backend uzak
+  #    repoyu klonlar (CONFIG_GIT_* ile özelleştirilebilir).
+  # ---------------------------------------------------------------------------
+  config-server:
+    build:
+      context: ..
+      dockerfile: config-server/Dockerfile
+    image: etiya/config-server:1.0.0
+    container_name: crm-config-server
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      # Git backend (private repo ise kullanıcı/parola verin; public'te boş kalır)
+      CONFIG_GIT_URI: ${CONFIG_GIT_URI:-https://github.com/safa-56/etiya-crm-lite-microservice.git}
+      CONFIG_GIT_LABEL: ${CONFIG_GIT_LABEL:-main}
+      CONFIG_GIT_USERNAME: ${CONFIG_GIT_USERNAME:-}
+      CONFIG_GIT_PASSWORD: ${CONFIG_GIT_PASSWORD:-}
+    ports:
+      - "${CONFIG_SERVER_PORT:-8888}:8888"
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # 2) eureka-server (8761) - servis keşfi. config-server SAĞLIKLI olunca başlar.
+  # ---------------------------------------------------------------------------
+  eureka-server:
+    build:
+      context: ..
+      dockerfile: eureka-server/Dockerfile
+    image: etiya/eureka-server:1.0.0
+    container_name: crm-eureka-server
+    restart: unless-stopped
+    depends_on:
+      config-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports:
+      - "${EUREKA_SERVER_PORT:-8761}:8761"
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # 3) gateway-server (8080) - API gateway. eureka-server SAĞLIKLI olunca başlar.
+  # ---------------------------------------------------------------------------
+  gateway-server:
+    build:
+      context: ..
+      dockerfile: gateway-server/Dockerfile
+    image: etiya/gateway-server:1.0.0
+    container_name: crm-gateway-server
+    restart: unless-stopped
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports:
+      - "${GATEWAY_SERVER_PORT:-8080}:8080"
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # customer-service (8081) - müşteri servisi. config-server + eureka-server
+  # ve altyapı (postgres, redis, kafka) SAĞLIKLI olunca başlar.
+  # ---------------------------------------------------------------------------
+  customer-service:
+    build:
+      context: ..
+      dockerfile: customer-service/Dockerfile
+    image: etiya/customer-service:1.0.0
+    container_name: crm-customer-service
+    restart: unless-stopped
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports:
+      - "${CUSTOMER_SERVICE_PORT:-8081}:8081"
+    networks:
+      - crm-net
+
+# -----------------------------------------------------------------------------
+# Kalıcı hacimler
+# -----------------------------------------------------------------------------
+volumes:
+  postgres-data:
+  redis-data:
+  redisinsight-data:
+  kafka-data:
+
+# -----------------------------------------------------------------------------
+# Ortak ağ - tüm altyapı ve uygulama servisleri bu ağ üzerinden servis adıyla
+# (ör. config-server:8888, postgres:5432, kafka:29092) haberleşir.
+# -----------------------------------------------------------------------------
+networks:
+  crm-net:
+    driver: bridge
+    name: crm-net

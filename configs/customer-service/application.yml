@@ -1,0 +1,76 @@
+# =============================================================================
+# customer-service - ORTAK (profil bağımsız) konfigürasyon
+# Merkezi config server üzerinden sunulur (configs/customer-service/).
+# Ortama özel (host/port/şifre) ayarlar dev/docker/prod profillerinde override edilir.
+# =============================================================================
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  jpa:
+    hibernate:
+      # Şema yönetimi ortama göre override edilir (dev: update, prod: validate).
+      ddl-auto: validate
+    # Lazy-loading kaynaklı beklenmedik sorguları önlemek için view'da session açma.
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # --- Redis (cacheleme) ---
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  cache:
+    type: redis
+    redis:
+      # Cache girişleri için varsayılan TTL (RedisConfig ile de yönetilir).
+      time-to-live: 600000
+      cache-null-values: false
+
+  # --- Kafka (Spring Cloud Stream + Kafka binder) ---
+  # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici (inbound)
+  # binding'i tanımlıdır. Broker adresi local Kafka container'ıdır (ortama göre override).
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${KAFKA_BROKERS:localhost:9092}
+      bindings:
+        # InboundEventConsumerConfig#inboundEventConsumer -> "inboundEventConsumer-in-0"
+        inboundEventConsumer-in-0:
+          destination: ${APP_INBOUND_TOPIC:crm.inbound.events}
+          group: customer-service
+
+# Uygulamaya özel ayarlar
+app:
+  kafka:
+    # Kafka consumer'larını aç/kapa (test profilinde false yapılır)
+    enabled: true
+  outbox:
+    # Debezium EventRouter'ın route.by.field olarak kullandığı aggregate tipi
+    customer-aggregate-type: Customer
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

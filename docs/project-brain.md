@@ -127,15 +127,66 @@ Tanımlı servisler: **config-server** (8888), **eureka-server** (8761),
   parent'ın `dependencyManagement`'ında yönetilir. Alt POM'lara versiyon yazılmaz.
 - Encoding: UTF-8.
 
+## 4.2. customer-service (ilk iş servisi)
+
+`customer-service` (port **8081**), n-katmanlı (n-layered) ilk somut iş servisidir.
+
+**Katmanlar (paketler):** `entities`, `dataAccess`, `business`
+(+ `business/rules`, `business/mappers`, `business/constants`, `business/dtos`),
+`apiController`, ayrıca cross-cutting için `core`.
+
+**Alınan kararlar ve gerekçeleri:**
+
+1. **Veritabanı: PostgreSQL (per-service DB).** Servis kendi şemasını yönetir.
+   Debezium CDC için `wal_level=logical` gerekir (bkz. `infra/`).
+
+2. **Kalıtım = JPA `JOINED`.** Görseldeki ER modeli birebir uygulandı:
+   `Customer` (kök, `customers`) ← `IndividualCustomer` (`individual_customers`,
+   `@PrimaryKeyJoinColumn(customer_id)`; 1-1 paylaşılan PK). `Address` ve
+   `CustomerContactInfo` müşteriyle N-1 (`customer_id` FK).
+
+3. **`BaseEntity` (@MappedSuperclass).** Ortak alanlar `id, created_date,
+   updated_date, deleted_date, is_active` burada; tüm entity'ler miras alır.
+   Soft-delete `is_active` + `deleted_date` ile yapılır (görseldeki `is_deleted`
+   bunlarla karşılandı). Zaman damgaları `@PrePersist/@PreUpdate` ile otomatik.
+
+4. **Asenkron iletişim: Kafka (local container) + Transactional Outbox + Debezium.**
+   Manager, iş verisi ile `outbox_events` kaydını **aynı transaction**'da yazar
+   (ghost event yok). Debezium (Kafka Connect) outbox tablosunu izleyip
+   `EventRouter` SMT ile `crm.<aggregateType>.events` topic'ine yayınlar.
+   Broker **local container** (KRaft, Zookeeper'sız, tek node); uygulama tüketici
+   tarafında **Spring Cloud Stream (Kafka binder)** fonksiyonel binding kullanır
+   (`inboundEventConsumer-in-0`). Kafka Cloud kullanılmaz.
+
+5. **Duplicate consume: Inbox Pattern.** `inbox_messages` tablosu + `InboxService`
+   ile `messageId` bazlı idempotent tüketim (örnek: `ExampleInboxConsumer`).
+
+6. **Cacheleme: Redis (Spring Cache).** `RedisCacheConfig` ile JSON serileştirme
+   ve cache bazlı TTL. Cache'ler **RedisInsight** ile izlenir.
+
+7. **İş kuralları `business/rules` altında** ayrı sınıfta toplanır ve ilgili
+   manager'a inject edilir. **Mesajlar** `business/constants/Messages` sabitleri
+   (magic string yok). İstek/yanıt için **DTO** (record) + **MapStruct** mapper.
+
+8. **Hata yönetimi:** `core` altında merkezi `@RestControllerAdvice`
+   (`GlobalExceptionHandler`, RFC 7807 `ProblemDetail`) ve iş hataları için
+   özel `BusinessException`.
+
+**Altyapı:** Kök `infra/docker-compose.yml` → PostgreSQL, Redis, RedisInsight,
+Debezium (Kafka Connect). Debezium outbox connector: `infra/debezium/`. Bkz.
+`infra/README.md`.
+
 ## 7. Açık Sorular / Yapılacaklar
 
 - [x] Servis keşfi: **Netflix Eureka** (`eureka-server`) + API Gateway
   (`gateway-server`, Spring Cloud Gateway).
 - [x] Merkezi konfigürasyon: **Spring Cloud Config** (`config-server`), Git
   backend + kök `configs/` klasörü. Bkz. §4.1.
-- [ ] Veritabanı teknolojisi (per-service DB?) belirlenecek.
-- [ ] İlk somut servisin (örn. `customer-service`) oluşturulması.
+- [x] Veritabanı teknolojisi: **PostgreSQL, per-service DB** (`customer-service`).
+- [x] İlk somut servis: **`customer-service`** (n-layered) oluşturuldu. Bkz. §4.2.
 - [ ] Observability (Actuator, Micrometer, tracing) standardı.
+- [ ] `Gender`/`Nationality` lookup tabloları (şimdilik `gender_id`/`nationality_id`
+  ham referans; ilgili servis/tablo eklenince FK'ye bağlanacak).
 
 ## 8. Değişiklik Günlüğü
 
@@ -146,3 +197,7 @@ Tanımlı servisler: **config-server** (8888), **eureka-server** (8761),
 - **2026-07-06:** `config-server` (Spring Cloud Config) eklendi. Tüm servisler
   `spring.config.import` ile merkezi config'e bağlandı; ortam bazlı ayarlar kök
   `configs/<service>/` klasörüne taşındı (`test` profili yerel kaldı). Bkz. §4.1.
+- **2026-07-06:** `customer-service` (ilk iş servisi, n-layered) eklendi:
+  PostgreSQL, Redis (+RedisInsight), Kafka Cloud + Transactional Outbox/Debezium,
+  Inbox Pattern, JOINED kalıtım (Customer/IndividualCustomer), BaseEntity,
+  merkezi hata yönetimi, DTO+MapStruct, iş kuralları. Altyapı `infra/`. Bkz. §4.2.

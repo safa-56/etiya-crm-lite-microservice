@@ -1,13 +1,3 @@
-# Geliştirme profili.
-#
-# Git backend'i kullanır (kök application.yml'deki GitHub URL'i). configs/
-# altındaki değişikliklerin config server tarafından görülmesi için commit +
-# push gereklidir. force-pull=true olduğundan her istekte remote'tan güncellenir.
-#
-# NOT: Push'suz, tamamen yerel çalışma modu istenirse 'native' backend'e
-# geçilebilir. Bunun için config server'ı şu şekilde başlatın:
-#   SPRING_PROFILES_ACTIVE=dev,native
-#   --spring.cloud.config.server.native.search-locations=file:<repo-kok>/configs/{application}
 logging:
   level:
     # Config server'ın hangi property source'ları çözdüğünü ayrıntılı görmek için.
