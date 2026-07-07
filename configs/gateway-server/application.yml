@@ -19,6 +19,26 @@ spring:
               enabled: true
               lower-case-service-id: true
 
+          # -----------------------------------------------------------------
+          # Açık (explicit) route tanımları — projenin ANA GİRİŞİ burasıdır.
+          # Her servis '/<servis-adı>/**' önekiyle dışarı açılır; StripPrefix=1
+          # ile önek atılıp istek downstream servise (lb://<servis-adı>) iletilir.
+          #   Dış:  http://localhost:8080/customer-service/api/v1/individual-customers
+          #   İç :  lb://customer-service   -> /api/v1/individual-customers
+          #
+          # Yeni bir servis eklerken bu listeye aynı kalıpta bir route ekleyin
+          # (id + Path predicate + StripPrefix filtresi). Bu route'lar tüm
+          # profillerde (prod dahil) geçerlidir; keşif tabanlı locator'a bağlı
+          # değildir.
+          # -----------------------------------------------------------------
+          routes:
+            - id: customer-service
+              uri: lb://customer-service
+              predicates:
+                - Path=/customer-service/**
+              filters:
+                - StripPrefix=1
+
 server:
   # API Gateway'in dış dünyaya açıldığı standart port (SERVER_PORT ile override)
   port: ${SERVER_PORT:8080}
