@@ -29,7 +29,7 @@ public record CreateIndividualCustomerRequest(
         String lastName,
 
         @Past(message = "Doğum tarihi geçmiş bir tarih olmalıdır.")
-        @NotBlank(message = "Doğum tarihi (birthDate) zorunludur.")
+        @NotNull(message = "Doğum tarihi (birthDate) zorunludur.")
         LocalDate birthDate,
 
         @Size(max = 100)
@@ -38,12 +38,12 @@ public record CreateIndividualCustomerRequest(
         @Size(max = 100)
         String motherName,
 
-        @NotBlank(message = "TC kimlik numarası (nationality_id) zorunludur.")
+        @NotNull(message = "TC kimlik numarası (nationality_id) zorunludur.")
         @Min(value = 10_000_000_000L, message = "TC kimlik numarası 11 haneli olmalıdır.")
         @Max(value = 99_999_999_999L, message = "TC kimlik numarası 11 haneli olmalıdır.")
         Long nationalityId,
 
-        @NotBlank(message = "Cinsiyet (genderType) zorunludur.")
+        @NotNull(message = "Cinsiyet (genderType) zorunludur.")
         GenderType genderType,
 
         @Valid

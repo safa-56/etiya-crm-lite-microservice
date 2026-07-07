@@ -48,11 +48,4 @@ public class IndividualCustomerBusinessRules {
             }
         }
     }
-
-    /** Doğum tarihi gelecekte olamaz (validation'a ek savunma). */
-    public void checkIfBirthDateValid(LocalDate birthDate) {
-        if (birthDate != null && birthDate.isAfter(LocalDate.now())) {
-            throw new BusinessException(Messages.BIRTH_DATE_CANNOT_BE_IN_FUTURE);
-        }
-    }
 }

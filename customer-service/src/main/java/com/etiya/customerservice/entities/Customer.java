@@ -1,10 +1,6 @@
 package com.etiya.customerservice.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Inheritance;
-import jakarta.persistence.InheritanceType;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -20,10 +16,10 @@ import java.util.List;
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Customer extends BaseEntity {
 
-    @OneToMany(mappedBy = "customer")
+    @OneToMany(mappedBy = "customer",cascade = CascadeType.PERSIST)
     private List<CustomerContactInfo> contactInfos = new ArrayList<>();
 
-    @OneToMany(mappedBy = "customer")
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.PERSIST)
     private List<Address> addresses = new ArrayList<>();
 
     /** İki yönlü ilişkiyi tutarlı kurmak için yardımcı. */

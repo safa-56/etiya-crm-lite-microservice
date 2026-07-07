@@ -2,6 +2,7 @@ package com.etiya.customerservice.business.dtos.requests;
 
 import jakarta.validation.constraints.NotBlank;
 
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CreateAddressRequest(
@@ -25,7 +26,7 @@ public record CreateAddressRequest(
         @NotBlank(message = "Adres açıklaması (addressDescription) zorunludur.")
         String addressDescription,
 
-        @NotBlank
+        @NotNull
         Boolean isPrimary
 ) {
 }

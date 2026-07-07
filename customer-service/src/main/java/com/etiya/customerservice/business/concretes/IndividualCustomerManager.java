@@ -27,15 +27,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Bireysel müşteri iş servisi uygulaması (business concrete).
- *
- * <p>CRUD işlemlerini yürütür; iş kurallarını {@link IndividualCustomerBusinessRules}'a
- * delege eder, DTO/entity dönüşümünü {@link IndividualCustomerMapper} ile yapar,
- * cacheleme için Redis (Spring Cache) kullanır ve her yazma işleminde
- * {@link OutboxService} üzerinden (aynı transaction'da) bir domain olayı yazar
- * (Transactional Outbox → Debezium → Kafka Cloud).
- */
 @Service
 public class IndividualCustomerManager implements IndividualCustomerService {
 
@@ -59,7 +50,6 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     @CacheEvict(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST, allEntries = true)
     public IndividualCustomerResponse add(CreateIndividualCustomerRequest request) {
         // --- iş kuralları ---
-        rules.checkIfBirthDateValid(request.birthDate());
         rules.checkIfEmailsAlreadyExist(extractEmails(request.contactInfos()));
 
         // --- dönüşüm + ilişki kurulumu ---
@@ -101,7 +91,6 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     )
     public IndividualCustomerResponse update(UpdateIndividualCustomerRequest request) {
         rules.checkIfIndividualCustomerExists(request.id());
-        rules.checkIfBirthDateValid(request.birthDate());
 
         IndividualCustomer customer = repository.findByIdAndIsActiveTrue(request.id())
                 .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
