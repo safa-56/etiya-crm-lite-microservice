@@ -1,6 +1,8 @@
 package com.etiya.customerservice.core.crosscutting.exceptions.handlers;
 
 import com.etiya.customerservice.core.crosscutting.exceptions.BusinessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
@@ -23,6 +25,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /** İş kuralı ihlalleri → 400 Bad Request. */
     @ExceptionHandler(BusinessException.class)
@@ -54,6 +58,9 @@ public class GlobalExceptionHandler {
     /** Beklenmeyen tüm hatalar → 500 Internal Server Error. */
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpectedException(Exception exception, WebRequest request) {
+        // Beklenmeyen hataların kök nedeni istemciye sızdırılmaz ama sunucuda mutlaka loglanır.
+        log.error("Beklenmeyen hata: {}", request.getDescription(false), exception);
+
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR, "Beklenmeyen bir hata oluştu.");
         problem.setTitle("Internal Server Error");

@@ -25,11 +25,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @Entity
 @Table(name = "individual_customers")
-//@PrimaryKeyJoinColumn(name = "customer_id")
+@PrimaryKeyJoinColumn(name = "id")
 public class IndividualCustomer extends Customer {
 
-    /** Uyruk referans kimliği (nationality lookup). */
-    @Column(name = "nationality_id")
+    @Column(name = "nationality_id", nullable = false)
     private Long nationalityId;
 
     @Column(name = "first_name", nullable = false, length = 100)
@@ -41,7 +40,7 @@ public class IndividualCustomer extends Customer {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(name = "birth_date")
+    @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
 
     @Column(name = "father_name", length = 100)
@@ -51,6 +50,6 @@ public class IndividualCustomer extends Customer {
     private String motherName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "gender_type", length = 20)
+    @Column(name = "gender_type", nullable = false, length = 20)
     private GenderType genderType;
 }

@@ -10,12 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Adres (Address).
- *
- * <p>ER modelindeki {@code Addresses} tablosuna karşılık gelir;
- * {@link Customer} ile N-1 ilişkilidir ({@code customer_id} FK).
- */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,19 +18,19 @@ import lombok.Setter;
 public class Address extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @Column(name = "city", length = 100)
+    @Column(name = "city", nullable = false, length = 100)
     private String city;
 
-    @Column(name = "street", length = 150)
+    @Column(name = "street", nullable = false, length = 150)
     private String street;
 
-    @Column(name = "house_number", length = 30)
+    @Column(name = "house_number", nullable = false, length = 30)
     private String houseNumber;
 
-    @Column(name = "address_description", length = 500)
+    @Column(name = "address_description", nullable = false, length = 500)
     private String addressDescription;
 
     @Column(name = "is_primary", nullable = false)

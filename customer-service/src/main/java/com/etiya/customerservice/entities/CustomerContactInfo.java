@@ -27,14 +27,13 @@ public class CustomerContactInfo extends BaseEntity {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @Column(name = "email", length = 150)
+    @Column(name = "email", nullable = false, length = 150)
     private String email;
 
     @Column(name = "home_phone", length = 20)
     private String homePhone;
 
-    // Görseldeki alan adı 'mobil_phone' olarak birebir korunmuştur.
-    @Column(name = "mobil_phone", length = 20)
+    @Column(name = "mobil_phone", nullable = false, length = 20)
     private String mobilPhone;
 
     @Column(name = "fax", length = 20)

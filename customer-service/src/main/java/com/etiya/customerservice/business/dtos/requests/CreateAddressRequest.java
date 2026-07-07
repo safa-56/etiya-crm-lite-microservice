@@ -1,35 +1,31 @@
 package com.etiya.customerservice.business.dtos.requests;
 
+import jakarta.validation.constraints.NotBlank;
+
 import jakarta.validation.constraints.Size;
 
-/**
- * Adres oluşturma isteği.
- *
- * <p>İki şekilde kullanılır:
- * <ul>
- *   <li>Bireysel müşteri oluşturma isteğinin içinde <b>iç içe</b> — bu durumda
- *       {@code customerId} gönderilmez, ilişki agrega kökü üzerinden kurulur.</li>
- *   <li>{@code AddressesController} üzerinden <b>tek başına</b> — bu durumda
- *       {@code customerId} zorunludur (iş kuralı olarak doğrulanır).</li>
- * </ul>
- */
 public record CreateAddressRequest(
 
         /** Adresin ait olduğu müşteri; yalnızca standalone oluşturmada gönderilir. */
         Long customerId,
 
         @Size(max = 100)
+        @NotBlank(message = "Şehir (city) zorunludur.")
         String city,
 
         @Size(max = 150)
+        @NotBlank(message = "Sokak (street) zorunludur.")
         String street,
 
         @Size(max = 30)
+        @NotBlank(message = "Ev no (houseNumber) zorunludur.")
         String houseNumber,
 
         @Size(max = 500)
+        @NotBlank(message = "Adres açıklaması (addressDescription) zorunludur.")
         String addressDescription,
 
+        @NotBlank
         Boolean isPrimary
 ) {
 }

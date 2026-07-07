@@ -12,23 +12,6 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/**
- * Tüm entity'lerin miras aldığı taban sınıf.
- *
- * <p>Ortak alanları ve denetim (audit) davranışını tek yerde toplar:
- * <ul>
- *   <li>{@code id}          - birincil anahtar</li>
- *   <li>{@code createdDate} - kayıt oluşturulma zamanı</li>
- *   <li>{@code updatedDate} - son güncelleme zamanı</li>
- *   <li>{@code deletedDate} - soft-delete zamanı (silinmediyse {@code null})</li>
- *   <li>{@code isActive}    - kayıt aktif mi (soft-delete bayrağı)</li>
- * </ul>
- *
- * <p>{@link MappedSuperclass} olduğu için kendi tablosu yoktur; alanları miras
- * alan entity'nin (JOINED stratejisinde kök) tablosuna iner. Zaman damgaları
- * JPA yaşam döngüsü geri çağrıları ({@link PrePersist}/{@link PreUpdate}) ile
- * otomatik doldurulur.
- */
 @Getter
 @Setter
 @MappedSuperclass
@@ -39,7 +22,7 @@ public abstract class BaseEntity {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "created_date", updatable = false)
+    @Column(name = "created_date")
     private LocalDateTime createdDate;
 
     @Column(name = "updated_date")
@@ -48,10 +31,9 @@ public abstract class BaseEntity {
     @Column(name = "deleted_date")
     private LocalDateTime deletedDate;
 
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "is_active")
     private Boolean isActive;
 
-    /** Yeni kayıt: oluşturulma zamanını ata, aktiflik verilmediyse {@code true} yap. */
     @PrePersist
     protected void onCreate() {
         this.createdDate = LocalDateTime.now();
@@ -60,7 +42,6 @@ public abstract class BaseEntity {
         }
     }
 
-    /** Güncelleme: güncelleme zamanını tazele. */
     @PreUpdate
     protected void onUpdate() {
         this.updatedDate = LocalDateTime.now();
