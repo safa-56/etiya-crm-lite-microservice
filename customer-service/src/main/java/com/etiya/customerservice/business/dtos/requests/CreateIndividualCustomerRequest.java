@@ -36,6 +36,8 @@ public record CreateIndividualCustomerRequest(
 
         Long genderId,
 
+        @NotBlank(message = "TC kimlik numarası (nationality_id) zorunludur.")
+        @Size(min = 11 , max = 11)
         Long nationalityId,
 
         GenderType genderType,

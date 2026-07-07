@@ -25,12 +25,8 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @Entity
 @Table(name = "individual_customers")
-@PrimaryKeyJoinColumn(name = "customer_id")
+//@PrimaryKeyJoinColumn(name = "customer_id")
 public class IndividualCustomer extends Customer {
-
-    /** Cinsiyet referans kimliği (gender lookup tablosuna FK). */
-    @Column(name = "gender_id")
-    private Long genderId;
 
     /** Uyruk referans kimliği (nationality lookup). */
     @Column(name = "nationality_id")

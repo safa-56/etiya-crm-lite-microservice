@@ -15,6 +15,15 @@ public final class Messages {
     /** Bireysel müşteri bulunamadı. */
     public static final String INDIVIDUAL_CUSTOMER_NOT_FOUND = "Bireysel müşteri bulunamadı.";
 
+    /** Müşteri bulunamadı. */
+    public static final String CUSTOMER_NOT_FOUND = "Müşteri bulunamadı.";
+
+    /** Adres bulunamadı. */
+    public static final String ADDRESS_NOT_FOUND = "Adres bulunamadı.";
+
+    /** İletişim bilgisi bulunamadı. */
+    public static final String CONTACT_INFO_NOT_FOUND = "İletişim bilgisi bulunamadı.";
+
     /** Verilen e-posta zaten kayıtlı. */
     public static final String EMAIL_ALREADY_EXISTS = "Bu e-posta adresi zaten kayıtlı.";
 

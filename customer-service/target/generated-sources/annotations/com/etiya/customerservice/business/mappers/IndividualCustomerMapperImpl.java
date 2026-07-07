@@ -19,8 +19,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-07-06T16:05:23+0300",
-    comments = "version: 1.6.3, compiler: javac, environment: Java 25.0.3 (Oracle Corporation)"
+    date = "2026-07-07T08:39:34+0300",
+    comments = "version: 1.6.3, compiler: Eclipse JDT (IDE) 3.46.100.v20260624-0231, environment: Java 21.0.11 (Eclipse Adoptium)"
 )
 @Component
 public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
@@ -33,7 +33,6 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
 
         IndividualCustomer individualCustomer = new IndividualCustomer();
 
-        individualCustomer.setGenderId( request.genderId() );
         individualCustomer.setNationalityId( request.nationalityId() );
         individualCustomer.setFirstName( request.firstName() );
         individualCustomer.setSecondName( request.secondName() );
@@ -92,7 +91,6 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
         LocalDate birthDate = null;
         String fatherName = null;
         String motherName = null;
-        Long genderId = null;
         Long nationalityId = null;
         GenderType genderType = null;
         Boolean isActive = null;
@@ -108,7 +106,6 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
         birthDate = entity.getBirthDate();
         fatherName = entity.getFatherName();
         motherName = entity.getMotherName();
-        genderId = entity.getGenderId();
         nationalityId = entity.getNationalityId();
         genderType = entity.getGenderType();
         isActive = entity.getIsActive();
@@ -116,6 +113,8 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
         updatedDate = entity.getUpdatedDate();
         contactInfos = customerContactInfoListToContactInfoResponseList( entity.getContactInfos() );
         addresses = addressListToAddressResponseList( entity.getAddresses() );
+
+        Long genderId = null;
 
         IndividualCustomerResponse individualCustomerResponse = new IndividualCustomerResponse( id, firstName, secondName, lastName, birthDate, fatherName, motherName, genderId, nationalityId, genderType, isActive, createdDate, updatedDate, contactInfos, addresses );
 

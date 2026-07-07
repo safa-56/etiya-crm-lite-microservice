@@ -7,6 +7,5 @@ package com.etiya.customerservice.entities.enums;
 public enum GenderType {
     MALE,
     FEMALE,
-    OTHER,
     UNKNOWN
 }

@@ -1,16 +1,12 @@
 package com.etiya.customerservice.core.config;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.etiya.customerservice.core.constants.CacheNames;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -27,16 +23,20 @@ import java.util.Map;
 @Configuration
 public class RedisCacheConfig {
 
-    /** JSON serileştirme için Java 8 tarih/zaman (LocalDate/LocalDateTime) destekli mapper. */
-    private GenericJackson2JsonRedisSerializer jsonSerializer() {
-        ObjectMapper objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule());
-        // Cache'ten geri okurken somut tipleri çözebilmek için tip bilgisi gömülür.
-        objectMapper.activateDefaultTyping(
-                LaissezFaireSubTypeValidator.instance,
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY);
-        return new GenericJackson2JsonRedisSerializer(objectMapper);
+    /**
+     * JSON serileştirici (Jackson 3 tabanlı). Java 8 tarih/zaman
+     * (LocalDate/LocalDateTime) desteği Jackson 3'te otomatik gelir.
+     *
+     * <p>Cache'ten geri okurken somut tipleri çözebilmek için tip bilgisi
+     * gömülür ({@code activateDefaultTyping}, NON_FINAL, As.PROPERTY karşılığı).
+     * {@code enableUnsafeDefaultTyping}, eski {@code LaissezFaireSubTypeValidator}
+     * (tüm tiplere izin veren) davranışının birebir karşılığıdır; yalnızca
+     * güvenilen (internal) Redis verisi için uygundur.
+     */
+    private GenericJacksonJsonRedisSerializer jsonSerializer() {
+        return GenericJacksonJsonRedisSerializer.builder()
+                .enableUnsafeDefaultTyping()
+                .build();
     }
 
     private RedisCacheConfiguration baseConfig(Duration ttl) {

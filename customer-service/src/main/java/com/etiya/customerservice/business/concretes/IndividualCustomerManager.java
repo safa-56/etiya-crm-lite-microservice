@@ -113,7 +113,6 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         customer.setBirthDate(request.birthDate());
         customer.setFatherName(request.fatherName());
         customer.setMotherName(request.motherName());
-        customer.setGenderId(request.genderId());
         customer.setNationalityId(request.nationalityId());
         customer.setGenderType(request.genderType());
 
