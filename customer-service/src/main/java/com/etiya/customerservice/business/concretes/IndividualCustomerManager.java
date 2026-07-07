@@ -14,7 +14,11 @@ import com.etiya.customerservice.business.mappers.IndividualCustomerMapper;
 import com.etiya.customerservice.business.rules.IndividualCustomerBusinessRules;
 import com.etiya.customerservice.core.constants.CacheNames;
 import com.etiya.customerservice.core.crosscutting.exceptions.BusinessException;
+import com.etiya.customerservice.dataAccess.AddressRepository;
+import com.etiya.customerservice.dataAccess.CustomerContactInfoRepository;
 import com.etiya.customerservice.dataAccess.IndividualCustomerRepository;
+import com.etiya.customerservice.entities.Address;
+import com.etiya.customerservice.entities.CustomerContactInfo;
 import com.etiya.customerservice.entities.IndividualCustomer;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -31,15 +35,21 @@ import java.util.Objects;
 public class IndividualCustomerManager implements IndividualCustomerService {
 
     private final IndividualCustomerRepository repository;
+    private final CustomerContactInfoRepository contactInfoRepository;
+    private final AddressRepository addressRepository;
     private final IndividualCustomerMapper mapper;
     private final IndividualCustomerBusinessRules rules;
     private final OutboxService outboxService;
 
     public IndividualCustomerManager(IndividualCustomerRepository repository,
+                                     CustomerContactInfoRepository contactInfoRepository,
+                                     AddressRepository addressRepository,
                                      IndividualCustomerMapper mapper,
                                      IndividualCustomerBusinessRules rules,
                                      OutboxService outboxService) {
         this.repository = repository;
+        this.contactInfoRepository = contactInfoRepository;
+        this.addressRepository = addressRepository;
         this.mapper = mapper;
         this.rules = rules;
         this.outboxService = outboxService;
@@ -52,12 +62,12 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         // --- iş kuralları ---
         rules.checkIfEmailsAlreadyExist(extractEmails(request.contactInfos()));
 
-        // --- dönüşüm + ilişki kurulumu ---
-        IndividualCustomer customer = mapper.toEntity(request);
-        applyContactInfos(customer, request.contactInfos());
-        applyAddresses(customer, request.addresses());
+        // --- müşteriyi tek başına persist et (cascade yok) ---
+        IndividualCustomer saved = repository.save(mapper.toEntity(request));
 
-        IndividualCustomer saved = repository.save(customer);
+        // --- çocuk kayıtları açıkça persist et (kendi repository'leri üzerinden) ---
+        persistContactInfos(saved, request.contactInfos());
+        persistAddresses(saved, request.addresses());
 
         // --- outbox olayı (aynı transaction) ---
         publishEvent(saved, CustomerEvents.CUSTOMER_CREATED);
@@ -105,14 +115,15 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         customer.setNationalityId(request.nationalityId());
         customer.setGenderType(request.genderType());
 
-        // İç içe koleksiyonlar gönderildiyse tamamen değiştir (orphanRemoval eskileri siler)
+        // İç içe koleksiyonlar gönderildiyse tamamen değiştir: eskileri pasifleştir
+        // (soft-delete), yenilerini açıkça persist et (cascade/orphanRemoval yok).
         if (request.contactInfos() != null) {
-            customer.getContactInfos().clear();
-            applyContactInfos(customer, request.contactInfos());
+            deactivateContactInfos(customer);
+            persistContactInfos(customer, request.contactInfos());
         }
         if (request.addresses() != null) {
-            customer.getAddresses().clear();
-            applyAddresses(customer, request.addresses());
+            deactivateAddresses(customer);
+            persistAddresses(customer, request.addresses());
         }
 
         IndividualCustomer saved = repository.save(customer);
@@ -134,27 +145,71 @@ public class IndividualCustomerManager implements IndividualCustomerService {
                 .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
 
         // Soft-delete: fiziksel silme yok; pasifleştir ve silinme zamanını işaretle.
+        // Çocuk kayıtlar (adresler + iletişim bilgileri) de aynı anda pasifleştirilir.
         customer.setIsActive(false);
         customer.setDeletedDate(LocalDateTime.now());
         repository.save(customer);
+
+        deactivateContactInfos(customer);
+        deactivateAddresses(customer);
 
         publishEvent(customer, CustomerEvents.CUSTOMER_DELETED);
     }
 
     // ------------------------------------------------------------------ yardımcılar
 
-    private void applyContactInfos(IndividualCustomer customer, List<CreateContactInfoRequest> requests) {
+    /** İletişim bilgilerini açıkça persist eder (cascade yok) ve müşteriye bağlar. */
+    private void persistContactInfos(IndividualCustomer customer, List<CreateContactInfoRequest> requests) {
         if (requests == null) {
             return;
         }
-        requests.forEach(req -> customer.addContactInfo(mapper.toContactInfo(req)));
+        requests.forEach(req -> {
+            CustomerContactInfo contactInfo = mapper.toContactInfo(req);
+            customer.addContactInfo(contactInfo);     // iki yönlü ilişki + koleksiyon
+            contactInfoRepository.save(contactInfo);  // açıkça persist
+        });
     }
 
-    private void applyAddresses(IndividualCustomer customer, List<CreateAddressRequest> requests) {
+    /** Adresleri açıkça persist eder (cascade yok) ve müşteriye bağlar. */
+    private void persistAddresses(IndividualCustomer customer, List<CreateAddressRequest> requests) {
         if (requests == null) {
             return;
         }
-        requests.forEach(req -> customer.addAddress(mapper.toAddress(req)));
+        requests.forEach(req -> {
+            Address address = mapper.toAddress(req);
+            customer.addAddress(address);       // iki yönlü ilişki + koleksiyon
+            addressRepository.save(address);    // açıkça persist
+        });
+    }
+
+    /** Müşterinin mevcut iletişim bilgilerini soft-delete ile pasifleştirir. */
+    private void deactivateContactInfos(IndividualCustomer customer) {
+        List<CustomerContactInfo> contactInfos = customer.getContactInfos();
+        if (contactInfos.isEmpty()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        contactInfos.forEach(contactInfo -> {
+            contactInfo.setIsActive(false);
+            contactInfo.setDeletedDate(now);
+        });
+        contactInfoRepository.saveAll(contactInfos);
+        contactInfos.clear(); // in-memory koleksiyonu boşalt (yeni gelenler eklenecek)
+    }
+
+    /** Müşterinin mevcut adreslerini soft-delete ile pasifleştirir. */
+    private void deactivateAddresses(IndividualCustomer customer) {
+        List<Address> addresses = customer.getAddresses();
+        if (addresses.isEmpty()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        addresses.forEach(address -> {
+            address.setIsActive(false);
+            address.setDeletedDate(now);
+        });
+        addressRepository.saveAll(addresses);
+        addresses.clear(); // in-memory koleksiyonu boşalt (yeni gelenler eklenecek)
     }
 
     private List<String> extractEmails(List<CreateContactInfoRequest> contactInfos) {

@@ -16,10 +16,12 @@ import java.util.List;
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Customer extends BaseEntity {
 
-    @OneToMany(mappedBy = "customer",cascade = CascadeType.PERSIST)
+    // Cascade yok: çocuk kayıtlar (contactInfos/addresses) manager katmanında
+    // kendi repository'leri üzerinden açıkça persist/pasifleştirilir.
+    @OneToMany(mappedBy = "customer")
     private List<CustomerContactInfo> contactInfos = new ArrayList<>();
 
-    @OneToMany(mappedBy = "customer", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "customer")
     private List<Address> addresses = new ArrayList<>();
 
     /** İki yönlü ilişkiyi tutarlı kurmak için yardımcı. */
