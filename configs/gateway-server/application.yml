@@ -41,6 +41,13 @@ spring:
               filters:
                 - StripPrefix=1
 
+            - id: account-service
+              uri: lb://account-service
+              predicates:
+                - Path=/api/v1/billing-accounts/**
+              filters:
+                - StripPrefix=1
+
 server:
   # API Gateway'in dış dünyaya açıldığı standart port (SERVER_PORT ile override)
   port: ${SERVER_PORT:8080}

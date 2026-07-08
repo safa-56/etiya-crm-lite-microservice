@@ -151,6 +151,7 @@
         <module>eureka-server</module>
         <module>gateway-server</module>
         <module>customer-service</module>
+        <module>account-service</module>
     </modules>
 
 </project>

@@ -1,7 +1,8 @@
 # infra — Altyapı Servisleri
 
-`customer-service` için gereken altyapıyı ayağa kaldırır: **PostgreSQL**, **Redis**,
-**RedisInsight**, **Kafka (local, KRaft)**, **Kafka UI** ve **Debezium (Kafka Connect)**.
+`customer-service` ve `account-service` için gereken altyapıyı ayağa kaldırır:
+**PostgreSQL**, **Redis**, **RedisInsight**, **Kafka (local, KRaft)**, **Kafka UI**
+ve **Debezium (Kafka Connect)**.
 
 > **Kafka (local container):** Kafka broker'ı bu compose'da yer alır (Zookeeper'sız
 > KRaft, tek node). Uygulama **Spring Cloud Stream (Kafka binder)** ile bağlanır;
@@ -16,7 +17,7 @@ docker compose -f infra/docker-compose.yml up -d
 
 | Servis        | Adres                     | Not                                        |
 |---------------|---------------------------|--------------------------------------------|
-| PostgreSQL    | `localhost:5432`          | db: `customerdb`                           |
+| PostgreSQL    | `localhost:5432`          | db'ler: `customerdb`, `accountdb`          |
 | Redis         | `localhost:6379`          | cache                                      |
 | RedisInsight  | http://localhost:5540     | Redis host olarak `redis:6379` ekleyin     |
 | Kafka         | `localhost:9092` (host)   | konteyner içi: `kafka:29092`               |
@@ -28,13 +29,24 @@ docker compose -f infra/docker-compose.yml up -d
 Servis en az bir kez çalışıp `outbox_events` tablosunu oluşturduktan sonra:
 
 ```bash
+# customer-service (db: customerdb)
 curl -i -X POST http://localhost:8083/connectors \
   -H "Content-Type: application/json" \
   -d @infra/debezium/register-outbox-connector.json
 
+# account-service (db: accountdb)
+curl -i -X POST http://localhost:8083/connectors \
+  -H "Content-Type: application/json" \
+  -d @infra/debezium/register-account-connector.json
+
 # Durum:
 curl -s http://localhost:8083/connectors/customer-outbox-connector/status | jq
+curl -s http://localhost:8083/connectors/account-outbox-connector/status | jq
 ```
+
+> **accountdb var mı?** `accountdb`, postgres ilk açılışında
+> `postgres/init/01-create-databases.sql` ile oluşturulur (yalnızca boş volume'de).
+> Var olan bir kurulumda elle: `docker exec -it crm-postgres psql -U postgres -c "CREATE DATABASE accountdb;"`
 
 ### Nasıl çalışır? (Transactional Outbox + Debezium)
 

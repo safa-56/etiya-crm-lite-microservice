@@ -1,0 +1,43 @@
+# =============================================================================
+# account-service - 'test' profili (YEREL kalır; merkezi config'e taşınmaz)
+# Hermetik testler: ağ/registry/config-server/Kafka/Redis'e bağımlı olmadan
+# context'in ayağa kalkabilmesi için in-memory H2 ve devre dışı entegrasyonlar.
+# =============================================================================
+server:
+  # 0 => işletim sistemi boş bir port atar; paralel testlerde çakışmayı önler.
+  port: 0
+
+spring:
+  # In-memory H2 (PostgreSQL uyumluluk modu)
+  datasource:
+    url: jdbc:h2:mem:accountdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  # Cache'i basit in-memory yap (Redis'e bağlanmasın)
+  cache:
+    type: simple
+
+# Uygulamaya özel bayrak: Kafka consumer binding'ini testte başlatma.
+# false olduğu için ProductEventConsumerConfig yüklenmez -> Spring Cloud Stream
+# hiçbir binding oluşturmaz ve broker'a bağlanmaya çalışmaz (hermetik test).
+app:
+  kafka:
+    enabled: false
+
+eureka:
+  client:
+    # Test ortamında registry bağlantısı kurma; başlatmayı hızlandırır ve izole eder.
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+logging:
+  level:
+    org.hibernate.SQL: INFO

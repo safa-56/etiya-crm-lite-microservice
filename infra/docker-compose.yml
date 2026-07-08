@@ -59,6 +59,9 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # İlk açılışta ek veritabanlarını (accountdb) oluşturan init betikleri.
+      # Yalnızca postgres-data hacmi boşken çalışır.
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-customerdb}"]
       interval: 10s
@@ -312,6 +315,36 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
     ports:
       - "${CUSTOMER_SERVICE_PORT:-8081}:8081"
+    networks:
+      - crm-net
+
+  # ---------------------------------------------------------------------------
+  # account-service (8082) - fatura hesabı servisi. config-server + eureka-server
+  # ve altyapı (postgres, redis, kafka) SAĞLIKLI olunca başlar.
+  # ---------------------------------------------------------------------------
+  account-service:
+    build:
+      context: ..
+      dockerfile: account-service/Dockerfile
+    image: etiya/account-service:1.0.0
+    container_name: crm-account-service
+    restart: unless-stopped
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports:
+      - "${ACCOUNT_SERVICE_PORT:-8082}:8082"
     networks:
       - crm-net
 
