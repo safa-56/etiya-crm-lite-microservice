@@ -27,6 +27,9 @@ public final class BillingAccountSagaEvents {
     /** account-service -> : yeni fatura hesabı için müşteri/adres doğrulaması isteği. */
     public static final String CREATION_REQUESTED = "BillingAccountCreationRequested";
 
+    /** account-service -> : mevcut hesabın adres değişikliği için doğrulama isteği. */
+    public static final String ADDRESS_CHANGE_REQUESTED = "BillingAccountAddressChangeRequested";
+
     /** customer-service -> : müşteri ve adres doğrulandı (saga ileri gidebilir). */
     public static final String CUSTOMER_VALIDATED = "BillingAccountCustomerValidated";
 

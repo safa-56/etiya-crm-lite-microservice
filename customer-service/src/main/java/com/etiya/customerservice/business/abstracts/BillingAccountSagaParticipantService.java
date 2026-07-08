@@ -11,6 +11,9 @@ import com.etiya.customerservice.business.dtos.events.BillingAccountSagaRequeste
  */
 public interface BillingAccountSagaParticipantService {
 
-    /** Doğrulama isteğini işler ve saga sonucunu yayınlar. */
-    void handleCreationRequested(BillingAccountSagaRequestedPayload request);
+    /**
+     * Doğrulama isteğini işler (oluşturma ya da adres değişikliği — doğrulama
+     * aynıdır) ve saga sonucunu (validated/failed) yayınlar.
+     */
+    void handleValidationRequest(BillingAccountSagaRequestedPayload request);
 }

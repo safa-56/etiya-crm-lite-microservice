@@ -21,6 +21,7 @@ public record BillingAccountResponse(
         AccountType accountType,
         String accountDescription,
         Long addressId,
+        Long pendingAddressId,
         String address,
         String orderNumber,
         Boolean isActive,

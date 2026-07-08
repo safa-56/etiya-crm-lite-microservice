@@ -44,18 +44,27 @@ public class BillingAccount extends BaseEntity {
     private String accountDescription;
 
     /**
-     * Hesabın adresi, müşterinin adreslerinden biriyle ({@link #addressId})
-     * ilişkilidir; seçilen adres yerel müşteri projeksiyonundan doğrulanır.
-     * customer-service adres id'sine referans (yerel FK değil).
+     * Hesabın adresi, müşterinin adreslerinden biriyle ({@code addressId})
+     * ilişkilidir; adresin müşteriye ait olduğu Saga'da customer-service tarafından
+     * otoriter doğrulanır. customer-service adres id'sine referans (yerel FK değil).
      */
     @Column(name = "address_id")
     private Long addressId;
 
     /**
+     * Adres değişikliği Saga'sında doğrulanmayı bekleyen yeni adres kimliği.
+     * Update sırasında set edilir; doğrulama onaylanınca {@code addressId}'ye
+     * uygulanıp temizlenir, reddedilince temizlenir (eski adres korunur). Bekleyen
+     * değişiklik yokken {@code null}.
+     */
+    @Column(name = "pending_address_id")
+    private Long pendingAddressId;
+
+    /**
      * Seçilen adresin okunur metin gösterimi (snapshot). Saga PENDING aşamasında
-     * henüz otoriter olarak doğrulanmadığından geçici (optimistik projeksiyon ya da
-     * boş) bir değer taşır; customer-service doğrulaması (CustomerValidated) geldiğinde
-     * otoriter değerle üzerine yazılır. Kolon NOT NULL kalır (asla {@code null} yazılmaz).
+     * henüz otoriter doğrulanmadığından boş taşınır; customer-service doğrulaması
+     * (CustomerValidated) geldiğinde otoriter değerle yazılır. Kolon NOT NULL kalır
+     * (asla {@code null} yazılmaz).
      */
     @Column(name = "address", nullable = false, length = 500)
     private String address;

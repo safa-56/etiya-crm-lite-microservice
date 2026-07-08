@@ -176,11 +176,14 @@ Tanımlı servisler: **config-server** (8888), **eureka-server** (8761),
 Debezium (Kafka Connect). Debezium outbox connector: `infra/debezium/`. Bkz.
 `infra/README.md`.
 
-## 4.3. Saga Pattern (choreography) — Fatura Hesabı Oluşturma
+## 4.3. Saga Pattern (choreography) — Fatura Hesabı
 
 Servisler arası dağıtık işlem **choreography-based Saga** ile yürütülür (merkezi
 orchestrator yok; her servis olayları dinleyip kendi adımını yapar, hata olursa
 telafi eder). Mevcut **Outbox + Debezium + Inbox** altyapısı üzerine kuruludur.
+**CQRS read-model (müşteri projeksiyonu) kaldırıldı**; account-service artık
+müşteri/adres doğrulamasını yerel bir kopyadan değil, **Saga ile customer-service'e
+otoriter olarak** yaptırır. Böylece tüm cross-service yazma kararları saga'dan geçer.
 
 **Kanal:** Aggregate tipi `BillingAccountSaga` olan tüm outbox kayıtları — hangi
 servisin DB'sinden gelirse gelsin — EventRouter ile tek topic'e yönlenir:
@@ -189,23 +192,29 @@ connector aggregate_type'a göre dinamik yönlendirir). Her iki servis bu topic'
 dinler ve payload'daki `eventType` ile yalnızca kendini ilgilendiren olayı işler
 (self-consume olayları atlanır → döngü yok).
 
-**Akış (Create Billing Account):**
-1. **account-service** hesabı `PENDING` açar → `BillingAccountCreationRequested`
-   yayınlar (senkron müşteri/adres doğrulaması YAPMAZ; otoriteyi customer'a bırakır).
-2. **customer-service** (participant) müşteri + adresi **kendi DB'sinden otoriter**
-   doğrular → `BillingAccountCustomerValidated` (otoriter adres snapshot'ıyla) ya da
-   `BillingAccountCustomerValidationFailed` (neden ile) yayınlar.
-3. **account-service** sonucu uygular: Validated → `ACTIVE` (onay, adres yazılır);
-   Failed → `CANCELLED` + soft-delete (**telafi/compensation**). PENDING olmayan
-   hesapta idempotent atlanır.
+**customer-service** doğrulayıcı (participant) rolündedir: gelen isteklerde
+(`...CreationRequested` / `...AddressChangeRequested`) müşteri + adresi **kendi
+DB'sinden otoriter** doğrular → `...CustomerValidated` (adres snapshot'ıyla) ya da
+`...CustomerValidationFailed` (neden ile) yayınlar. account-service sonucu hesabın
+durumuna göre yönlendirir.
+
+**Akış 1 — Create Billing Account:**
+1. account-service hesabı `PENDING` açar (adres boş) → `...CreationRequested`.
+2. customer-service doğrular → Validated/Failed.
+3. account-service: Validated → `ACTIVE` (otoriter adres yazılır); Failed →
+   `CANCELLED` + soft-delete (**telafi**).
+
+**Akış 2 — Update Billing Account Address:**
+1. account-service adres-dışı alanları senkron günceller; adres değiştiyse yeni
+   adresi `pendingAddressId`'de tutar (hesap ACTIVE kalır) → `...AddressChangeRequested`.
+2. customer-service (aynı doğrulama) → Validated/Failed.
+3. account-service: Validated → yeni adresi uygular (`addressId` + metin), beklemeyi
+   temizler; Failed → beklemeyi temizler, **eski adres korunur** (telafi).
 
 **Durumlar:** `AccountStatus` = `PENDING → ACTIVE | CANCELLED` (+ `PASSIVE` silmede).
-Create endpoint artık `PENDING` döner (asenkron tamamlanma). Idempotency Inbox +
-"yalnızca PENDING'i ilerlet" kuralıyla sağlanır.
-
-**Not:** account-service'in Kafka ile beslenen müşteri projeksiyonu (§4.2) hâlâ
-okuma/görüntüleme ve `update` doğrulaması için kullanılır; saga'daki **yazma
-kararı** ise customer-service'in otoriter doğrulamasına dayanır.
+Create ve adres-update **asenkron** tamamlanır (endpoint hemen döner; sonuç saga ile
+gelir). Idempotency: Inbox + sonucu hesap durumuna göre yönlendirme
+(PENDING → create; `pendingAddressId` → update; ikisi de yoksa atla).
 
 ## 7. Açık Sorular / Yapılacaklar
 
@@ -228,6 +237,12 @@ kararı** ise customer-service'in otoriter doğrulamasına dayanır.
 - **2026-07-06:** `config-server` (Spring Cloud Config) eklendi. Tüm servisler
   `spring.config.import` ile merkezi config'e bağlandı; ortam bazlı ayarlar kök
   `configs/<service>/` klasörüne taşındı (`test` profili yerel kaldı). Bkz. §4.1.
+- **2026-07-08:** Saga **update akışına** genişletildi ve **CQRS projeksiyonu
+  kaldırıldı**. Fatura hesabı adres değişikliği artık `pendingAddressId` +
+  `...AddressChangeRequested` ile Saga üzerinden otoriter doğrulanır (onayda uygulanır,
+  redde eski adres korunur). account-service'teki müşteri/adres projeksiyonu
+  (read-model) ve `customerEventConsumer` silindi; tüm cross-service doğrulama Saga'dan
+  geçer. Bkz. §4.3.
 - **2026-07-08:** **Saga Pattern (choreography)** eklendi — Fatura Hesabı Oluşturma
   akışı: account-service `PENDING` başlatır, customer-service otoriter doğrular
   (validated/failed), account-service onaylar (`ACTIVE`) veya telafi eder

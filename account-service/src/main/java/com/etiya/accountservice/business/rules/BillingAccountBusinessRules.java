@@ -3,7 +3,6 @@ package com.etiya.accountservice.business.rules;
 import com.etiya.accountservice.business.constants.Messages;
 import com.etiya.accountservice.core.crosscutting.exceptions.BusinessException;
 import com.etiya.accountservice.dataAccess.BillingAccountRepository;
-import com.etiya.accountservice.dataAccess.CustomerProjectionRepository;
 import com.etiya.accountservice.entities.BillingAccount;
 import org.springframework.stereotype.Service;
 
@@ -19,33 +18,15 @@ import org.springframework.stereotype.Service;
 public class BillingAccountBusinessRules {
 
     private final BillingAccountRepository billingAccountRepository;
-    private final CustomerProjectionRepository customerProjectionRepository;
 
-    public BillingAccountBusinessRules(BillingAccountRepository billingAccountRepository,
-                                       CustomerProjectionRepository customerProjectionRepository) {
+    public BillingAccountBusinessRules(BillingAccountRepository billingAccountRepository) {
         this.billingAccountRepository = billingAccountRepository;
-        this.customerProjectionRepository = customerProjectionRepository;
     }
 
     /** Aktif bir fatura hesabı id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfBillingAccountExists(Long id) {
         if (!billingAccountRepository.existsByIdAndIsActiveTrue(id)) {
             throw new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND);
-        }
-    }
-
-    /**
-     * Fatura hesabının bağlanacağı müşteri, Kafka ile beslenen yerel müşteri
-     * projeksiyonunda aktif olarak bulunmalıdır. Böylece var olmayan/pasif bir
-     * müşteriye hesap açılması engellenir (servisler arası tutarlılık).
-     *
-     * <p>Not: Projeksiyon eventual-consistent'tir; müşteri olayı henüz
-     * tüketilmemişse kural hata verebilir (yeniden denenebilir).
-     */
-    public void checkIfCustomerExists(Long customerId) {
-        if (customerId == null
-                || !customerProjectionRepository.existsByCustomerIdAndIsActiveTrue(customerId)) {
-            throw new BusinessException(Messages.CUSTOMER_NOT_FOUND);
         }
     }
 

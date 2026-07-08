@@ -49,9 +49,11 @@ public class BillingAccountSagaConsumerConfig {
         return message -> {
             String payload = message.getPayload();
             BillingAccountSagaRequestedPayload request = deserialize(payload);
-            if (request == null
-                    || !BillingAccountSagaEvents.CREATION_REQUESTED.equals(request.eventType())) {
-                // Sonuç olayı ya da çözümlenemeyen mesaj: bu adım işlemez.
+            String eventType = request != null ? request.eventType() : null;
+            // Yalnızca doğrulama İSTEKLERİ işlenir (oluşturma + adres değişikliği);
+            // kendi ürettiği sonuç olayları ve çözümlenemeyen mesajlar atlanır.
+            if (!BillingAccountSagaEvents.CREATION_REQUESTED.equals(eventType)
+                    && !BillingAccountSagaEvents.ADDRESS_CHANGE_REQUESTED.equals(eventType)) {
                 return;
             }
 
@@ -60,8 +62,8 @@ public class BillingAccountSagaConsumerConfig {
                     + ":" + payload.hashCode();
 
             boolean processed = inboxService.process(
-                    messageId, BillingAccountSagaEvents.CREATION_REQUESTED,
-                    () -> participantService.handleCreationRequested(request));
+                    messageId, eventType,
+                    () -> participantService.handleValidationRequest(request));
 
             if (!processed) {
                 log.debug("Duplicate consume atlandı. messageId={}", messageId);

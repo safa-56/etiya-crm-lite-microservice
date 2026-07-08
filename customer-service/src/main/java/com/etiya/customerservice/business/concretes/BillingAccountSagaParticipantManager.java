@@ -38,7 +38,7 @@ public class BillingAccountSagaParticipantManager implements BillingAccountSagaP
     }
 
     @Override
-    public void handleCreationRequested(BillingAccountSagaRequestedPayload request) {
+    public void handleValidationRequest(BillingAccountSagaRequestedPayload request) {
         if (request == null || request.billingAccountId() == null) {
             log.warn("Saga isteği kimlik içermiyor, atlanıyor: {}", request);
             return;

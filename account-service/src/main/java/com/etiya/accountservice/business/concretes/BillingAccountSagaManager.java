@@ -55,22 +55,31 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
             return;
         }
 
-        // İdempotency: yalnızca PENDING hesap saga sonucuyla ilerletilir.
-        if (account.getAccountStatus() != AccountStatus.PENDING) {
-            log.debug("Hesap PENDING değil (durum={}), saga sonucu atlanıyor. id={}",
-                    account.getAccountStatus(), account.getId());
-            return;
-        }
-
-        if (payload.valid()) {
-            confirm(account, payload);
+        // Sonucu hesabın durumuna göre yönlendir (idempotent):
+        //  - PENDING           -> oluşturma saga'sı (onay/telafi)
+        //  - pendingAddressId  -> adres değişikliği saga'sı (uygula/reddet)
+        if (account.getAccountStatus() == AccountStatus.PENDING) {
+            if (payload.valid()) {
+                confirmCreate(account, payload);
+            } else {
+                cancelCreate(account, payload);
+            }
+        } else if (account.getPendingAddressId() != null) {
+            if (payload.valid()) {
+                applyAddressChange(account, payload);
+            } else {
+                rejectAddressChange(account, payload);
+            }
         } else {
-            compensate(account, payload);
+            log.debug("Hesabın bekleyen saga'sı yok (durum={}), sonuç atlanıyor. id={}",
+                    account.getAccountStatus(), account.getId());
         }
     }
 
+    // ------------------------------------------------------------ oluşturma saga'sı
+
     /** Onay: hesabı ACTIVE yapar, otoriter adres snapshot'ını yazar. */
-    private void confirm(BillingAccount account, BillingAccountSagaValidationPayload payload) {
+    private void confirmCreate(BillingAccount account, BillingAccountSagaValidationPayload payload) {
         account.setAccountStatus(AccountStatus.ACTIVE);
         account.setAddress(formatAddress(payload));
         account.setStatusReason(null);
@@ -81,7 +90,7 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
     }
 
     /** Telafi (compensation): hesabı CANCELLED yapar ve pasifleştirir. */
-    private void compensate(BillingAccount account, BillingAccountSagaValidationPayload payload) {
+    private void cancelCreate(BillingAccount account, BillingAccountSagaValidationPayload payload) {
         account.setAccountStatus(AccountStatus.CANCELLED);
         account.setIsActive(false);
         account.setDeletedDate(LocalDateTime.now());
@@ -90,6 +99,31 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
 
         publish(account, AccountEvents.BILLING_ACCOUNT_CANCELLED);
         log.info("Saga telafi edildi: hesap CANCELLED (neden={}). id={}",
+                payload.reason(), account.getId());
+    }
+
+    // -------------------------------------------------------- adres değişikliği saga'sı
+
+    /** Onay: bekleyen yeni adresi uygular (addressId + adres metni), beklemeyi temizler. */
+    private void applyAddressChange(BillingAccount account, BillingAccountSagaValidationPayload payload) {
+        account.setAddressId(account.getPendingAddressId());
+        account.setAddress(formatAddress(payload));
+        account.setPendingAddressId(null);
+        account.setStatusReason(null);
+        repository.save(account);
+
+        publish(account, AccountEvents.BILLING_ACCOUNT_UPDATED);
+        log.info("Adres değişikliği onaylandı ve uygulandı. id={}, addressId={}",
+                account.getId(), account.getAddressId());
+    }
+
+    /** Telafi: adres değişikliğini reddeder; eski adres korunur, bekleme temizlenir. */
+    private void rejectAddressChange(BillingAccount account, BillingAccountSagaValidationPayload payload) {
+        account.setPendingAddressId(null);
+        account.setStatusReason(payload.reason());
+        repository.save(account);
+
+        log.info("Adres değişikliği reddedildi (neden={}), eski adres korundu. id={}",
                 payload.reason(), account.getId());
     }
 
