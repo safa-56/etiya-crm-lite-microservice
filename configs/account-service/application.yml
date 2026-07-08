@@ -32,8 +32,9 @@ spring:
       cache-null-values: false
 
   # --- Kafka (Spring Cloud Stream + Kafka binder) ---
-  # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici (product
-  # olayları) binding'i tanımlıdır. Broker adresi ortama göre override edilir.
+  # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici binding'leri
+  # tanımlıdır. Broker adresi ortama göre override edilir.
+  cloud:
     # Birden fazla fonksiyonel binding olduğunda Spring Cloud Stream'in hepsini
     # bind etmesi için tanımlar açıkça listelenmelidir (";" ile ayrılır).
     function:

@@ -32,8 +32,9 @@ spring:
       cache-null-values: false
 
   # --- Kafka (Spring Cloud Stream + Kafka binder) ---
-  # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici (inbound)
-  # binding'i tanımlıdır. Broker adresi local Kafka container'ıdır (ortama göre override).
+  # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici binding'leri
+  # tanımlıdır. Broker adresi local Kafka container'ıdır (ortama göre override).
+  cloud:
     # Birden fazla fonksiyonel binding olduğundan tanımlar açıkça listelenir.
     function:
       definition: inboundEventConsumer;billingAccountSagaConsumer
