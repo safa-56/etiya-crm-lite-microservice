@@ -51,8 +51,12 @@ public class BillingAccount extends BaseEntity {
     @Column(name = "address_id")
     private Long addressId;
 
-    /** Seçilen adresin okunur metin gösterimi (projeksiyondan çözülen snapshot). */
-    @Column(name = "address", nullable = false, length = 500)
+    /**
+     * Seçilen adresin okunur metin gösterimi (snapshot). Saga PENDING aşamasında
+     * henüz doğrulanmadığından {@code null} olabilir; customer-service doğrulaması
+     * (CustomerValidated) geldiğinde otoriter değerle doldurulur.
+     */
+    @Column(name = "address", length = 500)
     private String address;
 
     /** Alfanümerik, en fazla 30 karakter. */
@@ -74,4 +78,11 @@ public class BillingAccount extends BaseEntity {
     /** Hesaba bağlı aktif ürün sayısı (ürün olaylarından türetilir). */
     @Column(name = "active_product_count", nullable = false)
     private Integer activeProductCount = 0;
+
+    /**
+     * Saga sonucu açıklaması (gözlemlenebilirlik). Doğrulama başarısız olup hesap
+     * CANCELLED yapıldığında iptal nedenini tutar; başarılı akışta {@code null}.
+     */
+    @Column(name = "status_reason", length = 500)
+    private String statusReason;
 }

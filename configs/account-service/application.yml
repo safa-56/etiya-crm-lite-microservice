@@ -37,7 +37,7 @@ spring:
     # Birden fazla fonksiyonel binding olduğunda Spring Cloud Stream'in hepsini
     # bind etmesi için tanımlar açıkça listelenmelidir (";" ile ayrılır).
     function:
-      definition: productEventConsumer;customerEventConsumer
+      definition: productEventConsumer;customerEventConsumer;billingAccountSagaConsumer
     stream:
       kafka:
         binder:
@@ -51,6 +51,11 @@ spring:
         # customer-service'in Outbox+Debezium ile yayınladığı müşteri olayları.
         customerEventConsumer-in-0:
           destination: ${APP_CUSTOMER_TOPIC:crm.Customer.events}
+          group: account-service
+        # BillingAccountSagaConsumerConfig#billingAccountSagaConsumer -> "-in-0"
+        # Fatura hesabı oluşturma Saga'sının doğrulama SONUÇ olayları.
+        billingAccountSagaConsumer-in-0:
+          destination: ${APP_SAGA_TOPIC:crm.BillingAccountSaga.events}
           group: account-service
 
 # Uygulamaya özel ayarlar

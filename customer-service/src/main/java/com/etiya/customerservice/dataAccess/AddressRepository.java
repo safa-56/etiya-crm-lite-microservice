@@ -29,6 +29,12 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
      */
     List<Address> findByCustomer_IdAndIsActiveTrue(Long customerId);
 
+    /**
+     * Verilen adresin, verilen müşteriye ait ve aktif olduğunu doğrular (otoriter).
+     * Fatura hesabı Saga'sında adres doğrulaması için kullanılır.
+     */
+    Optional<Address> findByIdAndCustomer_IdAndIsActiveTrue(Long id, Long customerId);
+
     /** Aktif bir adresin id ile var olup olmadığını kontrol eder. */
     boolean existsByIdAndIsActiveTrue(Long id);
 

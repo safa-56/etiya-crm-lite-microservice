@@ -15,4 +15,10 @@ public final class AccountEvents {
     public static final String BILLING_ACCOUNT_CREATED = "BillingAccountCreated";
     public static final String BILLING_ACCOUNT_UPDATED = "BillingAccountUpdated";
     public static final String BILLING_ACCOUNT_DELETED = "BillingAccountDeleted";
+
+    /** Saga onayı: hesap doğrulandı ve ACTIVE oldu. */
+    public static final String BILLING_ACCOUNT_ACTIVATED = "BillingAccountActivated";
+
+    /** Saga telafisi: doğrulama başarısız, hesap CANCELLED oldu. */
+    public static final String BILLING_ACCOUNT_CANCELLED = "BillingAccountCancelled";
 }

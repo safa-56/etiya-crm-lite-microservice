@@ -38,4 +38,14 @@ public final class Messages {
 
     /** Doğum tarihi gelecekte olamaz. */
     public static final String BIRTH_DATE_CANNOT_BE_IN_FUTURE = "Doğum tarihi gelecekte olamaz.";
+
+    // --- Saga (fatura hesabı oluşturma) doğrulama nedenleri ---
+
+    /** Saga: fatura hesabının bağlanmak istendiği müşteri aktif değil/yok. */
+    public static final String SAGA_CUSTOMER_NOT_FOUND =
+            "Customer not found or inactive.";
+
+    /** Saga: seçilen adres müşteriye ait değil veya aktif değil. */
+    public static final String SAGA_ADDRESS_NOT_FOUND =
+            "Address does not belong to the customer or is inactive.";
 }

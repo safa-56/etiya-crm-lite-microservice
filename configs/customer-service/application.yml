@@ -34,7 +34,9 @@ spring:
   # --- Kafka (Spring Cloud Stream + Kafka binder) ---
   # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici (inbound)
   # binding'i tanımlıdır. Broker adresi local Kafka container'ıdır (ortama göre override).
-  cloud:
+    # Birden fazla fonksiyonel binding olduğundan tanımlar açıkça listelenir.
+    function:
+      definition: inboundEventConsumer;billingAccountSagaConsumer
     stream:
       kafka:
         binder:
@@ -43,6 +45,11 @@ spring:
         # InboundEventConsumerConfig#inboundEventConsumer -> "inboundEventConsumer-in-0"
         inboundEventConsumer-in-0:
           destination: ${APP_INBOUND_TOPIC:crm.inbound.events}
+          group: customer-service
+        # BillingAccountSagaConsumerConfig#billingAccountSagaConsumer -> "-in-0"
+        # Fatura hesabı oluşturma Saga'sının doğrulama İSTEK olayları.
+        billingAccountSagaConsumer-in-0:
+          destination: ${APP_SAGA_TOPIC:crm.BillingAccountSaga.events}
           group: customer-service
 
 # Uygulamaya özel ayarlar

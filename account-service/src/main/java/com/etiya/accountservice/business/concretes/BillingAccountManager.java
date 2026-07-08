@@ -3,8 +3,10 @@ package com.etiya.accountservice.business.concretes;
 import com.etiya.accountservice.business.abstracts.BillingAccountService;
 import com.etiya.accountservice.business.abstracts.OutboxService;
 import com.etiya.accountservice.business.constants.AccountEvents;
+import com.etiya.accountservice.business.constants.BillingAccountSagaEvents;
 import com.etiya.accountservice.business.constants.Messages;
 import com.etiya.accountservice.business.dtos.events.BillingAccountEventPayload;
+import com.etiya.accountservice.business.dtos.events.BillingAccountSagaRequestedPayload;
 import com.etiya.accountservice.business.dtos.requests.CreateBillingAccountRequest;
 import com.etiya.accountservice.business.dtos.requests.UpdateBillingAccountRequest;
 import com.etiya.accountservice.business.dtos.responses.BillingAccountResponse;
@@ -66,28 +68,30 @@ public class BillingAccountManager implements BillingAccountService {
     @Transactional
     @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
     public BillingAccountResponse add(CreateBillingAccountRequest request) {
-        // --- iş kuralları (servisler arası tutarlılık: Kafka projeksiyonu) ---
-        rules.checkIfCustomerExists(request.customerId());
-        // Seçilen adres bu müşteriye ait olmalı; adres metni projeksiyondan çözülür.
-        CustomerAddressProjection address = resolveCustomerAddress(
-                request.customerId(), request.addressId());
+        // --- hesap-lokal kural (senkron) ---
         rules.checkIfAccountNumberAlreadyExists(request.accountNumber());
 
         BillingAccount account = mapper.toEntity(request);
 
-        // --- adres: referans (addressId) mapper'dan geldi; metin projeksiyondan ---
-        account.setAddress(formatAddress(address));
-
-        // --- sistem tarafından atanan alanlar (kabul kriteri) ---
+        // --- Saga (choreography) adım 1: hesabı PENDING olarak aç ---
+        // Müşteri/adres doğrulaması otoriter olarak customer-service'e bırakılır;
+        // hesap, doğrulama sonucu gelene kadar PENDING kalır (henüz kullanılamaz).
         account.setAccountType(AccountType.BILLING_ACCOUNT);
-        account.setAccountStatus(AccountStatus.ACTIVE);
+        account.setAccountStatus(AccountStatus.PENDING);
         account.setActiveProductCount(0);
         account.setIsActive(true);
+        account.setAddress(null); // otoriter adres snapshot'ı doğrulamada gelecek
 
         BillingAccount saved = repository.save(account);
 
-        // --- outbox olayı (aynı transaction) ---
-        publishEvent(saved, AccountEvents.BILLING_ACCOUNT_CREATED);
+        // --- Saga adım 1 olayı: doğrulama isteği (aynı transaction — outbox) ---
+        outboxService.publish(
+                BillingAccountSagaEvents.AGGREGATE_TYPE,
+                String.valueOf(saved.getId()),
+                BillingAccountSagaEvents.CREATION_REQUESTED,
+                new BillingAccountSagaRequestedPayload(
+                        BillingAccountSagaEvents.CREATION_REQUESTED,
+                        saved.getId(), saved.getCustomerId(), saved.getAddressId()));
 
         return mapper.toResponse(saved);
     }
