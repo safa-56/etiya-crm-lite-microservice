@@ -53,10 +53,11 @@ public class BillingAccount extends BaseEntity {
 
     /**
      * Seçilen adresin okunur metin gösterimi (snapshot). Saga PENDING aşamasında
-     * henüz doğrulanmadığından {@code null} olabilir; customer-service doğrulaması
-     * (CustomerValidated) geldiğinde otoriter değerle doldurulur.
+     * henüz otoriter olarak doğrulanmadığından geçici (optimistik projeksiyon ya da
+     * boş) bir değer taşır; customer-service doğrulaması (CustomerValidated) geldiğinde
+     * otoriter değerle üzerine yazılır. Kolon NOT NULL kalır (asla {@code null} yazılmaz).
      */
-    @Column(name = "address", length = 500)
+    @Column(name = "address", nullable = false, length = 500)
     private String address;
 
     /** Alfanümerik, en fazla 30 karakter. */

@@ -80,7 +80,10 @@ public class BillingAccountManager implements BillingAccountService {
         account.setAccountStatus(AccountStatus.PENDING);
         account.setActiveProductCount(0);
         account.setIsActive(true);
-        account.setAddress(null); // otoriter adres snapshot'ı doğrulamada gelecek
+        // Geçici (optimistik) adres metni: yerel projeksiyonda varsa okunur değer,
+        // yoksa boş. Otoriter değer saga doğrulamasında (CustomerValidated) yazılır.
+        // Kolon NOT NULL olduğundan asla null bırakılmaz.
+        account.setAddress(optimisticAddress(request.customerId(), request.addressId()));
 
         BillingAccount saved = repository.save(account);
 
@@ -180,6 +183,17 @@ public class BillingAccountManager implements BillingAccountService {
     private CustomerAddressProjection resolveCustomerAddress(Long customerId, Long addressId) {
         return addressProjectionRepository.findByAddressIdAndCustomerId(addressId, customerId)
                 .orElseThrow(() -> new BusinessException(Messages.ADDRESS_NOT_FOUND_FOR_CUSTOMER));
+    }
+
+    /**
+     * PENDING aşamasında adres için geçici (optimistik) metin: yerel projeksiyonda
+     * adres varsa okunur snapshot'ı, yoksa boş string döner (fırlatmaz). Otoriter
+     * değer saga doğrulamasında yazılacağından bu yalnızca geçici gösterimdir.
+     */
+    private String optimisticAddress(Long customerId, Long addressId) {
+        return addressProjectionRepository.findByAddressIdAndCustomerId(addressId, customerId)
+                .map(this::formatAddress)
+                .orElse("");
     }
 
     /** Adres projeksiyonunu hesapta saklanacak okunur metne (snapshot) dönüştürür. */
