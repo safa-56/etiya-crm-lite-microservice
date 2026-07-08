@@ -36,6 +36,31 @@ public class IndividualCustomerBusinessRules {
         }
     }
 
+    /**
+     * Yeni müşteri oluşturmada TC kimlik numarası (Nationality ID) tekilliğini
+     * doğrular: aynı numaraya sahip aktif bir müşteri varsa iş hatası fırlatılır
+     * (FR-003 ACC-07/08).
+     */
+    public void checkIfNationalityIdAlreadyExists(Long nationalityId) {
+        if (nationalityId != null
+                && individualCustomerRepository.existsByNationalityIdAndIsActiveTrue(nationalityId)) {
+            throw new BusinessException(Messages.NATIONALITY_ID_ALREADY_EXISTS);
+        }
+    }
+
+    /**
+     * Güncellemede TC kimlik numarasının, güncellenen müşteri dışında başka bir
+     * aktif müşteriye ait olmadığını doğrular. Müşterinin kendi mevcut numarası
+     * hatayı tetiklemez (FR-004 ACC-07/08).
+     */
+    public void checkIfNationalityIdBelongsToAnotherCustomer(Long nationalityId, Long customerId) {
+        if (nationalityId != null && customerId != null
+                && individualCustomerRepository
+                        .existsByNationalityIdAndIdNotAndIsActiveTrue(nationalityId, customerId)) {
+            throw new BusinessException(Messages.NATIONALITY_ID_ALREADY_EXISTS);
+        }
+    }
+
     /** Verilen e-postalardan herhangi biri aktif bir kayıtta zaten kullanılıyorsa hata verir. */
     public void checkIfEmailsAlreadyExist(List<String> emails) {
         if (emails == null) {

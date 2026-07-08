@@ -23,9 +23,8 @@ public record UpdateBillingAccountRequest(
         @Size(max = 500, message = "Hesap açıklaması en fazla 500 karakter olabilir.")
         String accountDescription,
 
-        @NotBlank(message = "Adres (address) zorunludur.")
-        @Size(max = 500, message = "Adres en fazla 500 karakter olabilir.")
-        String address,
+        @NotNull(message = "Adres (addressId) zorunludur.")
+        Long addressId,
 
         @Size(max = 30, message = "Hesap numarası en fazla 30 karakter olabilir.")
         @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "Hesap numarası yalnızca alfanümerik karakter içerebilir.")

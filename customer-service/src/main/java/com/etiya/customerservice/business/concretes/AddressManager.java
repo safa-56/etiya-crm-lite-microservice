@@ -1,7 +1,10 @@
 package com.etiya.customerservice.business.concretes;
 
 import com.etiya.customerservice.business.abstracts.AddressService;
+import com.etiya.customerservice.business.abstracts.OutboxService;
+import com.etiya.customerservice.business.constants.CustomerEvents;
 import com.etiya.customerservice.business.constants.Messages;
+import com.etiya.customerservice.business.dtos.events.CustomerEventPayload;
 import com.etiya.customerservice.business.dtos.requests.CreateAddressRequest;
 import com.etiya.customerservice.business.dtos.requests.UpdateAddressRequest;
 import com.etiya.customerservice.business.dtos.responses.AddressResponse;
@@ -36,15 +39,18 @@ public class AddressManager implements AddressService {
     private final CustomerRepository customerRepository;
     private final AddressMapper mapper;
     private final AddressBusinessRules rules;
+    private final OutboxService outboxService;
 
     public AddressManager(AddressRepository repository,
                           CustomerRepository customerRepository,
                           AddressMapper mapper,
-                          AddressBusinessRules rules) {
+                          AddressBusinessRules rules,
+                          OutboxService outboxService) {
         this.repository = repository;
         this.customerRepository = customerRepository;
         this.mapper = mapper;
         this.rules = rules;
+        this.outboxService = outboxService;
     }
 
     @Override
@@ -60,7 +66,18 @@ public class AddressManager implements AddressService {
         Address address = mapper.toEntity(request);
         address.setCustomer(customer);
 
+        // Bu adres birincil olarak ekleniyorsa, müşterinin diğer birincil
+        // adreslerini düşür (en fazla bir birincil adres — FR-006 ACC-07).
+        if (Boolean.TRUE.equals(address.getIsPrimary())) {
+            rules.demoteExistingPrimaryAddresses(customer.getId(), null);
+        }
+
         Address saved = repository.save(address);
+
+        // Adres kümesi değişti: account-service projeksiyonunu tazelemek için
+        // müşterinin güncel adresleriyle bir CustomerUpdated olayı yayınla.
+        publishCustomerAddressSnapshot(customer.getId());
+
         return mapper.toResponse(saved);
     }
 
@@ -90,22 +107,32 @@ public class AddressManager implements AddressService {
         address.setStreet(request.street());
         address.setHouseNumber(request.houseNumber());
         address.setAddressDescription(request.addressDescription());
-        if (request.isPrimary() != null) {
+        if (Boolean.TRUE.equals(request.isPrimary())) {
+            // Bu adres birincil yapılıyorsa, aynı müşterinin daha önce birincil
+            // işaretlenmiş adresinin bayrağını kaldır (FR-006 ACC-07).
+            rules.demoteExistingPrimaryAddresses(address.getCustomer().getId(), address.getId());
+            address.setIsPrimary(true);
+        } else if (request.isPrimary() != null) {
             address.setIsPrimary(request.isPrimary());
         }
 
-        return mapper.toResponse(repository.save(address));
+        Address saved = repository.save(address);
+        publishCustomerAddressSnapshot(saved.getCustomer().getId());
+        return mapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public void delete(Long id) {
         Address address = findActiveAddress(id);
+        Long customerId = address.getCustomer().getId();
 
         // Soft-delete: fiziksel silme yok; pasifleştir ve silinme zamanını işaretle.
         address.setIsActive(false);
         address.setDeletedDate(LocalDateTime.now());
         repository.save(address);
+
+        publishCustomerAddressSnapshot(customerId);
     }
 
     // ------------------------------------------------------------------ yardımcılar
@@ -113,5 +140,29 @@ public class AddressManager implements AddressService {
     private Address findActiveAddress(Long id) {
         return repository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new BusinessException(Messages.ADDRESS_NOT_FOUND));
+    }
+
+    /**
+     * Müşterinin güncel (aktif) adres kümesini bir {@code CustomerUpdated} olayı
+     * olarak outbox'a yazar. Böylece standalone adres ekleme/güncelleme/silme
+     * işlemleri de account-service'in yerel müşteri-adres projeksiyonuna yansır.
+     *
+     * <p>Ad/soyad bu bağlamda bilinmediğinden {@code null} gönderilir; tüketici
+     * bunları yalnızca dolu geldiğinde günceller, aksi halde mevcut değeri korur.
+     */
+    private void publishCustomerAddressSnapshot(Long customerId) {
+        List<CustomerEventPayload.AddressPayload> addresses =
+                repository.findByCustomer_IdAndIsActiveTrue(customerId).stream()
+                        .map(address -> new CustomerEventPayload.AddressPayload(
+                                address.getId(), address.getCity(), address.getStreet(),
+                                address.getHouseNumber(), address.getAddressDescription(),
+                                address.getIsPrimary()))
+                        .toList();
+
+        CustomerEventPayload payload = new CustomerEventPayload(
+                customerId, null, null, CustomerEvents.CUSTOMER_UPDATED, addresses, LocalDateTime.now());
+        outboxService.publish(
+                CustomerEvents.AGGREGATE_TYPE, String.valueOf(customerId),
+                CustomerEvents.CUSTOMER_UPDATED, payload);
     }
 }

@@ -19,6 +19,19 @@ public final class Messages {
     public static final String ACCOUNT_NUMBER_ALREADY_EXISTS = "Bu hesap numarası zaten kayıtlı.";
 
     /**
+     * Fatura hesabının bağlanmak istendiği müşteri, yerel projeksiyonda
+     * (Kafka ile beslenen read-model) aktif olarak bulunamadı.
+     */
+    public static final String CUSTOMER_NOT_FOUND = "Müşteri bulunamadı.";
+
+    /**
+     * Seçilen adres, verilen müşteriye ait değil veya yerel projeksiyonda yok
+     * (müşteri/adres olayı henüz tüketilmemiş olabilir).
+     */
+    public static final String ADDRESS_NOT_FOUND_FOR_CUSTOMER =
+            "Adres bu müşteriye ait değil veya bulunamadı.";
+
+    /**
      * Aktif ürünü olan hesap silinemez.
      *
      * <p>Kabul kriteri gereği bu mesaj birebir bu metinle döner (değiştirilmemeli).

@@ -34,7 +34,10 @@ spring:
   # --- Kafka (Spring Cloud Stream + Kafka binder) ---
   # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici (product
   # olayları) binding'i tanımlıdır. Broker adresi ortama göre override edilir.
-  cloud:
+    # Birden fazla fonksiyonel binding olduğunda Spring Cloud Stream'in hepsini
+    # bind etmesi için tanımlar açıkça listelenmelidir (";" ile ayrılır).
+    function:
+      definition: productEventConsumer;customerEventConsumer
     stream:
       kafka:
         binder:
@@ -43,6 +46,11 @@ spring:
         # ProductEventConsumerConfig#productEventConsumer -> "productEventConsumer-in-0"
         productEventConsumer-in-0:
           destination: ${APP_PRODUCT_TOPIC:crm.Product.events}
+          group: account-service
+        # CustomerEventConsumerConfig#customerEventConsumer -> "customerEventConsumer-in-0"
+        # customer-service'in Outbox+Debezium ile yayınladığı müşteri olayları.
+        customerEventConsumer-in-0:
+          destination: ${APP_CUSTOMER_TOPIC:crm.Customer.events}
           group: account-service
 
 # Uygulamaya özel ayarlar

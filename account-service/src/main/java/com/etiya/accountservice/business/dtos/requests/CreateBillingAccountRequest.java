@@ -10,8 +10,13 @@ import jakarta.validation.constraints.Size;
  *
  * <p>Create Billing Account ekranının zorunlu/opsiyonel alanlarını taşır:
  * {@code accountName} (zorunlu), {@code accountDescription} (opsiyonel),
- * {@code address} (zorunlu). Hesap bir müşteriye bağlı olduğundan
+ * {@code addressId} (zorunlu). Hesap bir müşteriye bağlı olduğundan
  * {@code customerId} de zorunludur.
+ *
+ * <p>{@code addressId}, müşterinin customer-service'teki adreslerinden birinin
+ * kimliğidir (FR-007 adres seçme davranışı). Bu adresin gerçekten o müşteriye ait
+ * olduğu, account-service'in Kafka ile beslenen yerel müşteri projeksiyonundan
+ * doğrulanır ve adres metni oradan çözülür.
  *
  * <p>{@code accountNumber} (alfanümerik, ≤30) ve {@code orderNumber}
  * (alfanümerik, ≤20) opsiyoneldir; verilirse kabul kriterlerindeki kısıtlara
@@ -30,9 +35,8 @@ public record CreateBillingAccountRequest(
         @Size(max = 500, message = "Hesap açıklaması en fazla 500 karakter olabilir.")
         String accountDescription,
 
-        @NotBlank(message = "Adres (address) zorunludur.")
-        @Size(max = 500, message = "Adres en fazla 500 karakter olabilir.")
-        String address,
+        @NotNull(message = "Adres (addressId) zorunludur.")
+        Long addressId,
 
         @Size(max = 30, message = "Hesap numarası en fazla 30 karakter olabilir.")
         @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "Hesap numarası yalnızca alfanümerik karakter içerebilir.")

@@ -65,7 +65,7 @@ public class BillingAccountsController {
                                          @Valid @RequestBody UpdateBillingAccountRequest request) {
         // Yol değişkeni (path) ile gövdedeki id'yi tutarlı hale getir.
         UpdateBillingAccountRequest normalized = new UpdateBillingAccountRequest(
-                id, request.accountName(), request.accountDescription(), request.address(),
+                id, request.accountName(), request.accountDescription(), request.addressId(),
                 request.accountNumber(), request.orderNumber());
         return billingAccountService.update(normalized);
     }

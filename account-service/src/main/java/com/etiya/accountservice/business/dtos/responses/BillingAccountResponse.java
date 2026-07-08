@@ -20,6 +20,7 @@ public record BillingAccountResponse(
         String accountName,
         AccountType accountType,
         String accountDescription,
+        Long addressId,
         String address,
         String orderNumber,
         Boolean isActive,

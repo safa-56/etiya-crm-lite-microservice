@@ -60,6 +60,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     @CacheEvict(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST, allEntries = true)
     public IndividualCustomerResponse add(CreateIndividualCustomerRequest request) {
         // --- iş kuralları ---
+        rules.checkIfNationalityIdAlreadyExists(request.nationalityId());
         rules.checkIfEmailsAlreadyExist(extractEmails(request.contactInfos()));
 
         // --- müşteriyi tek başına persist et (cascade yok) ---
@@ -101,6 +102,8 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     )
     public IndividualCustomerResponse update(UpdateIndividualCustomerRequest request) {
         rules.checkIfIndividualCustomerExists(request.id());
+        // Nationality ID başka bir müşteriye ait olmamalı (kendisi hariç).
+        rules.checkIfNationalityIdBelongsToAnotherCustomer(request.nationalityId(), request.id());
 
         IndividualCustomer customer = repository.findByIdAndIsActiveTrue(request.id())
                 .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
@@ -224,8 +227,24 @@ public class IndividualCustomerManager implements IndividualCustomerService {
 
     private void publishEvent(IndividualCustomer customer, String eventType) {
         CustomerEventPayload payload = new CustomerEventPayload(
-                customer.getId(), customer.getFirstName(), customer.getLastName(), LocalDateTime.now());
+                customer.getId(), customer.getFirstName(), customer.getLastName(),
+                eventType, toAddressPayloads(customer), LocalDateTime.now());
         outboxService.publish(
                 CustomerEvents.AGGREGATE_TYPE, String.valueOf(customer.getId()), eventType, payload);
+    }
+
+    /**
+     * Müşterinin o an aktif olan adreslerini olay gövdesine dönüştürür. Silmede
+     * adresler pasifleştirildiğinden (koleksiyon boşaltılır) liste boş döner;
+     * account-service {@code CustomerDeleted} olayında zaten adresleri temizler.
+     */
+    private List<CustomerEventPayload.AddressPayload> toAddressPayloads(IndividualCustomer customer) {
+        return customer.getAddresses().stream()
+                .filter(address -> Boolean.TRUE.equals(address.getIsActive()))
+                .map(address -> new CustomerEventPayload.AddressPayload(
+                        address.getId(), address.getCity(), address.getStreet(),
+                        address.getHouseNumber(), address.getAddressDescription(),
+                        address.getIsPrimary()))
+                .toList();
     }
 }

@@ -22,6 +22,9 @@ public interface BillingAccountMapper {
     @Mapping(target = "accountType", ignore = true)
     @Mapping(target = "accountStatus", ignore = true)
     @Mapping(target = "activeProductCount", ignore = true)
+    // Adres metni (snapshot) request'te yok; manager, addressId'yi müşteri
+    // projeksiyonundan doğrulayıp adres metnini oradan çözerek set eder.
+    @Mapping(target = "address", ignore = true)
     BillingAccount toEntity(CreateBillingAccountRequest request);
 
     // --- entity -> response ---

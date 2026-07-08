@@ -43,6 +43,15 @@ public class BillingAccount extends BaseEntity {
     @Column(name = "account_description", length = 500)
     private String accountDescription;
 
+    /**
+     * Hesabın adresi, müşterinin adreslerinden biriyle ({@link #addressId})
+     * ilişkilidir; seçilen adres yerel müşteri projeksiyonundan doğrulanır.
+     * customer-service adres id'sine referans (yerel FK değil).
+     */
+    @Column(name = "address_id")
+    private Long addressId;
+
+    /** Seçilen adresin okunur metin gösterimi (projeksiyondan çözülen snapshot). */
     @Column(name = "address", nullable = false, length = 500)
     private String address;
 

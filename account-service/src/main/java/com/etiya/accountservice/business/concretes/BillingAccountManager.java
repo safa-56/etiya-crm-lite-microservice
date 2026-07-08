@@ -14,9 +14,11 @@ import com.etiya.accountservice.business.rules.BillingAccountBusinessRules;
 import com.etiya.accountservice.core.constants.CacheNames;
 import com.etiya.accountservice.core.crosscutting.exceptions.BusinessException;
 import com.etiya.accountservice.dataAccess.BillingAccountRepository;
+import com.etiya.accountservice.dataAccess.CustomerAddressProjectionRepository;
 import com.etiya.accountservice.entities.BillingAccount;
 import com.etiya.accountservice.entities.enums.AccountStatus;
 import com.etiya.accountservice.entities.enums.AccountType;
+import com.etiya.accountservice.entities.projection.CustomerAddressProjection;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -46,25 +48,35 @@ public class BillingAccountManager implements BillingAccountService {
     private final BillingAccountMapper mapper;
     private final BillingAccountBusinessRules rules;
     private final OutboxService outboxService;
+    private final CustomerAddressProjectionRepository addressProjectionRepository;
 
     public BillingAccountManager(BillingAccountRepository repository,
                                  BillingAccountMapper mapper,
                                  BillingAccountBusinessRules rules,
-                                 OutboxService outboxService) {
+                                 OutboxService outboxService,
+                                 CustomerAddressProjectionRepository addressProjectionRepository) {
         this.repository = repository;
         this.mapper = mapper;
         this.rules = rules;
         this.outboxService = outboxService;
+        this.addressProjectionRepository = addressProjectionRepository;
     }
 
     @Override
     @Transactional
     @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
     public BillingAccountResponse add(CreateBillingAccountRequest request) {
-        // --- iş kuralları ---
+        // --- iş kuralları (servisler arası tutarlılık: Kafka projeksiyonu) ---
+        rules.checkIfCustomerExists(request.customerId());
+        // Seçilen adres bu müşteriye ait olmalı; adres metni projeksiyondan çözülür.
+        CustomerAddressProjection address = resolveCustomerAddress(
+                request.customerId(), request.addressId());
         rules.checkIfAccountNumberAlreadyExists(request.accountNumber());
 
         BillingAccount account = mapper.toEntity(request);
+
+        // --- adres: referans (addressId) mapper'dan geldi; metin projeksiyondan ---
+        account.setAddress(formatAddress(address));
 
         // --- sistem tarafından atanan alanlar (kabul kriteri) ---
         account.setAccountType(AccountType.BILLING_ACCOUNT);
@@ -108,6 +120,10 @@ public class BillingAccountManager implements BillingAccountService {
         BillingAccount account = repository.findByIdAndIsActiveTrue(request.id())
                 .orElseThrow(() -> new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND));
 
+        // Seçilen (yeni) adres, hesabın müşterisine ait olmalı; metni projeksiyondan çöz.
+        CustomerAddressProjection address = resolveCustomerAddress(
+                account.getCustomerId(), request.addressId());
+
         // Hesap numarası değiştiyse tekilliği doğrula.
         if (request.accountNumber() != null
                 && !request.accountNumber().equals(account.getAccountNumber())) {
@@ -116,7 +132,8 @@ public class BillingAccountManager implements BillingAccountService {
 
         account.setAccountName(request.accountName());
         account.setAccountDescription(request.accountDescription());
-        account.setAddress(request.address());
+        account.setAddressId(request.addressId());
+        account.setAddress(formatAddress(address));
         account.setAccountNumber(request.accountNumber());
         account.setOrderNumber(request.orderNumber());
 
@@ -150,6 +167,22 @@ public class BillingAccountManager implements BillingAccountService {
     }
 
     // ------------------------------------------------------------------ yardımcılar
+
+    /**
+     * Seçilen adresin ({@code addressId}) verilen müşteriye ait olduğunu yerel
+     * projeksiyondan (Kafka read-model) doğrular ve projeksiyon kaydını döner.
+     * Adres müşteriye ait değilse/bulunamazsa iş hatası fırlatılır.
+     */
+    private CustomerAddressProjection resolveCustomerAddress(Long customerId, Long addressId) {
+        return addressProjectionRepository.findByAddressIdAndCustomerId(addressId, customerId)
+                .orElseThrow(() -> new BusinessException(Messages.ADDRESS_NOT_FOUND_FOR_CUSTOMER));
+    }
+
+    /** Adres projeksiyonunu hesapta saklanacak okunur metne (snapshot) dönüştürür. */
+    private String formatAddress(CustomerAddressProjection address) {
+        return address.getCity() + ", " + address.getStreet() + " "
+                + address.getHouseNumber() + " - " + address.getAddressDescription();
+    }
 
     private void publishEvent(BillingAccount account, String eventType) {
         BillingAccountEventPayload payload = new BillingAccountEventPayload(
