@@ -20,5 +20,6 @@ public interface CustomerContactInfoMapper {
     @Mapping(target = "customer", ignore = true)
     CustomerContactInfo toEntity(CreateContactInfoRequest request);
 
+    @Mapping(target = "customerId", source = "customer.id")
     ContactInfoResponse toResponse(CustomerContactInfo entity);
 }

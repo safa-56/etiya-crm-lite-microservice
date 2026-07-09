@@ -17,7 +17,7 @@ public interface IndividualCustomerService {
 
     List<IndividualCustomerResponse> getAll();
 
-    IndividualCustomerResponse update(UpdateIndividualCustomerRequest request);
+    IndividualCustomerResponse update(Long id,UpdateIndividualCustomerRequest request);
 
     void delete(Long id);
 }

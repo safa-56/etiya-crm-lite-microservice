@@ -17,15 +17,10 @@ import org.springframework.messaging.Message;
 import java.util.function.Consumer;
 
 /**
- * Saga sonuç tüketicisi (account-service adımı) — {@code crm.BillingAccountSaga.events}.
- *
- * <p>Bu topic'te hem account-service'in gönderdiği {@code CREATION_REQUESTED} hem de
- * customer-service'in ürettiği {@code CUSTOMER_VALIDATED}/{@code CUSTOMER_VALIDATION_FAILED}
- * olayları akar. Bu tüketici yalnızca doğrulama <b>sonuçlarını</b> işler; kendi
- * gönderdiği isteği (eventType header'ı ile) atlar.
- *
- * <p><b>Inbox Pattern</b> ile idempotent; yalnızca {@code app.kafka.enabled=true}
- * iken devreye girer. Binding adı {@code billingAccountSagaConsumer-in-0}.
+ * crm.BillingAccountSaga.events topic'ini dinleyen kafka tüketici binding'dir.
+ * Bu topic'te hem account-service'in gönderdiği {CREATION_REQUESTED} hem de
+ * customer-service'in ürettiği {@code CUSTOMER_VALIDATED}/{USTOMER_VALIDATION_FAILED}
+ * olayları akar. Bu tüketici yalnızca sonuçları işler ve işlemeyi BillingAccountSagaManager'a devreder.
  */
 @Configuration
 @ConditionalOnProperty(name = "app.kafka.enabled", havingValue = "true")

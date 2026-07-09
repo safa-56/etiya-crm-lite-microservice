@@ -14,11 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * {@link BillingAccountSagaParticipantService} uygulaması — Saga'nın doğrulayıcı adımı.
- *
- * <p>Çağıran (Inbox) transaction'ı içinde çalışır; doğrulama + sonuç olayı (outbox)
- * + inbox kaydı atomik olur. Doğrulama otoriterdir: müşteri ve adres, customer-service'in
- * kendi veritabanından kontrol edilir (projeksiyon değil).
+ * Saga'nın doğrulayıcı adımıdır.
+ * Account-service'in gönderdiği doğrulama isteğini(BillingAccountManager içindeki add fonksiyonunda gönderilen istek) alır,
+ * müşteri ve adreri kendi otoriter veritabanından kontrol eder. Sonucu event olarak geri yayınlar
  */
 @Service
 public class BillingAccountSagaParticipantManager implements BillingAccountSagaParticipantService {

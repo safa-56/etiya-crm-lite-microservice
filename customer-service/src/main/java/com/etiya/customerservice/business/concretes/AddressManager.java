@@ -97,10 +97,10 @@ public class AddressManager implements AddressService {
 
     @Override
     @Transactional
-    public AddressResponse update(UpdateAddressRequest request) {
-        rules.checkIfAddressExists(request.id());
+    public AddressResponse update(Long id, UpdateAddressRequest request) {
+        rules.checkIfAddressExists(id);
 
-        Address address = findActiveAddress(request.id());
+        Address address = findActiveAddress(id);
 
         // Skaler alanları güncelle (müşteri ilişkisi değiştirilmez).
         address.setCity(request.city());

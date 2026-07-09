@@ -17,7 +17,7 @@ public interface CustomerContactInfoService {
 
     List<ContactInfoResponse> getAll();
 
-    ContactInfoResponse update(UpdateContactInfoRequest request);
+    ContactInfoResponse update(Long id,UpdateContactInfoRequest request);
 
     void delete(Long id);
 }

@@ -117,8 +117,8 @@ public class BillingAccountManager implements BillingAccountService {
             put = @CachePut(value = CacheNames.BILLING_ACCOUNTS, key = "#request.id"),
             evict = @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
     )
-    public BillingAccountResponse update(UpdateBillingAccountRequest request) {
-        BillingAccount account = repository.findByIdAndIsActiveTrue(request.id())
+    public BillingAccountResponse update(Long id, UpdateBillingAccountRequest request) {
+        BillingAccount account = repository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND));
 
         // Hesap numarası değiştiyse tekilliği doğrula (hesap-lokal kural).

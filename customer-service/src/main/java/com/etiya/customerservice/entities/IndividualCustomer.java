@@ -28,8 +28,8 @@ import java.time.LocalDate;
 @PrimaryKeyJoinColumn(name = "id")
 public class IndividualCustomer extends Customer {
 
-    @Column(name = "nationality_id", nullable = false)
-    private Long nationalityId;
+    @Column(name = "nationality_id", nullable = false, length = 11)
+    private String nationalityId;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;

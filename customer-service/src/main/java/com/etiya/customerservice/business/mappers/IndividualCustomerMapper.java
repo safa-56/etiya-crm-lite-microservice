@@ -39,7 +39,9 @@ public interface IndividualCustomerMapper {
 
     IndividualCustomerResponse toResponse(IndividualCustomer entity);
 
+    @Mapping(target = "customerId", source = "customer.id")
     ContactInfoResponse toContactInfoResponse(CustomerContactInfo entity);
 
+    @Mapping(target = "customerId", source = "customer.id")
     AddressResponse toAddressResponse(Address entity);
 }

@@ -60,9 +60,9 @@ public class AddressesController {
                                   @Valid @RequestBody UpdateAddressRequest request) {
         // Yol değişkeni (path) ile gövdedeki id'yi tutarlı hale getir.
         UpdateAddressRequest normalized = new UpdateAddressRequest(
-                id, request.city(), request.street(), request.houseNumber(),
+                request.city(), request.street(), request.houseNumber(),
                 request.addressDescription(), request.isPrimary());
-        return addressService.update(normalized);
+        return addressService.update(id, normalized);
     }
 
     /** Adresi soft-delete ile pasifleştirir. */

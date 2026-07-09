@@ -60,10 +60,10 @@ public class IndividualCustomersController {
                                              @Valid @RequestBody UpdateIndividualCustomerRequest request) {
         // Yol değişkeni (path) ile gövdedeki id'yi tutarlı hale getir.
         UpdateIndividualCustomerRequest normalized = new UpdateIndividualCustomerRequest(
-                id, request.firstName(), request.secondName(), request.lastName(), request.birthDate(),
+                request.firstName(), request.secondName(), request.lastName(), request.birthDate(),
                 request.fatherName(), request.motherName(), request.nationalityId(),
                 request.genderType(), request.contactInfos(), request.addresses());
-        return individualCustomerService.update(normalized);
+        return individualCustomerService.update(id, normalized);
     }
 
     /** Bireysel müşteriyi soft-delete ile pasifleştirir. */

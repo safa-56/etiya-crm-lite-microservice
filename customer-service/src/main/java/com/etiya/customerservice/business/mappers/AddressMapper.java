@@ -20,5 +20,6 @@ public interface AddressMapper {
     @Mapping(target = "customer", ignore = true)
     Address toEntity(CreateAddressRequest request);
 
+    @Mapping(target = "customerId", source = "customer.id")
     AddressResponse toResponse(Address entity);
 }

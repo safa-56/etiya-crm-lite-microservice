@@ -9,9 +9,6 @@ import java.util.List;
 
 public record UpdateIndividualCustomerRequest(
 
-        @NotNull(message = "Güncellenecek müşteri id'si zorunludur.")
-        Long id,
-
         @NotBlank(message = "İsim (first_name) zorunludur.")
         @Size(max = 50)
         String firstName,
@@ -24,7 +21,7 @@ public record UpdateIndividualCustomerRequest(
         String lastName,
 
         @Past(message = "Doğum tarihi geçmiş bir tarih olmalıdır.")
-        @NotBlank(message = "Doğum tarihi (birthDate) zorunludur.")
+        @NotNull(message = "Doğum tarihi (birthDate) zorunludur.")
         LocalDate birthDate,
 
         @Size(max = 100)
@@ -34,11 +31,10 @@ public record UpdateIndividualCustomerRequest(
         String motherName,
 
         @NotBlank(message = "TC kimlik numarası (nationality_id) zorunludur.")
-        @Min(value = 10_000_000_000L, message = "TC kimlik numarası 11 haneli olmalıdır.")
-        @Max(value = 99_999_999_999L, message = "TC kimlik numarası 11 haneli olmalıdır.")
-        Long nationalityId,
+        @Pattern(regexp = "\\d{11}", message = "TC kimlik numarası 11 haneli olmalıdır.")
+        String nationalityId,
 
-        @NotBlank(message = "Cinsiyet (genderType) zorunludur.")
+        @NotNull(message = "Cinsiyet (genderType) zorunludur.")
         GenderType genderType,
 
         @Valid

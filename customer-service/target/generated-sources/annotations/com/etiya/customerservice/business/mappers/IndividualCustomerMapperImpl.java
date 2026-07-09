@@ -7,6 +7,7 @@ import com.etiya.customerservice.business.dtos.responses.AddressResponse;
 import com.etiya.customerservice.business.dtos.responses.ContactInfoResponse;
 import com.etiya.customerservice.business.dtos.responses.IndividualCustomerResponse;
 import com.etiya.customerservice.entities.Address;
+import com.etiya.customerservice.entities.Customer;
 import com.etiya.customerservice.entities.CustomerContactInfo;
 import com.etiya.customerservice.entities.IndividualCustomer;
 import com.etiya.customerservice.entities.enums.GenderType;
@@ -19,8 +20,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-07-07T10:15:21+0300",
-    comments = "version: 1.6.3, compiler: Eclipse JDT (IDE) 3.46.100.v20260624-0231, environment: Java 21.0.11 (Eclipse Adoptium)"
+    date = "2026-07-09T10:12:17+0300",
+    comments = "version: 1.6.3, compiler: javac, environment: Java 25.0.3 (Oracle Corporation)"
 )
 @Component
 public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
@@ -91,7 +92,7 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
         LocalDate birthDate = null;
         String fatherName = null;
         String motherName = null;
-        Long nationalityId = null;
+        String nationalityId = null;
         GenderType genderType = null;
         Boolean isActive = null;
         LocalDateTime createdDate = null;
@@ -127,19 +128,21 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
             return null;
         }
 
+        Long customerId = null;
         Long id = null;
         String email = null;
         String homePhone = null;
         String mobilPhone = null;
         String fax = null;
 
+        customerId = entityCustomerId( entity );
         id = entity.getId();
         email = entity.getEmail();
         homePhone = entity.getHomePhone();
         mobilPhone = entity.getMobilPhone();
         fax = entity.getFax();
 
-        ContactInfoResponse contactInfoResponse = new ContactInfoResponse( id, email, homePhone, mobilPhone, fax );
+        ContactInfoResponse contactInfoResponse = new ContactInfoResponse( id, customerId, email, homePhone, mobilPhone, fax );
 
         return contactInfoResponse;
     }
@@ -150,6 +153,7 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
             return null;
         }
 
+        Long customerId = null;
         Long id = null;
         String city = null;
         String street = null;
@@ -157,6 +161,7 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
         String addressDescription = null;
         Boolean isPrimary = null;
 
+        customerId = entityCustomerId1( entity );
         id = entity.getId();
         city = entity.getCity();
         street = entity.getStreet();
@@ -164,7 +169,7 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
         addressDescription = entity.getAddressDescription();
         isPrimary = entity.getIsPrimary();
 
-        AddressResponse addressResponse = new AddressResponse( id, city, street, houseNumber, addressDescription, isPrimary );
+        AddressResponse addressResponse = new AddressResponse( id, customerId, city, street, houseNumber, addressDescription, isPrimary );
 
         return addressResponse;
     }
@@ -193,5 +198,21 @@ public class IndividualCustomerMapperImpl implements IndividualCustomerMapper {
         }
 
         return list1;
+    }
+
+    private Long entityCustomerId(CustomerContactInfo customerContactInfo) {
+        Customer customer = customerContactInfo.getCustomer();
+        if ( customer == null ) {
+            return null;
+        }
+        return customer.getId();
+    }
+
+    private Long entityCustomerId1(Address address) {
+        Customer customer = address.getCustomer();
+        if ( customer == null ) {
+            return null;
+        }
+        return customer.getId();
     }
 }

@@ -3,13 +3,14 @@ package com.etiya.customerservice.business.mappers;
 import com.etiya.customerservice.business.dtos.requests.CreateAddressRequest;
 import com.etiya.customerservice.business.dtos.responses.AddressResponse;
 import com.etiya.customerservice.entities.Address;
+import com.etiya.customerservice.entities.Customer;
 import javax.annotation.processing.Generated;
 import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-07-07T10:15:21+0300",
-    comments = "version: 1.6.3, compiler: Eclipse JDT (IDE) 3.46.100.v20260624-0231, environment: Java 21.0.11 (Eclipse Adoptium)"
+    date = "2026-07-09T10:12:17+0300",
+    comments = "version: 1.6.3, compiler: javac, environment: Java 25.0.3 (Oracle Corporation)"
 )
 @Component
 public class AddressMapperImpl implements AddressMapper {
@@ -37,6 +38,7 @@ public class AddressMapperImpl implements AddressMapper {
             return null;
         }
 
+        Long customerId = null;
         Long id = null;
         String city = null;
         String street = null;
@@ -44,6 +46,7 @@ public class AddressMapperImpl implements AddressMapper {
         String addressDescription = null;
         Boolean isPrimary = null;
 
+        customerId = entityCustomerId( entity );
         id = entity.getId();
         city = entity.getCity();
         street = entity.getStreet();
@@ -51,8 +54,16 @@ public class AddressMapperImpl implements AddressMapper {
         addressDescription = entity.getAddressDescription();
         isPrimary = entity.getIsPrimary();
 
-        AddressResponse addressResponse = new AddressResponse( id, city, street, houseNumber, addressDescription, isPrimary );
+        AddressResponse addressResponse = new AddressResponse( id, customerId, city, street, houseNumber, addressDescription, isPrimary );
 
         return addressResponse;
+    }
+
+    private Long entityCustomerId(Address address) {
+        Customer customer = address.getCustomer();
+        if ( customer == null ) {
+            return null;
+        }
+        return customer.getId();
     }
 }

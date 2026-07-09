@@ -29,12 +29,12 @@ public interface IndividualCustomerRepository extends JpaRepository<IndividualCu
      * Verilen TC kimlik numarasına (nationalityId) sahip aktif bir müşteri var mı?
      * (Yeni müşteri oluşturmada tekillik kontrolü — FR-003 ACC-07/08.)
      */
-    boolean existsByNationalityIdAndIsActiveTrue(Long nationalityId);
+    boolean existsByNationalityIdAndIsActiveTrue(String nationalityId);
 
     /**
      * Verilen TC kimlik numarası, {@code id}'si hariç (başka) aktif bir müşteriye
      * ait mi? (Güncellemede tekillik kontrolü — FR-004 ACC-07/08; müşterinin kendi
      * kimlik numarası tetiklememelidir.)
      */
-    boolean existsByNationalityIdAndIdNotAndIsActiveTrue(Long nationalityId, Long id);
+    boolean existsByNationalityIdAndIdNotAndIsActiveTrue(String nationalityId, Long id);
 }

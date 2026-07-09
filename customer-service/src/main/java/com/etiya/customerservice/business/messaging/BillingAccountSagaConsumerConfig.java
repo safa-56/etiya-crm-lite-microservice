@@ -17,14 +17,12 @@ import java.util.function.Consumer;
 
 /**
  * Fatura hesabı Saga'sının customer-service (doğrulayıcı) tüketicisi —
- * {@code crm.BillingAccountSaga.events}.
- *
- * <p>Bu topic'te hem istek ({@code CREATION_REQUESTED}) hem de sonuç olayları akar.
- * Bu tüketici yalnızca <b>istekleri</b> işler; kendi ürettiği sonuç olaylarını
- * (validated/failed) payload'daki {@code eventType} ile ayırt edip atlar.
- *
- * <p><b>Inbox Pattern</b> ile idempotent; yalnızca {@code app.kafka.enabled=true}
- * iken devreye girer. Binding adı {@code billingAccountSagaConsumer-in-0}.
+ * crm.BillingAccountSaga.events
+ * Bu topic'te hem istek (CREATION_REQUESTED) hem de sonuç olayları akar.
+ * Bu tüketici yalnızca istekleri işler; kendi ürettiği sonuç olaylarını
+ * (validated/failed) payload'daki eventType ile ayırt edip atlar.
+ * Inbox Patternile idempotent; yalnızca app.kafka.enabled=true
+ * iken devreye girer. Binding adı billingAccountSagaConsumer-in-0
  */
 @Configuration
 @ConditionalOnProperty(name = "app.kafka.enabled", havingValue = "true")

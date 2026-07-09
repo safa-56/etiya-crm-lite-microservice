@@ -18,7 +18,7 @@ public record IndividualCustomerResponse(
         String fatherName,
         String motherName,
         Long genderId,
-        Long nationalityId,
+        String nationalityId,
         GenderType genderType,
         Boolean isActive,
         LocalDateTime createdDate,

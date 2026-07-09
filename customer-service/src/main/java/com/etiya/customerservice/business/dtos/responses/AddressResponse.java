@@ -5,6 +5,7 @@ package com.etiya.customerservice.business.dtos.responses;
  */
 public record AddressResponse(
         Long id,
+        Long customerId,
         String city,
         String street,
         String houseNumber,

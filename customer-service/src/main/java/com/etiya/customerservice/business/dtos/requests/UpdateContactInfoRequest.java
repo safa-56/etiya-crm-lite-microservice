@@ -6,8 +6,6 @@ import jakarta.validation.constraints.Size;
 
 public record UpdateContactInfoRequest(
 
-        Long id,
-
         @Email(message = "Geçerli bir e-posta adresi giriniz.")
         @NotBlank(message = "Email (email) zorunludur.")
         @Size(max = 150)

@@ -18,7 +18,7 @@ public interface BillingAccountService {
     /** Aktif fatura hesaplarını sayfalı listeler (kabul kriteri: sayfalama). */
     PagedResponse<BillingAccountResponse> getAll(Pageable pageable);
 
-    BillingAccountResponse update(UpdateBillingAccountRequest request);
+    BillingAccountResponse update(Long id, UpdateBillingAccountRequest request);
 
     void delete(Long id);
 }

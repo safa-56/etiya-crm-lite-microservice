@@ -41,7 +41,7 @@ public class IndividualCustomerBusinessRules {
      * doğrular: aynı numaraya sahip aktif bir müşteri varsa iş hatası fırlatılır
      * (FR-003 ACC-07/08).
      */
-    public void checkIfNationalityIdAlreadyExists(Long nationalityId) {
+    public void checkIfNationalityIdAlreadyExists(String nationalityId) {
         if (nationalityId != null
                 && individualCustomerRepository.existsByNationalityIdAndIsActiveTrue(nationalityId)) {
             throw new BusinessException(Messages.NATIONALITY_ID_ALREADY_EXISTS);
@@ -53,7 +53,7 @@ public class IndividualCustomerBusinessRules {
      * aktif müşteriye ait olmadığını doğrular. Müşterinin kendi mevcut numarası
      * hatayı tetiklemez (FR-004 ACC-07/08).
      */
-    public void checkIfNationalityIdBelongsToAnotherCustomer(Long nationalityId, Long customerId) {
+    public void checkIfNationalityIdBelongsToAnotherCustomer(String nationalityId, Long customerId) {
         if (nationalityId != null && customerId != null
                 && individualCustomerRepository
                         .existsByNationalityIdAndIdNotAndIsActiveTrue(nationalityId, customerId)) {

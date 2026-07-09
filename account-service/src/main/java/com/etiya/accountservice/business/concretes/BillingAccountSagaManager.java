@@ -18,11 +18,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 /**
- * {@link BillingAccountSagaService} uygulaması — Saga'nın account-service adımı.
- *
- * <p>Çağıran (Inbox) transaction'ı içinde çalışır; durum güncellemesi, sonuç
- * olayı (outbox) ve inbox kaydı atomik olur. PENDING olmayan hesaplarda idempotent
- * olarak atlanır (duplicate consume / geç gelen sonuç güvenli).
+ * Saga'nın account-service tarafındaki doğrulama sınıfıdır.
+ * Customer-service'ten gelen doğrulama sonucunu alıp hesabı ileri götürür(onay) ya da
+ * geri alır(telafi)
  */
 @Service
 public class BillingAccountSagaManager implements BillingAccountSagaService {

@@ -82,10 +82,10 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
 
     @Override
     @Transactional
-    public ContactInfoResponse update(UpdateContactInfoRequest request) {
-        rules.checkIfContactInfoExists(request.id());
+    public ContactInfoResponse update(Long id, UpdateContactInfoRequest request) {
+        rules.checkIfContactInfoExists(id);
 
-        CustomerContactInfo contactInfo = findActiveContactInfo(request.id());
+        CustomerContactInfo contactInfo = findActiveContactInfo(id);
 
         // E-posta değişiyorsa benzersizliği tekrar doğrula.
         if (request.email() != null && !Objects.equals(request.email(), contactInfo.getEmail())) {

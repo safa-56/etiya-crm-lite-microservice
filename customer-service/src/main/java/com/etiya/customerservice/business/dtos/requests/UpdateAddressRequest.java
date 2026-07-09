@@ -1,11 +1,10 @@
 package com.etiya.customerservice.business.dtos.requests;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UpdateAddressRequest(
-
-        Long id,
 
         @Size(max = 100)
         @NotBlank(message = "Şehir (city) zorunludur.")
@@ -23,7 +22,7 @@ public record UpdateAddressRequest(
         @NotBlank(message = "Adres açıklaması (addressDescription) zorunludur.")
         String addressDescription,
 
-        @NotBlank
+        @NotNull
         Boolean isPrimary
 ) {
 }

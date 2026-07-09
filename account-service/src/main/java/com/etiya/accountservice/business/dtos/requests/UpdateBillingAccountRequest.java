@@ -13,9 +13,6 @@ import jakarta.validation.constraints.Size;
  */
 public record UpdateBillingAccountRequest(
 
-        @NotNull(message = "Hesap kimliği (id) zorunludur.")
-        Long id,
-
         @NotBlank(message = "Hesap adı (accountName) zorunludur.")
         @Size(max = 150, message = "Hesap adı en fazla 150 karakter olabilir.")
         String accountName,

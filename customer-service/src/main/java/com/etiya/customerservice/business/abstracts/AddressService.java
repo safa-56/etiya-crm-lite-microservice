@@ -17,7 +17,7 @@ public interface AddressService {
 
     List<AddressResponse> getAll();
 
-    AddressResponse update(UpdateAddressRequest request);
+    AddressResponse update(Long id,UpdateAddressRequest request);
 
     void delete(Long id);
 }

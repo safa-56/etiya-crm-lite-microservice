@@ -100,12 +100,12 @@ public class IndividualCustomerManager implements IndividualCustomerService {
             put = @CachePut(value = CacheNames.INDIVIDUAL_CUSTOMERS, key = "#request.id"),
             evict = @CacheEvict(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST, allEntries = true)
     )
-    public IndividualCustomerResponse update(UpdateIndividualCustomerRequest request) {
-        rules.checkIfIndividualCustomerExists(request.id());
+    public IndividualCustomerResponse update(Long id, UpdateIndividualCustomerRequest request) {
+        rules.checkIfIndividualCustomerExists(id);
         // Nationality ID başka bir müşteriye ait olmamalı (kendisi hariç).
-        rules.checkIfNationalityIdBelongsToAnotherCustomer(request.nationalityId(), request.id());
+        rules.checkIfNationalityIdBelongsToAnotherCustomer(request.nationalityId(), id);
 
-        IndividualCustomer customer = repository.findByIdAndIsActiveTrue(request.id())
+        IndividualCustomer customer = repository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
 
         // Skaler alanları güncelle
