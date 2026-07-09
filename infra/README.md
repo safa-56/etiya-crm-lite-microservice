@@ -17,7 +17,7 @@ docker compose -f infra/docker-compose.yml up -d
 
 | Servis        | Adres                     | Not                                        |
 |---------------|---------------------------|--------------------------------------------|
-| PostgreSQL    | `localhost:5432`          | db'ler: `customerdb`, `accountdb`, `productdb` |
+| PostgreSQL    | `localhost:5432`          | db'ler: `customerdb`, `accountdb`, `productdb`, `cartdb` |
 | Redis         | `localhost:6379`          | cache                                      |
 | RedisInsight  | http://localhost:5540     | Redis host olarak `redis:6379` ekleyin     |
 | Kafka         | `localhost:9092` (host)   | konteyner içi: `kafka:29092`               |
@@ -44,11 +44,24 @@ curl -i -X POST http://localhost:8083/connectors \
   -H "Content-Type: application/json" \
   -d @infra/debezium/register-product-connector.json
 
+# cart-service (db: cartdb)
+curl -i -X POST http://localhost:8083/connectors \
+  -H "Content-Type: application/json" \
+  -d @infra/debezium/register-cart-connector.json
+
 # Durum:
 curl -s http://localhost:8083/connectors/customer-outbox-connector/status | jq
 curl -s http://localhost:8083/connectors/account-outbox-connector/status | jq
 curl -s http://localhost:8083/connectors/product-outbox-connector/status | jq
+curl -s http://localhost:8083/connectors/cart-outbox-connector/status | jq
 ```
+
+> **Not (Sepete ekleme Saga'sı):** cart-service sepete ekleme kararını product-service
+> ile bir choreography Saga üzerinden verir (`crm.CartSaga.events`). cart, doğrulama
+> isteğini `cartdb` outbox'ına yazar (yeni `cart-outbox-connector` bunu yönlendirir);
+> product-service teklifi/kampanyayı doğrulayıp sonucu `productdb` outbox'ına yazar
+> (**mevcut product connector** yönlendirir). İki tarafın `CartSaga` kayıtları da
+> aggregate_type ile aynı topic'e düşer — **ek connector gerekmez**.
 
 > **accountdb var mı?** `accountdb`, postgres ilk açılışında
 > `postgres/init/01-create-databases.sql` ile oluşturulur (yalnızca boş volume'de).

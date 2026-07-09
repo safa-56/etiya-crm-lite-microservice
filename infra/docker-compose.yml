@@ -377,6 +377,37 @@ services:
 #      - "${PRODUCT_SERVICE_PORT:-8084}:8084"
 #    networks:
 #      - crm-net
+#
+#  # ---------------------------------------------------------------------------
+#  # cart-service (8085) - sepet servisi. config-server + eureka-server ve altyapı
+#  # (postgres, redis, kafka) SAĞLIKLI olunca başlar. product-service'in teklif/
+#  # kampanya olaylarını dinleyip yerel projeksiyonlarını besler.
+#  # ---------------------------------------------------------------------------
+#  cart-service:
+#    build:
+#      context: ..
+#      dockerfile: cart-service/Dockerfile
+#    image: etiya/cart-service:1.0.0
+#    container_name: crm-cart-service
+#    restart: unless-stopped
+#    depends_on:
+#      config-server:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
+#    environment:
+#      SPRING_PROFILES_ACTIVE: docker
+#      CONFIG_SERVER_URL: http://config-server:8888
+#    ports:
+#      - "${CART_SERVICE_PORT:-8085}:8085"
+#    networks:
+#      - crm-net
 
 # -----------------------------------------------------------------------------
 # Kalıcı hacimler

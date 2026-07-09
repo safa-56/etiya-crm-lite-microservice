@@ -30,4 +30,18 @@ public final class Messages {
 
     // --- Product ---
     public static final String PRODUCT_NOT_FOUND = "Ürün bulunamadı.";
+
+    // --- Sepete ekleme Saga'sı (doğrulayıcı adım) ---
+
+    /** Sepet saga'sı: eklenmek istenen ürün teklifi bulunamadı/aktif değil (telafi nedeni). */
+    public static final String SAGA_CART_PRODUCT_OFFER_NOT_FOUND =
+            "Ürün teklifi bulunamadı veya aktif değil.";
+
+    /** Sepet saga'sı: eklenmek istenen kampanya bulunamadı/aktif değil (telafi nedeni). */
+    public static final String SAGA_CART_CAMPAIGN_NOT_FOUND =
+            "Kampanya bulunamadı veya aktif değil.";
+
+    /** Sepet saga'sı: satır türü tanınmadı (telafi nedeni). */
+    public static final String SAGA_CART_ITEM_TYPE_UNKNOWN =
+            "Sepet satırı türü tanınmadı.";
 }

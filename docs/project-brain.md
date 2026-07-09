@@ -3,7 +3,7 @@
 > Bu dosya projenin canlı hafızasıdır. Mimari kararlar, standartlar ve ilerleme
 > burada tutulur. Projede ilerledikçe güncellenir.
 
-_Son güncelleme: 2026-07-06_
+_Son güncelleme: 2026-07-09_
 
 ---
 
@@ -266,6 +266,48 @@ hiçbir tablo oluşturmaz (uygulama yine "UP" görünür). Sıfırlamak için ta
 `TRUNCATE`/`DROP` et ya da şemayı silersen `CREATE SCHEMA public;` ile geri aç ve
 servisi yeniden başlat.
 
+## 4.5. cart-service — Sepet (Cart), iki ekleme yolu ve Sepet Saga'sı
+
+`cart-service` (port **8085**, DB **cartdb**), n-katmanlı sepet servisidir. Görseldeki
+`Carts` / `CartItems` tablolarını birebir modeller ve mevcut mimari kalıpları
+(account ↔ customer ↔ product) aynen sürdürür: PostgreSQL (per-service DB), Redis
+(+RedisInsight), Transactional Outbox + Debezium, Inbox Pattern, BaseEntity,
+merkezi hata yönetimi, DTO + MapStruct, `business/rules`, `business/constants/Messages`.
+
+**Alınan kararlar ve gerekçeleri:**
+
+1. **Model.** `Cart` (`carts`): `customerId` + `accountId` **ham referans** (per-service
+   DB gereği FK değil). `CartItem` (`cart_items`): `itemType` (OFFER | CAMPAIGN) +
+   `status` (PENDING | ACTIVE | CANCELLED); `productOfferId` **ya da** `campaignId`
+   dolu olur. `name` + `unitPrice` **Saga doğrulamasıyla** yazılan snapshot'tır
+   (PENDING iken boştur). CAMPAIGN satırının paket içeriği `CartItemLine`
+   (`cart_item_lines`) snapshot satırlarında tutulur. Silme soft-delete; sepet toplamı
+   yalnızca **ACTIVE** satırların Σ(`unitPrice × quantity`)'idir.
+
+2. **Sepete ekleme iki yol (FR-014).** (a) **addOffer** — katalogdan doğrudan tek
+   teklif (`POST /carts/{id}/items/offers`). (b) **addCampaign** — içinde birden çok
+   teklif olan kampanya, **tek paket fiyatıyla bir bütün olarak** tek satır hâlinde
+   (`POST /carts/{id}/items/campaigns`); aynı kampanya iki kez eklenemez (sepet-lokal
+   kural). Kampanya satırı yanıtta paket içeriğiyle gösterilir.
+
+3. **Cross-service doğrulama = choreography Saga (senkron çağrı / projeksiyon YOK).**
+   Teklif/kampanya varlık-fiyat-içeriği product-service'e senkron sorulmaz ve yerel
+   read-model tutulmaz (projeksiyon kaldırıldı — saga modeline uygun değildi). Ekleme,
+   §4.3 (Billing Account) ve product-sale saga'sıyla **aynı** şekilde bir Saga ile
+   kesinleşir. Tek kanal: aggregate tipi `CartSaga` → topic **`crm.CartSaga.events`**
+   (hem cart hem product bu topic'i dinler; kendi ürettiği olayı `eventType` ile atlar).
+   **Akış:**
+   1. cart-service satırı `PENDING` açar → `CartItemValidationRequested` (outbox, aynı tx).
+   2. product-service (doğrulayıcı) teklifi/kampanyayı kendi DB'sinden otoriter doğrular
+      → `CartItemValidated` (ad + fiyat + kampanya içeriği) ya da `CartItemValidationFailed`
+      (neden). (`CartSagaParticipantManager` + `cartSagaConsumer`.)
+   3. cart-service sonucu uygular: Validated → satır `ACTIVE` (snapshot yazılır);
+      Failed → `CANCELLED` + soft-delete (**telafi**). (`CartSagaManager` + `cartSagaConsumer`.)
+   Ekleme **asenkron** tamamlanır (endpoint hemen döner, satır kısa süre PENDING görünür).
+   **Inbox** ile idempotenttir; **yeni Debezium connector gerekmez** — mevcut product
+   connector ve cart connector `CartSaga` kayıtlarını aggregate_type ile aynı topic'e
+   yönlendirir. **Checkout kapsam dışıdır.**
+
 ## 7. Açık Sorular / Yapılacaklar
 
 - [x] Servis keşfi: **Netflix Eureka** (`eureka-server`) + API Gateway
@@ -280,6 +322,15 @@ servisi yeniden başlat.
 
 ## 8. Değişiklik Günlüğü
 
+- **2026-07-09:** **cart-service** (sepet, n-layered, port 8085, cartdb) eklendi:
+  Cart/CartItem modeli, iki ekleme yolu (katalogdan teklif / kampanya paketi),
+  CRUD, Redis cache. Cross-service doğrulama **choreography Saga** ile yapılır
+  (`crm.CartSaga.events`): cart-service satırı PENDING açıp doğrulama ister,
+  product-service (doğrulayıcı) teklifi/kampanyayı otoriter doğrulayıp ad/fiyat/içerik
+  ile sonuç yayınlar, cart-service satırı ACTIVE yapar ya da telafi ile CANCELLED eder.
+  Inbox ile idempotent; yeni Debezium connector gerekmez. **Not:** ilk taslakta
+  denenen "product-service offer/campaign event'i yayınlar + cart yerel projeksiyon
+  tutar" yaklaşımı saga modeline uygun olmadığından kaldırıldı. Bkz. §4.5.
 - **2026-07-06:** Proje başlatıldı. Parent POM (`etiya.com:crm-lite`) ve bu
   project-brain dökümanı oluşturuldu.
 - **2026-07-06:** `eureka-server` ve `gateway-server` eklendi (4 profil:
