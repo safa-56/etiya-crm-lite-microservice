@@ -9,19 +9,45 @@ _Son güncelleme: 2026-07-09_
 
 ## 1. Proje Özeti
 
-Etiya CRM Lite, mikroservis mimarisiyle geliştirilen bir CRM uygulamasıdır.
-Her servis bağımsız olarak paketlenir (`jar`) ve çalıştırılır; ortak yapı ve
-bağımlılık yönetimi merkezi bir **parent POM** üzerinden sağlanır.
+Etiya CRM Lite, mikroservis mimarisiyle geliştirilen bir CRM uygulamasıdır. Her
+servis bağımsız olarak paketlenir (`jar`) ve çalıştırılır; ortak yapı ve bağımlılık
+yönetimi merkezi bir **parent POM** üzerinden sağlanır.
+
+**Modüller (7):**
+
+| Servis             | Port | DB          | Rolü                                                        |
+|--------------------|------|-------------|--------------------------------------------------------------|
+| `config-server`    | 8888 | -           | Merkezi konfigürasyon (Spring Cloud Config, Git backend)     |
+| `eureka-server`    | 8761 | -           | Servis keşfi (Netflix Eureka)                                 |
+| `gateway-server`   | 8080 | -           | API Gateway (Spring Cloud Gateway), tüm dış erişimin girişi   |
+| `customer-service` | 8081 | `customerdb`| Müşteri, bireysel müşteri, adres, iletişim bilgisi            |
+| `account-service`  | 8082 | `accountdb` | Fatura hesabı (Billing Account)                               |
+| `product-service`  | 8084 | `productdb` | Katalog, teknik özellik, teklif, kampanya, satılan ürün        |
+| `cart-service`     | 8085 | `cartdb`    | Sepet (Cart) ve sepet satırları                                |
+
+İş servisleri (`customer` / `account` / `product` / `cart`) hepsi aynı **n-katmanlı**
+şablonu izler ve aralarındaki dağıtık işlemler **choreography Saga** ile yürür (bkz. §6).
 
 ## 2. Teknoloji Yığını (Tech Stack)
 
-| Katman            | Teknoloji            | Versiyon        |
-|-------------------|----------------------|-----------------|
-| Dil               | Java                 | 25              |
-| Framework         | Spring Boot          | 4.1.0           |
-| Build aracı       | Maven                | 3.9+            |
-| Konfigürasyon     | YAML (`application.yml`) | -           |
-| Paketleme         | JAR (alt servisler)  | -               |
+| Katman              | Teknoloji                          | Not                                    |
+|---------------------|-------------------------------------|-----------------------------------------|
+| Dil                 | Java                                 | 25                                       |
+| Framework           | Spring Boot                          | 4.0.0 (parent), Spring Cloud 2025.1.0    |
+| Build aracı         | Maven                                | 3.9+                                     |
+| Veritabanı          | PostgreSQL                           | per-service DB, `wal_level=logical`      |
+| Servis keşfi        | Netflix Eureka                       | -                                         |
+| API Gateway         | Spring Cloud Gateway (WebFlux)       | -                                         |
+| Merkezi config      | Spring Cloud Config (Git backend)    | bu repo, `main` dalı                     |
+| Asenkron iletişim   | Kafka (local, KRaft, tek node)       | Spring Cloud Stream (Kafka binder)       |
+| Güvenilir yayın     | Transactional Outbox + Debezium      | ghost event yok                          |
+| Idempotent tüketim  | Inbox Pattern                        | duplicate consume yok                    |
+| Dağıtık işlem       | Choreography Saga                    | merkezi orkestratör yok                  |
+| Cache               | Redis (Spring Cache) + RedisInsight  | -                                         |
+| DTO eşleme          | MapStruct                            | -                                         |
+| API dokümantasyonu  | springdoc-openapi (Swagger UI)       | -                                         |
+| Konfigürasyon       | YAML (`application.yml`)             | `properties` kullanılmaz                 |
+| Paketleme           | JAR (alt servisler)                  | parent `pom`                             |
 
 ## 3. Maven Koordinatları
 
@@ -41,9 +67,8 @@ Kök dizindeki [pom.xml](../pom.xml) tüm servisler için ortak parent'tır.
    konfigürasyonlar tüm alt servislere otomatik iner. Sürüm çakışmaları önlenir.
 
 2. **Parent packaging = `pom` (jar değil).**
-   Kullanıcı "jar olacak" dedi; ancak Maven kuralı gereği parent olarak
-   kullanılan bir artifact `pom` paketlenmek zorundadır. `jar` paketlemesi
-   **alt servisler** için geçerlidir. Bu bilinçli ve zorunlu bir tercihtir.
+   Maven kuralı gereği parent olarak kullanılan bir artifact `pom` paketlenmek
+   zorundadır. `jar` paketlemesi **alt servisler** için geçerlidir.
 
 3. **Konfigürasyon YAML üzerinden.**
    Servisler `application.yml` kullanır. `spring-boot-configuration-processor`
@@ -52,16 +77,54 @@ Kök dizindeki [pom.xml](../pom.xml) tüm servisler için ortak parent'tır.
 4. **Merkezi versiyon yönetimi.**
    BOM dışındaki bağımlılıklar (`springdoc`, `mapstruct`) `properties` +
    `dependencyManagement` ile merkezileştirildi. Alt POM'lar versiyon yazmaz.
+   `spring-cloud.version` (2025.1.0) her iş servisinin kendi POM'unda tanımlıdır
+   (Spring Cloud BOM importu için) ve tüm servislerde **aynı** olmalıdır.
 
-5. **Ortak bağımlılıklar (tüm servislerde):**
-   - `spring-boot-configuration-processor` (optional)
-   - `lombok` (optional)
-   - `spring-boot-starter-test` (test)
+5. **Ortak bağımlılıklar (tüm servislerde):** `spring-boot-configuration-processor`
+   (optional), `lombok` (optional), `spring-boot-starter-test` (test).
 
 6. **Annotation processor sırası:** Lombok → MapStruct (compiler plugin'de
    `annotationProcessorPaths` ile sabitlendi).
 
-## 4.1. Merkezi Konfigürasyon (Spring Cloud Config)
+### 4.1. Yeni servis ekleme prosedürü
+
+1. Servis dizini oluşturulur (örn. `cart-service/`), n-katmanlı paket yapısı
+   kurulur: `entities`, `dataAccess`, `business` (+ `rules`, `mappers`,
+   `constants`, `dtos`, `messaging`), `apiController`, `core` (cross-cutting).
+2. Servis POM'unda parent olarak `etiya.com:crm-lite:1.0.0-SNAPSHOT` gösterilir;
+   `spring-cloud.version` property'si eklenir (bkz. örnek aşağıda).
+3. Kök `pom.xml` içindeki `<modules>` bloğuna eklenir.
+4. `configs/<service>/` altına 4 profil dosyası eklenir: `application.yml`
+   (ortak), `application-dev.yml`, `application-docker.yml`, `application-prod.yml`.
+   Servisin **yerel** `src/main/resources/application.yml`'i yalnızca bootstrap
+   bilgisi (isim, aktif profil, config-server importu) taşır; `application-test.yml`
+   ise hermetik testler için yerelde kalır (bkz. §5).
+5. `configs/` altındaki yeni dosyalar **commit + push** edilmeden config-server
+   bunları göremez (Git backend uzak repoyu okur — bkz. §5).
+6. `gateway-server`'ın route listesine (`configs/gateway-server/application.yml`)
+   yeni servisin path prefix'i eklenir.
+7. Servisler arası dağıtık işlem gerekiyorsa **Saga** kurulur (bkz. §6); tek
+   yönlü/lokal entegrasyon yeterliyse Outbox + Inbox ile asenkron olay akışı kurulur.
+8. `infra/docker-compose.yml`'e servis bloğu (yorum satırı olarak, diğerleriyle
+   aynı desende) ve gerekiyorsa `infra/postgres/init/01-create-databases.sql`'e
+   yeni DB, `infra/debezium/register-<service>-connector.json`'a yeni connector
+   eklenir (yalnızca servisin **kendi** outbox'ı için; saga kanalları genelde
+   mevcut connector'lar üzerinden zaten yönlenir).
+
+Örnek alt servis POM `<parent>` bloğu:
+
+```xml
+<parent>
+    <groupId>etiya.com</groupId>
+    <artifactId>crm-lite</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+</parent>
+<artifactId>cart-service</artifactId>
+<packaging>jar</packaging>
+```
+
+## 5. Merkezi Konfigürasyon (Spring Cloud Config)
 
 `config-server` modülü, tüm servislerin ortam bazlı konfigürasyonunu tek bir
 kaynaktan sunar (`@EnableConfigServer`).
@@ -69,9 +132,9 @@ kaynaktan sunar (`@EnableConfigServer`).
 **Mimari kararlar ve gerekçeleri:**
 
 1. **Git backend + tek repo.** Config server, bu reponun kendisini Git backend
-   olarak kullanır (`https://github.com/safa-56/etiya-crm-lite-microservice.git`).
-   Konfigürasyonlar kök `configs/` klasöründe, servis adına göre klasörlenir:
-   `configs/<service>/application-<profile>.yml`.
+   olarak kullanır (`https://github.com/safa-56/etiya-crm-lite-microservice.git`,
+   dal: `main`). Konfigürasyonlar kök `configs/` klasöründe, servis adına göre
+   klasörlenir: `configs/<service>/application-<profile>.yml`.
 
 2. **`search-paths: configs/{application}`.** `{application}` placeholder'ı,
    istek yapan servisin `spring.application.name` değerine göre çözülür; config
@@ -81,122 +144,146 @@ kaynaktan sunar (`@EnableConfigServer`).
    (Spring Cloud 2020+ standardı) her servisin yerel `application.yml`'inde:
    `import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}`.
    `optional:` öneki, config server erişilemezse servisin yereldeki ayarlarla
-   açılmasına izin verir (dayanıklılık).
+   açılmasına izin verir (dayanıklılık) — ama bu durumda datasource gibi
+   merkezde tanımlı ayarlar **eksik kalır** (bkz. tuzak notu aşağıda).
 
 4. **Yerel vs. merkezi ayrımı.** Servislerin yerel `application.yml` dosyaları
    yalnızca **bootstrap** bilgisi tutar (isim, aktif profil, config importu).
    `dev/docker/prod` ayarları merkezi `configs/` altına taşındı. **`test`
    profili** ise hermetik (ağdan bağımsız) testler için her serviste **yerel**
-   kalır.
+   kalır (H2, Kafka/Eureka kapalı — bkz. §8).
 
 5. **`config-server` kendi konfigürasyonunu yereldan yükler** (yumurta-tavuk
    problemi); başka bir config server'dan beslenmez.
 
-6. **Servis açılış sırası:** config-server → eureka-server → gateway-server.
-   Bu nedenle `config-server`, kök POM `<modules>` listesinde ilk sıradadır.
+6. **Servis açılış sırası:** config-server → eureka-server → gateway-server →
+   iş servisleri. Bu nedenle `config-server`, kök POM `<modules>` listesinde
+   ilk sıradadır.
 
-**ÖNEMLİ:** Git backend uzak depoyu klonlar; `configs/` değişikliklerinin config
-server tarafından görülmesi için **commit + push** gerekir. Private repo için
+**ÖNEMLİ / sık karşılaşılan tuzak:** Git backend uzak depoyu klonlar; `configs/`
+altına yeni bir dosya eklendiğinde (ör. yeni bir servis için) bu dosyalar
+config-server tarafından görülmeden önce **commit + push** edilmelidir. Aksi
+halde servis `optional:` sayesinde yine de açılır ama datasource/Kafka/Redis gibi
+merkezde tanımlı ayarları bulamaz ve şu hatayı verir: *"Failed to configure a
+DataSource: 'url' attribute is not specified..."*. Çözüm: `configs/<service>/*`
+dosyalarını `main`'e push et, servisi yeniden başlat. Private repo için
 `CONFIG_GIT_USERNAME` / `CONFIG_GIT_PASSWORD` ortam değişkenleri kullanılır.
 
-## 5. Modül Yapısı
+## 6. İş Servisi Şablonu (n-layered)
 
-Tanımlı servisler: **config-server** (8888), **eureka-server** (8761),
-**gateway-server** (8080). Yeni servis eklenirken:
+Tüm iş servisleri (`customer`, `account`, `product`, `cart`) **aynı** n-katmanlı
+şablonu izler. İlk kurulan `customer-service` referans alınarak sonrakiler
+birebir aynı desenle inşa edildi.
 
-1. Servis dizini oluşturulur (örn. `customer-service/`).
-2. Servis POM'unda parent olarak `etiya.com:crm-lite:1.0.0-SNAPSHOT` gösterilir.
-3. Kök `pom.xml` içindeki `<modules>` bloğuna eklenir.
+**Katmanlar (paketler):**
+- **entities** — JPA entity'leri + `entities/enums`, `entities/outbox`, `entities/inbox`
+- **dataAccess** — Spring Data JPA repository'leri
+- **business** — `business/rules` (iş kuralı sınıfları), `business/mappers`
+  (MapStruct), `business/constants` (`Messages`, olay sabitleri), `business/dtos`
+  (`requests`, `responses`, `events`), `business/messaging` (Kafka consumer
+  binding'leri), `business/abstracts` (servis arayüzleri), `business/concretes`
+  (manager implementasyonları)
+- **apiController** — REST uçları
+- **core** — cross-cutting: `core/config` (Redis, OpenAPI), `core/constants`
+  (`CacheNames`), `core/crosscutting/exceptions` (`BusinessException`,
+  `GlobalExceptionHandler`)
 
-Örnek alt servis POM `<parent>` bloğu:
+**Ortak mimari kararlar (tüm iş servislerinde aynı):**
 
-```xml
-<parent>
-    <groupId>etiya.com</groupId>
-    <artifactId>crm-lite</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-</parent>
-<artifactId>customer-service</artifactId>
-<packaging>jar</packaging>
-```
+1. **Veritabanı: PostgreSQL (per-service DB).** Her servis kendi şemasını yönetir
+   ve kendi Debezium replication slot'una sahiptir. Debezium CDC için
+   `wal_level=logical` gerekir (bkz. `infra/docker-compose.yml`).
 
-## 6. Standartlar & Konvansiyonlar
-
-- Konfigürasyon: `properties` değil **`yaml`** kullanılır.
-- Bağımlılık versiyonları: Mümkünse Spring Boot BOM'a bırakılır; değilse
-  parent'ın `dependencyManagement`'ında yönetilir. Alt POM'lara versiyon yazılmaz.
-- Encoding: UTF-8.
-
-## 4.2. customer-service (ilk iş servisi)
-
-`customer-service` (port **8081**), n-katmanlı (n-layered) ilk somut iş servisidir.
-
-**Katmanlar (paketler):** `entities`, `dataAccess`, `business`
-(+ `business/rules`, `business/mappers`, `business/constants`, `business/dtos`),
-`apiController`, ayrıca cross-cutting için `core`.
-
-**Alınan kararlar ve gerekçeleri:**
-
-1. **Veritabanı: PostgreSQL (per-service DB).** Servis kendi şemasını yönetir.
-   Debezium CDC için `wal_level=logical` gerekir (bkz. `infra/`).
-
-2. **Kalıtım = JPA `JOINED`.** Görseldeki ER modeli birebir uygulandı:
-   `Customer` (kök, `customers`) ← `IndividualCustomer` (`individual_customers`,
-   `@PrimaryKeyJoinColumn(customer_id)`; 1-1 paylaşılan PK). `Address` ve
-   `CustomerContactInfo` müşteriyle N-1 (`customer_id` FK).
-
-3. **`BaseEntity` (@MappedSuperclass).** Ortak alanlar `id, created_date,
+2. **`BaseEntity` (@MappedSuperclass).** Ortak alanlar `id, created_date,
    updated_date, deleted_date, is_active` burada; tüm entity'ler miras alır.
-   Soft-delete `is_active` + `deleted_date` ile yapılır (görseldeki `is_deleted`
-   bunlarla karşılandı). Zaman damgaları `@PrePersist/@PreUpdate` ile otomatik.
+   Soft-delete `is_active` + `deleted_date` ile yapılır. Zaman damgaları
+   `@PrePersist`/`@PreUpdate` ile otomatik atanır. `id` stratejisi `IDENTITY`.
 
-4. **Asenkron iletişim: Kafka (local container) + Transactional Outbox + Debezium.**
+3. **Asenkron iletişim: Kafka (local container) + Transactional Outbox + Debezium.**
    Manager, iş verisi ile `outbox_events` kaydını **aynı transaction**'da yazar
    (ghost event yok). Debezium (Kafka Connect) outbox tablosunu izleyip
    `EventRouter` SMT ile `crm.<aggregateType>.events` topic'ine yayınlar.
    Broker **local container** (KRaft, Zookeeper'sız, tek node); uygulama tüketici
    tarafında **Spring Cloud Stream (Kafka binder)** fonksiyonel binding kullanır
-   (`inboundEventConsumer-in-0`). Kafka Cloud kullanılmaz.
+   (`<isim>Consumer-in-0`, `java.util.function.Consumer<Message<String>>` bean'i).
+   Tüketiciler yalnızca `app.kafka.enabled=true` iken devreye girer (test
+   profilinde `false` — hermetik test). Kafka Cloud kullanılmaz.
 
-5. **Duplicate consume: Inbox Pattern.** `inbox_messages` tablosu + `InboxService`
-   ile `messageId` bazlı idempotent tüketim (örnek: `ExampleInboxConsumer`).
+4. **Duplicate consume: Inbox Pattern.** `inbox_messages` tablosu (PK
+   `message_id`) + `InboxService.process(messageId, eventType, handler)` ile
+   idempotent tüketim. `messageId`, olay Kafka anahtarına + payload hash'ine göre
+   üretilir (aynı agregada ardışık farklı olayların ayrı işlenmesi, gerçek
+   tekrarların atlanması için).
 
-6. **Cacheleme: Redis (Spring Cache).** `RedisCacheConfig` ile JSON serileştirme
-   ve cache bazlı TTL. Cache'ler **RedisInsight** ile izlenir.
+5. **Cacheleme: Redis (Spring Cache).** `RedisCacheConfig` ile JSON serileştirme
+   (`GenericJacksonJsonRedisSerializer`, tip bilgisiyle) ve cache bazlı TTL
+   (`CacheNames` sabitleri, tekil kayıt ~5-10 dk, liste ~2 dk). `@Cacheable` /
+   `@CacheEvict` / `@CachePut` / `@Caching` manager metodlarında kullanılır.
+   Cache'ler **RedisInsight** (`localhost:5540`) ile izlenir.
 
-7. **İş kuralları `business/rules` altında** ayrı sınıfta toplanır ve ilgili
-   manager'a inject edilir. **Mesajlar** `business/constants/Messages` sabitleri
-   (magic string yok). İstek/yanıt için **DTO** (record) + **MapStruct** mapper.
+6. **İş kuralları `business/rules` altında** ayrı sınıfta (`@Service`) toplanır
+   ve ilgili manager'a **constructor injection** ile enjekte edilir. Kural
+   ihlalinde `BusinessException` fırlatılır. **Mesajlar** `business/constants/
+   Messages` sabitlerinden gelir — magic string kullanılmaz. İstek/yanıt için
+   **DTO** (Java `record`) + **MapStruct** mapper (`componentModel = "spring"`,
+   `unmappedTargetPolicy = ReportingPolicy.IGNORE`) kullanılır. Sistem tarafından
+   atanan / türetilen alanlar mapper'da `ignore = true` ile atlanıp manager'da set
+   edilir.
 
-8. **Hata yönetimi:** `core` altında merkezi `@RestControllerAdvice`
-   (`GlobalExceptionHandler`, RFC 7807 `ProblemDetail`) ve iş hataları için
-   özel `BusinessException`.
+7. **Hata yönetimi:** `core` altında merkezi `@RestControllerAdvice`
+   (`GlobalExceptionHandler`) RFC 7807 `ProblemDetail` formatında yanıt döner:
+   `BusinessException` → 400, `MethodArgumentNotValidException` (`@Valid`) → 400
+   (alan bazlı detay), beklenmeyen `Exception` → 500 (kök neden istemciye
+   sızdırılmaz, sunucuda loglanır).
+
+8. **Sayfalama:** Liste uçları `Pageable` alır, `PagedResponse<T>` (content +
+   pageNumber/pageSize/totalElements/totalPages/last) döner.
+
+9. **Soft-delete deseni:** Silme fiziksel değildir; `isActive=false` +
+   `deletedDate=now()` set edilip kaydedilir. Repository'ler yalnızca aktif
+   kayıtları döndüren türetilmiş sorgular sağlar (`findByIdAndIsActiveTrue`,
+   `existsBy...AndIsActiveTrue` vb.).
 
 **Altyapı:** Kök `infra/docker-compose.yml` → PostgreSQL, Redis, RedisInsight,
-Debezium (Kafka Connect). Debezium outbox connector: `infra/debezium/`. Bkz.
+Kafka (KRaft), Kafka UI, Debezium (Kafka Connect). Debezium outbox connector
+tanımları: `infra/debezium/register-<service>-connector.json`. Bkz.
 `infra/README.md`.
 
-## 4.3. Saga Pattern (choreography) — Fatura Hesabı
+## 7. Choreography Saga Pattern
 
-Servisler arası dağıtık işlem **choreography-based Saga** ile yürütülür (merkezi
-orchestrator yok; her servis olayları dinleyip kendi adımını yapar, hata olursa
-telafi eder). Mevcut **Outbox + Debezium + Inbox** altyapısı üzerine kuruludur.
-**CQRS read-model (müşteri projeksiyonu) kaldırıldı**; account-service artık
-müşteri/adres doğrulamasını yerel bir kopyadan değil, **Saga ile customer-service'e
-otoriter olarak** yaptırır. Böylece tüm cross-service yazma kararları saga'dan geçer.
+Servisler arası **dağıtık işlemler** (bir serviste yazma kararının başka bir
+servisin otoriter verisine bağlı olduğu durumlar) merkezi orkestratör olmadan,
+**choreography-based Saga** ile yürütülür: her servis olayları dinler, kendi
+adımını yapar, doğrulama başarısızsa **telafi (compensation)** eder. Üç saga
+mevcuttur; hepsi aynı deseni izler ve mevcut **Outbox + Debezium + Inbox**
+altyapısı üzerine kuruludur.
 
-**Kanal:** Aggregate tipi `BillingAccountSaga` olan tüm outbox kayıtları — hangi
-servisin DB'sinden gelirse gelsin — EventRouter ile tek topic'e yönlenir:
-`crm.BillingAccountSaga.events`. **Yeni Debezium connector gerekmez** (mevcut iki
-connector aggregate_type'a göre dinamik yönlendirir). Her iki servis bu topic'i
-dinler ve payload'daki `eventType` ile yalnızca kendini ilgilendiren olayı işler
-(self-consume olayları atlanır → döngü yok).
+**Ortak desen:**
+- **Tek kanal / tek topic.** Aggregate tipi `<Saga>` olan tüm outbox kayıtları —
+  hangi servisin DB'sinden gelirse gelsin — Debezium EventRouter ile aynı
+  topic'e (`crm.<Saga>.events`) yönlenir. **Yeni Debezium connector genelde
+  gerekmez**: her servisin kendi outbox connector'ı zaten `aggregate_type`'a
+  göre dinamik yönlendirme yapar (`route.topic.replacement:
+  crm.${routedByValue}.events`).
+- **Self-consume önleme.** Her iki taraf da aynı topic'i dinler; payload
+  içindeki `eventType` alanına bakarak yalnızca kendini ilgilendiren olayları
+  işler, kendi ürettiği olayları atlar (döngü yok).
+- **İdempotency.** Inbox Pattern + **durum bazlı yönlendirme**: sonuç yalnızca
+  agrega hâlâ `PENDING` durumundaysa uygulanır (aksi hâlde saga zaten tamamlanmış
+  demektir, sonuç atlanır).
+- **Asenkron tamamlanma.** Başlatan endpoint hemen döner (agrega `PENDING`
+  durumda görünür); sonuç saga ile asenkron gelir.
 
-**customer-service** doğrulayıcı (participant) rolündedir: gelen isteklerde
+### 7.1. Billing Account Saga — account-service ↔ customer-service
+
+**Kanal:** `crm.BillingAccountSaga.events`.
+
+customer-service **doğrulayıcı (participant)** rolündedir: gelen isteklerde
 (`...CreationRequested` / `...AddressChangeRequested`) müşteri + adresi **kendi
-DB'sinden otoriter** doğrular → `...CustomerValidated` (adres snapshot'ıyla) ya da
-`...CustomerValidationFailed` (neden ile) yayınlar. account-service sonucu hesabın
-durumuna göre yönlendirir.
+DB'sinden otoriter** doğrular → `...CustomerValidated` (adres snapshot'ıyla) ya
+da `...CustomerValidationFailed` (neden ile) yayınlar. account-service sonucu
+hesabın durumuna göre yönlendirir. **CQRS read-model (müşteri projeksiyonu)
+kaldırıldı**; tüm cross-service yazma kararları saga'dan geçer.
 
 **Akış 1 — Create Billing Account:**
 1. account-service hesabı `PENDING` açar (adres boş) → `...CreationRequested`.
@@ -208,148 +295,284 @@ durumuna göre yönlendirir.
 1. account-service adres-dışı alanları senkron günceller; adres değiştiyse yeni
    adresi `pendingAddressId`'de tutar (hesap ACTIVE kalır) → `...AddressChangeRequested`.
 2. customer-service (aynı doğrulama) → Validated/Failed.
-3. account-service: Validated → yeni adresi uygular (`addressId` + metin), beklemeyi
-   temizler; Failed → beklemeyi temizler, **eski adres korunur** (telafi).
+3. account-service: Validated → yeni adresi uygular (`addressId` + metin),
+   beklemeyi temizler; Failed → beklemeyi temizler, **eski adres korunur** (telafi).
 
-**Durumlar:** `AccountStatus` = `PENDING → ACTIVE | CANCELLED` (+ `PASSIVE` silmede).
-Create ve adres-update **asenkron** tamamlanır (endpoint hemen döner; sonuç saga ile
-gelir). Idempotency: Inbox + sonucu hesap durumuna göre yönlendirme
-(PENDING → create; `pendingAddressId` → update; ikisi de yoksa atla).
+**Durumlar:** `AccountStatus` = `PENDING → ACTIVE | CANCELLED` (+ `PASSIVE`
+silmede). Idempotency: Inbox + hesap durumuna göre yönlendirme (PENDING →
+create; `pendingAddressId` → update; ikisi de yoksa atla).
 
-## 4.4. product-service — Katalog (kategori) vs. Kampanya (paket) modeli
+### 7.2. Product Sale Saga — product-service ↔ account-service
 
-Teklif Seçimi (FR-014 / UC-EACRML-014) analizindeki iki farklı kavram, domain'de
-**bilinçli olarak farklı** modellenir:
+**Kanal:** `crm.ProductSaga.events`.
+
+product-service **başlatıcı**, account-service **doğrulayıcı**dır: yeni satılan
+ürün için fatura hesabının var ve `ACTIVE` olduğu account-service'ten otoriter
+doğrulanır.
+
+**Akış:**
+1. product-service ürünü `PENDING` açar → `ProductSaleRequested`
+   (`ProductSagaRequestedPayload{productId, billingAccountId}`).
+2. account-service: hesap aktif + `ACTIVE` mi? → `ProductAccountValidated` /
+   `ProductAccountValidationFailed` (neden: `SAGA_BILLING_ACCOUNT_NOT_FOUND` /
+   `SAGA_BILLING_ACCOUNT_NOT_ACTIVE`).
+3. product-service: Validated → ürün `ACTIVE` olur ve **ayrıca**
+   `crm.Product.events`'e `ProductCreated` yayınlanır (account-service bunu
+   dinleyip `active_product_count` sayacını artırır — bu ayrı, saga-dışı bir
+   olay akışıdır); Failed → ürün `CANCELLED` + soft-delete (**telafi**).
+
+Idempotency: yalnızca `PENDING` durumundaki ürünler sonuçla ileri
+götürülür/telafi edilir (`ProductSagaManager.applyValidationResult`).
+
+### 7.3. Cart Item Saga — cart-service ↔ product-service
+
+**Kanal:** `crm.CartSaga.events`.
+
+cart-service **başlatıcı**, product-service **doğrulayıcı**dır. Sepete
+eklenen bir teklif ya da kampanyanın var/aktif olduğu ve güncel fiyatı,
+cart-service tarafından **senkron sorulmaz ve yerel bir read-model
+(projeksiyon) olarak tutulmaz** — bu, ilk taslakta denenip saga modeline uygun
+olmadığı için kaldırılan bir yaklaşımdı (bkz. §11 değişiklik günlüğü). Bunun
+yerine tamamen saga üzerinden, olay-tabanlı doğrulanır.
+
+**Akış:**
+1. cart-service sepet satırını `PENDING` açar (ad/fiyat henüz boş) →
+   `CartItemValidationRequested`
+   (`CartItemSagaRequestedPayload{cartItemId, itemType, productOfferId|campaignId}`).
+2. product-service (`CartSagaParticipantManager`), satır türüne göre kendi
+   otoriter DB'sinden doğrular:
+   - **OFFER** → teklif aktif mi? Doğruysa ad + liste fiyatı.
+   - **CAMPAIGN** → kampanya aktif mi? Doğruysa ad + paket fiyatı (`campaignPrice`)
+     + paket içeriği (aktif `CampaignOffer` satırlarından türetilen teklif listesi).
+   → `CartItemValidated` (`name`, `unitPrice`, `offers[]`) ya da
+   `CartItemValidationFailed` (neden: `SAGA_CART_PRODUCT_OFFER_NOT_FOUND` /
+   `SAGA_CART_CAMPAIGN_NOT_FOUND` / `SAGA_CART_ITEM_TYPE_UNKNOWN`).
+3. cart-service (`CartSagaManager`): Validated → satır `ACTIVE`, `name`/
+   `unitPrice` snapshot'ı yazılır; CAMPAIGN ise paket içeriği `CartItemLine`
+   satırlarına (silinip yeniden) yazılır. Failed → satır `CANCELLED` + soft-delete
+   (**telafi**).
+
+**Durumlar:** `CartItemStatus` = `PENDING → ACTIVE | CANCELLED`. Sepet toplamı
+yalnızca `ACTIVE` satırların Σ(`unitPrice × quantity`)'idir (PENDING satırlar
+toplama 0 katkı verir). Idempotency: yalnızca `PENDING` satırlar sonuçla ileri
+götürülür/telafi edilir.
+
+## 8. Servis Bazlı Notlar
+
+### 8.1. customer-service (ilk iş servisi, port 8081, DB `customerdb`)
+
+- **Kalıtım = JPA `JOINED`.** ER modeli birebir uygulandı: `Customer` (kök,
+  `customers`) ← `IndividualCustomer` (`individual_customers`,
+  `@PrimaryKeyJoinColumn(customer_id)`; 1-1 paylaşılan PK). `Address` ve
+  `CustomerContactInfo` müşteriyle N-1 (`customer_id` FK).
+- Billing Account Saga'sında **doğrulayıcı** roldedir (bkz. §7.1).
+- `Gender`/`Nationality` şimdilik ham referans (`gender_id`/`nationality_id`);
+  ilgili lookup servis/tablo eklenince FK'ye bağlanacak (açık madde, bkz. §10).
+
+### 8.2. account-service (port 8082, DB `accountdb`)
+
+- Fatura hesabı (`BillingAccount`): `AccountStatus` (`PENDING/ACTIVE/CANCELLED/
+  PASSIVE`), `AccountType`, `activeProductCount` (Product olaylarından
+  güncellenen sayaç — `crm.Product.events` tüketicisi, saga-dışı).
+- Billing Account Saga'sında **başlatıcı**, Product Sale Saga'sında
+  **doğrulayıcı** roldedir (bkz. §7.1, §7.2).
+- Silme kuralı: `activeProductCount > 0` olan hesap silinemez (iş hatası,
+  birebir sabit mesaj: *"The billing account cannot be deleted because it has
+  active products."*).
+
+### 8.3. product-service (port 8084, DB `productdb`)
+
+**Katalog (kategori) vs. Kampanya (paket) modeli** — Teklif Seçimi
+(FR-014 / UC-EACRML-014) analizindeki iki farklı kavram, domain'de **bilinçli
+olarak farklı** modellenir:
 
 1. **Katalog = zorunlu kategori (1-N).** Her `ProductOffer` **tam olarak bir**
-   `Catalog`'a aittir (`catalog_id` NOT NULL, `@ManyToOne`). Katalog bir kategoridir
-   (Ev İnterneti, Mobil, Superbox, TV, Sabit Hat). Eski `CatalogOffer` N-N join
-   entity'si **kaldırıldı** (kategori tekildir; N-N yanlış modeldi). Teklif
+   `Catalog`'a aittir (`catalog_id` NOT NULL, `@ManyToOne`). Katalog bir
+   kategoridir (Ev İnterneti, Mobil, Superbox, TV, Sabit Hat). Teklif
    oluştururken `catalogId` zorunludur. Catalog sekmesi araması:
    `GET /product-offers?catalogId=`.
 
-2. **Kampanya = opsiyonel paket/bundle (N-N).** Bir `Campaign` birden çok teklifi
-   `CampaignOffer` (N-N) ile paketler; bir teklif birden çok kampanyada olabilir ve
-   kampanyaya girmesi **zorunlu değildir**. Kampanya, tek `campaignPrice` ile sepete
-   **bir bütün olarak** eklenir. Kampanya, içindeki teklifleriyle birlikte tek
-   çağrıda kurulur: `POST /campaigns` gövdesi `{ name, campaignPrice, offerIds[] }`.
-   `CampaignResponse` paketi + türetilmiş fiyatları döner: `listPriceTotal`
-   (Σ liste), `savings` (indirim = listPriceTotal − campaignPrice) ve `offers[]`
-   (`{offerId, offerName, listPrice}`). Böylece ileride **sipariş (order)** akışı
-   paketi ek sorgu yapmadan tek yanıttan kurabilir.
+2. **Kampanya = opsiyonel paket/bundle (N-N).** Bir `Campaign` birden çok
+   teklifi `CampaignOffer` (N-N) ile paketler; bir teklif birden çok kampanyada
+   olabilir ve kampanyaya girmesi **zorunlu değildir**. Kampanya, tek
+   `campaignPrice` ile sepete **bir bütün olarak** eklenir. Kampanya, içindeki
+   teklifleriyle birlikte tek çağrıda kurulur: `POST /campaigns` gövdesi
+   `{ name, campaignPrice, offerIds[] }`. `CampaignResponse` paketi + türetilmiş
+   fiyatları döner: `listPriceTotal` (Σ liste), `savings` (indirim =
+   listPriceTotal − campaignPrice) ve `offers[]` (`{offerId, offerName,
+   listPrice}`).
 
-   **Kural notu:** "kampanya fiyatı < liste toplamı" iş kuralı olarak **zorlanmaz**
-   (yalnızca `savings` hesaplanıp gösterilir); zorlanan tek kural, paketin en az bir
-   **var olan/aktif** teklif içermesi ve aynı teklifin pakette tekrarlanmamasıdır.
+   **Kural notu:** "kampanya fiyatı < liste toplamı" iş kuralı olarak
+   **zorlanmaz** (yalnızca `savings` hesaplanıp gösterilir); zorlanan tek kural,
+   paketin en az bir **var olan/aktif** teklif içermesi ve aynı teklifin
+   pakette tekrarlanmamasıdır.
 
-**Satış (Product):** `Product`, satılan teklifin son halidir; opsiyonel `campaign_id`
-ile hangi paketten geldiğini taşır (`price_to_be_paid` = ödenen nihai fiyat). Satış
-choreography Saga'sı değişmedi (PENDING → ACTIVE/CANCELLED, bkz. §4.3 mantığı).
+**Satış (Product):** `Product`, satılan teklifin son hâlidir; opsiyonel
+`campaign_id` ile hangi paketten geldiğini taşır (`price_to_be_paid` = ödenen
+nihai fiyat). Product Sale Saga'sında **başlatıcı**, Cart Item Saga'sında
+**doğrulayıcı** roldedir (bkz. §7.2, §7.3).
 
-### Test seed verisi
+### 8.4. cart-service (port 8085, DB `cartdb`)
+
+`Carts` / `CartItems` ER modelini karşılar; şablonu §6'daki ortak desenle
+aynıdır (yalnızca cache/Kafka/DTO/rules deseni değil, **saga başlatıcılığı**
+da dahil).
+
+- **Model.** `Cart` (`carts`): `customerId` + `accountId` **ham referans**
+  (per-service DB gereği FK değil). `CartItem` (`cart_items`): `itemType`
+  (OFFER | CAMPAIGN) + `status` (PENDING | ACTIVE | CANCELLED);
+  `productOfferId` **ya da** `campaignId` dolu olur. `name` + `unitPrice`
+  **Saga doğrulamasıyla** yazılan snapshot'tır (PENDING iken boştur). CAMPAIGN
+  satırının paket içeriği `CartItemLine` (`cart_item_lines`) snapshot
+  satırlarında tutulur. Silme soft-delete; sepet toplamı yalnızca **ACTIVE**
+  satırların Σ(`unitPrice × quantity`)'idir.
+
+- **Sepete ekleme iki yol (FR-014).** (a) **addOffer** — katalogdan doğrudan
+  tek teklif (`POST /carts/{id}/items/offers`). (b) **addCampaign** — içinde
+  birden çok teklif olan kampanya, **tek paket fiyatıyla bir bütün olarak** tek
+  satır hâlinde (`POST /carts/{id}/items/campaigns`); aynı kampanya iki kez
+  eklenemez (sepet-lokal kural — `CartItemBusinessRules`). Kampanya satırı
+  yanıtta paket içeriğiyle gösterilir.
+
+- **Cross-service doğrulama = Cart Item Saga (bkz. §7.3).** Ekleme **asenkron**
+  tamamlanır (endpoint hemen döner, satır kısa süre `PENDING` görünür).
+  **Checkout kapsam dışıdır** (sepetten siparişe geçiş henüz yok; ileride
+  ayrı bir order-service ile ele alınacak).
+
+### 8.5. REST API Haritası (gateway üzerinden)
+
+Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir; route'lar
+`configs/gateway-server/application.yml`'de açık (explicit) tanımlıdır
+(`StripPrefix=1`). Her servisin Swagger UI'si de ayağa kalktığında
+`/<servis>/swagger-ui.html` altından erişilebilir.
+
+| Servis   | Base path                        | Uçlar (özet)                                                                 |
+|----------|----------------------------------|------------------------------------------------------------------------------|
+| customer | `/api/v1/individual-customers`   | CRUD (POST, GET/{id}, GET list, PUT/{id}, DELETE/{id})                        |
+| customer | `/api/v1/addresses`              | CRUD                                                                          |
+| customer | `/api/v1/contact-infos`          | CRUD                                                                          |
+| account  | `/api/v1/billing-accounts`       | CRUD (create + adres-update **asenkron** saga ile tamamlanır)                 |
+| product  | `/api/v1/product-specs`          | CRUD                                                                          |
+| product  | `/api/v1/catalogs`               | CRUD                                                                          |
+| product  | `/api/v1/product-offers`         | CRUD + `?catalogId=` ile kategori araması                                     |
+| product  | `/api/v1/campaigns`              | CRUD; `POST` gövdesi `{name, campaignPrice, offerIds[]}`                      |
+| product  | `/api/v1/products`               | create (**asenkron** saga), GET/{id}, GET list, `GET /details`, DELETE       |
+| cart     | `/api/v1/carts`                  | `POST` (create), `GET/{id}`, `GET` list, `GET /customer/{customerId}`, `DELETE/{id}` |
+| cart     | `/api/v1/carts/{id}/items/offers`    | `POST` — katalogdan teklif ekle (**asenkron** saga)                      |
+| cart     | `/api/v1/carts/{id}/items/campaigns` | `POST` — kampanya paketi ekle (**asenkron** saga)                       |
+| cart     | `/api/v1/carts/{cartId}/items/{itemId}` | `DELETE` — satırı çıkar                                                |
+
+### 8.6. Altyapı Hızlı Referansı (infra)
+
+Kök `infra/docker-compose.yml` ile ayağa kalkan bileşenler (ayrıntı:
+`infra/README.md`):
+
+| Bileşen        | Adres                    | Not                                              |
+|----------------|--------------------------|--------------------------------------------------|
+| PostgreSQL     | `localhost:5432`         | `customerdb`, `accountdb`, `productdb`, `cartdb` |
+| Redis          | `localhost:6379`         | cache                                            |
+| RedisInsight   | http://localhost:5540    | Redis host olarak `redis:6379` ekle              |
+| Kafka          | `localhost:9092` (host)  | konteyner içi: `kafka:29092` (KRaft, tek node)   |
+| Kafka UI       | http://localhost:8090    | topic/mesaj/consumer group izleme                |
+| Kafka Connect  | http://localhost:8083    | Debezium REST API                                |
+
+**Debezium connector'ları** (`infra/debezium/register-<service>-connector.json`,
+her servis kendi outbox'ı için ilk açılışta bir kez kaydedilir):
+`register-outbox-connector.json` (customerdb), `register-account-connector.json`
+(accountdb), `register-product-connector.json` (productdb),
+`register-cart-connector.json` (cartdb). Saga kanalları (`crm.*Saga.events`) bu
+mevcut connector'lar üzerinden `aggregate_type`'a göre yönlenir; ayrı connector
+gerekmez (bkz. §7).
+
+**cartdb notu:** Postgres init betiği (`infra/postgres/init/01-create-databases.sql`)
+yalnızca **boş volume'de ilk açılışta** çalışır. Var olan bir kurulumda yeni DB
+elle oluşturulur: `docker exec -it crm-postgres psql -U postgres -c "CREATE
+DATABASE cartdb;"`.
+
+## 9. Test Seed Verisi
 
 İki yol var (ayrıntı ve senaryo tablosu: `infra/seed/README.md`):
 
 1. **Otomatik seed (dev profili).** Her serviste `src/main/resources/data.sql`
    vardır; servis `dev` profilinde açıldığında Hibernate şemayı kurduktan sonra
-   Spring bu betiği çalıştırıp DB'yi **idempotent** (`ON CONFLICT (id) DO NOTHING`)
-   tohumlar. Aktifleştiren ayarlar servisin yerel `application.yml`'indeki dev
-   dökümanında: `spring.sql.init.mode=always` +
-   `spring.jpa.defer-datasource-initialization=true` (**prod/test almaz**). Böylece
-   repoyu pull edip dev'de çalıştıran herkeste veri kendiliğinden oluşur.
+   Spring bu betiği çalıştırıp DB'yi **idempotent** (`ON CONFLICT (id) DO
+   NOTHING`) tohumlar. Aktifleştiren ayarlar servisin yerel `application.yml`'
+   indeki dev dökümanında: `spring.sql.init.mode=always` +
+   `spring.jpa.defer-datasource-initialization=true` (**prod/test almaz**).
+   Böylece repoyu pull edip dev'de çalıştıran herkeste veri kendiliğinden oluşur.
 2. **Manuel tam sıfırlama.** `infra/seed/*.sql` (+ `run-seed.sh`/`run-seed.ps1`)
-   `TRUNCATE ... RESTART IDENTITY CASCADE` ile DB'yi baştan temiz seed'e döndürür.
+   `TRUNCATE ... RESTART IDENTITY CASCADE` ile DB'yi baştan temiz seed'e
+   döndürür. (Not: cart-service henüz bu manuel seed setine dahil değil —
+   sepet satırları saga ile API üzerinden oluşturulduğundan yalnızca boş bir
+   örnek sepet `data.sql` ile tohumlanır.)
 
 **Not (şema sıfırlama tuzağı):** DBeaver'da veriyi silmek için `public` şemasını
-DROP ETME; Hibernate tabloları `public`'e kurduğundan şema yoksa `ddl-auto` sessizce
-hiçbir tablo oluşturmaz (uygulama yine "UP" görünür). Sıfırlamak için tabloları
-`TRUNCATE`/`DROP` et ya da şemayı silersen `CREATE SCHEMA public;` ile geri aç ve
-servisi yeniden başlat.
+DROP ETME; Hibernate tabloları `public`'e kurduğundan şema yoksa `ddl-auto`
+sessizce hiçbir tablo oluşturmaz (uygulama yine "UP" görünür). Sıfırlamak için
+tabloları `TRUNCATE`/`DROP` et ya da şemayı silersen `CREATE SCHEMA public;`
+ile geri aç ve servisi yeniden başlat.
 
-## 4.5. cart-service — Sepet (Cart), iki ekleme yolu ve Sepet Saga'sı
+**Not (hermetik test profili tuzağı):** `application-test.yml`'de
+`defer-datasource-initialization` yalnızca `dev` profilinde açık olduğundan,
+eğer bir serviste `spring.sql.init.mode` test profilinde de etkinse `data.sql`
+Hibernate şemayı kurmadan önce çalışıp "tablo yok" hatası verebilir. cart-service
+bunun için `application-test.yml`'de `spring.sql.init.mode: never` ile bunu
+açıkça kapatır.
 
-`cart-service` (port **8085**, DB **cartdb**), n-katmanlı sepet servisidir. Görseldeki
-`Carts` / `CartItems` tablolarını birebir modeller ve mevcut mimari kalıpları
-(account ↔ customer ↔ product) aynen sürdürür: PostgreSQL (per-service DB), Redis
-(+RedisInsight), Transactional Outbox + Debezium, Inbox Pattern, BaseEntity,
-merkezi hata yönetimi, DTO + MapStruct, `business/rules`, `business/constants/Messages`.
-
-**Alınan kararlar ve gerekçeleri:**
-
-1. **Model.** `Cart` (`carts`): `customerId` + `accountId` **ham referans** (per-service
-   DB gereği FK değil). `CartItem` (`cart_items`): `itemType` (OFFER | CAMPAIGN) +
-   `status` (PENDING | ACTIVE | CANCELLED); `productOfferId` **ya da** `campaignId`
-   dolu olur. `name` + `unitPrice` **Saga doğrulamasıyla** yazılan snapshot'tır
-   (PENDING iken boştur). CAMPAIGN satırının paket içeriği `CartItemLine`
-   (`cart_item_lines`) snapshot satırlarında tutulur. Silme soft-delete; sepet toplamı
-   yalnızca **ACTIVE** satırların Σ(`unitPrice × quantity`)'idir.
-
-2. **Sepete ekleme iki yol (FR-014).** (a) **addOffer** — katalogdan doğrudan tek
-   teklif (`POST /carts/{id}/items/offers`). (b) **addCampaign** — içinde birden çok
-   teklif olan kampanya, **tek paket fiyatıyla bir bütün olarak** tek satır hâlinde
-   (`POST /carts/{id}/items/campaigns`); aynı kampanya iki kez eklenemez (sepet-lokal
-   kural). Kampanya satırı yanıtta paket içeriğiyle gösterilir.
-
-3. **Cross-service doğrulama = choreography Saga (senkron çağrı / projeksiyon YOK).**
-   Teklif/kampanya varlık-fiyat-içeriği product-service'e senkron sorulmaz ve yerel
-   read-model tutulmaz (projeksiyon kaldırıldı — saga modeline uygun değildi). Ekleme,
-   §4.3 (Billing Account) ve product-sale saga'sıyla **aynı** şekilde bir Saga ile
-   kesinleşir. Tek kanal: aggregate tipi `CartSaga` → topic **`crm.CartSaga.events`**
-   (hem cart hem product bu topic'i dinler; kendi ürettiği olayı `eventType` ile atlar).
-   **Akış:**
-   1. cart-service satırı `PENDING` açar → `CartItemValidationRequested` (outbox, aynı tx).
-   2. product-service (doğrulayıcı) teklifi/kampanyayı kendi DB'sinden otoriter doğrular
-      → `CartItemValidated` (ad + fiyat + kampanya içeriği) ya da `CartItemValidationFailed`
-      (neden). (`CartSagaParticipantManager` + `cartSagaConsumer`.)
-   3. cart-service sonucu uygular: Validated → satır `ACTIVE` (snapshot yazılır);
-      Failed → `CANCELLED` + soft-delete (**telafi**). (`CartSagaManager` + `cartSagaConsumer`.)
-   Ekleme **asenkron** tamamlanır (endpoint hemen döner, satır kısa süre PENDING görünür).
-   **Inbox** ile idempotenttir; **yeni Debezium connector gerekmez** — mevcut product
-   connector ve cart connector `CartSaga` kayıtlarını aggregate_type ile aynı topic'e
-   yönlendirir. **Checkout kapsam dışıdır.**
-
-## 7. Açık Sorular / Yapılacaklar
+## 10. Açık Sorular / Yapılacaklar
 
 - [x] Servis keşfi: **Netflix Eureka** (`eureka-server`) + API Gateway
   (`gateway-server`, Spring Cloud Gateway).
 - [x] Merkezi konfigürasyon: **Spring Cloud Config** (`config-server`), Git
-  backend + kök `configs/` klasörü. Bkz. §4.1.
-- [x] Veritabanı teknolojisi: **PostgreSQL, per-service DB** (`customer-service`).
-- [x] İlk somut servis: **`customer-service`** (n-layered) oluşturuldu. Bkz. §4.2.
+  backend + kök `configs/` klasörü. Bkz. §5.
+- [x] Veritabanı teknolojisi: **PostgreSQL, per-service DB**.
+- [x] İş servisleri: `customer-service`, `account-service`, `product-service`,
+  `cart-service` (n-layered). Bkz. §6, §8.
+- [x] Choreography Saga: Billing Account, Product Sale, Cart Item. Bkz. §7.
+- [ ] Sepetten siparişe geçiş (checkout) — order-service henüz yok; cart-service
+  şimdilik yalnızca sepet yönetimini kapsıyor.
 - [ ] Observability (Actuator, Micrometer, tracing) standardı.
-- [ ] `Gender`/`Nationality` lookup tabloları (şimdilik `gender_id`/`nationality_id`
-  ham referans; ilgili servis/tablo eklenince FK'ye bağlanacak).
+- [ ] `Gender`/`Nationality` lookup tabloları (şimdilik `gender_id`/
+  `nationality_id` ham referans; ilgili servis/tablo eklenince FK'ye
+  bağlanacak).
 
-## 8. Değişiklik Günlüğü
+## 11. Değişiklik Günlüğü
 
-- **2026-07-09:** **cart-service** (sepet, n-layered, port 8085, cartdb) eklendi:
-  Cart/CartItem modeli, iki ekleme yolu (katalogdan teklif / kampanya paketi),
-  CRUD, Redis cache. Cross-service doğrulama **choreography Saga** ile yapılır
-  (`crm.CartSaga.events`): cart-service satırı PENDING açıp doğrulama ister,
-  product-service (doğrulayıcı) teklifi/kampanyayı otoriter doğrulayıp ad/fiyat/içerik
-  ile sonuç yayınlar, cart-service satırı ACTIVE yapar ya da telafi ile CANCELLED eder.
-  Inbox ile idempotent; yeni Debezium connector gerekmez. **Not:** ilk taslakta
-  denenen "product-service offer/campaign event'i yayınlar + cart yerel projeksiyon
-  tutar" yaklaşımı saga modeline uygun olmadığından kaldırıldı. Bkz. §4.5.
+- **2026-07-09:** **cart-service** (sepet, n-layered, port 8085, cartdb)
+  eklendi: Cart/CartItem modeli, iki ekleme yolu (katalogdan teklif / kampanya
+  paketi), CRUD, Redis cache. Cross-service doğrulama **choreography Saga** ile
+  yapılır (`crm.CartSaga.events`): cart-service satırı PENDING açıp doğrulama
+  ister, product-service (doğrulayıcı) teklifi/kampanyayı otoriter doğrulayıp
+  ad/fiyat/içerik ile sonuç yayınlar, cart-service satırı ACTIVE yapar ya da
+  telafi ile CANCELLED eder. Inbox ile idempotent; yeni Debezium connector
+  gerekmez. **Not:** ilk taslakta denenen "product-service offer/campaign
+  event'i yayınlar + cart yerel projeksiyon tutar" yaklaşımı saga modeline
+  uygun olmadığından kaldırıldı. Bkz. §7.3, §8.4.
 - **2026-07-06:** Proje başlatıldı. Parent POM (`etiya.com:crm-lite`) ve bu
   project-brain dökümanı oluşturuldu.
 - **2026-07-06:** `eureka-server` ve `gateway-server` eklendi (4 profil:
   dev/test/prod/docker), Dockerfile'lar oluşturuldu.
 - **2026-07-06:** `config-server` (Spring Cloud Config) eklendi. Tüm servisler
-  `spring.config.import` ile merkezi config'e bağlandı; ortam bazlı ayarlar kök
-  `configs/<service>/` klasörüne taşındı (`test` profili yerel kaldı). Bkz. §4.1.
+  `spring.config.import` ile merkezi config'e bağlandı; ortam bazlı ayarlar
+  kök `configs/<service>/` klasörüne taşındı (`test` profili yerel kaldı).
+  Bkz. §5.
+- **2026-07-06:** `customer-service` (ilk iş servisi, n-layered) eklendi:
+  PostgreSQL, Redis (+RedisInsight), Kafka + Transactional Outbox/Debezium,
+  Inbox Pattern, JOINED kalıtım (Customer/IndividualCustomer), BaseEntity,
+  merkezi hata yönetimi, DTO+MapStruct, iş kuralları. Altyapı `infra/`.
+  Bkz. §8.1.
+- **2026-07-08:** **Saga Pattern (choreography)** eklendi — Fatura Hesabı
+  Oluşturma akışı: account-service `PENDING` başlatır, customer-service
+  otoriter doğrular (validated/failed), account-service onaylar (`ACTIVE`) veya
+  telafi eder (`CANCELLED`). Tek saga kanalı `crm.BillingAccountSaga.events`
+  (yeni connector yok). Bkz. §7.1.
 - **2026-07-08:** Saga **update akışına** genişletildi ve **CQRS projeksiyonu
   kaldırıldı**. Fatura hesabı adres değişikliği artık `pendingAddressId` +
-  `...AddressChangeRequested` ile Saga üzerinden otoriter doğrulanır (onayda uygulanır,
-  redde eski adres korunur). account-service'teki müşteri/adres projeksiyonu
-  (read-model) ve `customerEventConsumer` silindi; tüm cross-service doğrulama Saga'dan
-  geçer. Bkz. §4.3.
-- **2026-07-08:** **Saga Pattern (choreography)** eklendi — Fatura Hesabı Oluşturma
-  akışı: account-service `PENDING` başlatır, customer-service otoriter doğrular
-  (validated/failed), account-service onaylar (`ACTIVE`) veya telafi eder
-  (`CANCELLED`). Tek saga kanalı `crm.BillingAccountSaga.events` (yeni connector
-  yok). Bkz. §4.3.
-- **2026-07-06:** `customer-service` (ilk iş servisi, n-layered) eklendi:
-  PostgreSQL, Redis (+RedisInsight), Kafka Cloud + Transactional Outbox/Debezium,
-  Inbox Pattern, JOINED kalıtım (Customer/IndividualCustomer), BaseEntity,
-  merkezi hata yönetimi, DTO+MapStruct, iş kuralları. Altyapı `infra/`. Bkz. §4.2.
+  `...AddressChangeRequested` ile Saga üzerinden otoriter doğrulanır (onayda
+  uygulanır, redde eski adres korunur). account-service'teki müşteri/adres
+  projeksiyonu (read-model) ve `customerEventConsumer` silindi; tüm
+  cross-service doğrulama Saga'dan geçer. Bkz. §7.1.
+- **2026-07-08/09 (product-service):** `product-service` eklendi: Katalog
+  (zorunlu kategori) / Kampanya (opsiyonel paket) modeli, `Product` satışı
+  choreography Saga ile (`crm.ProductSaga.events`, account-service'i
+  doğrulayıcı olarak kullanır). Bkz. §7.2, §8.3.
