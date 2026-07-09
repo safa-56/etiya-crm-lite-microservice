@@ -1,0 +1,29 @@
+# =============================================================================
+# cart-service - 'dev' profili (yerel geliştirme)
+# Altyapı infra/docker-compose.yml ile localhost üzerinde çalışır.
+# =============================================================================
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:cartdb}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      # Geliştirmede şemayı otomatik güncelle (outbox/inbox/projeksiyon tabloları dahil).
+      ddl-auto: update
+    show-sql: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+
+logging:
+  level:
+    com.etiya.cartservice: DEBUG
+    org.hibernate.SQL: DEBUG

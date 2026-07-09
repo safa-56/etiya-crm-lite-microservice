@@ -1,10 +1,10 @@
 # =============================================================================
-# product-service - ORTAK (profil bağımsız) konfigürasyon
-# Merkezi config server üzerinden sunulur (configs/product-service/).
+# cart-service - ORTAK (profil bağımsız) konfigürasyon
+# Merkezi config server üzerinden sunulur (configs/cart-service/).
 # Ortama özel (host/port/şifre) ayarlar dev/docker/prod profillerinde override edilir.
 # =============================================================================
 server:
-  port: ${SERVER_PORT:8084}
+  port: ${SERVER_PORT:8085}
 
 spring:
   jpa:
@@ -32,37 +32,28 @@ spring:
       cache-null-values: false
 
   # --- Kafka (Spring Cloud Stream + Kafka binder) ---
-  # Producer tarafı Outbox + Debezium ile yürüdüğünden burada tüketici binding'i
-  # tanımlıdır. Broker adresi ortama göre override edilir.
+  # Producer tarafı Outbox + Debezium ile yürür. cart-service, sepete ekleme Saga'sının
+  # başlatıcısıdır: doğrulama isteğini yayınlar ve product-service'in sonuç olaylarını
+  # bu tüketici ile dinler (crm.CartSaga.events).
   cloud:
-    # Fonksiyonel binding tanımı açıkça listelenir (birden fazla olursa ";" ile ayrılır).
     function:
-      definition: productSagaConsumer;cartSagaConsumer
+      definition: cartSagaConsumer
     stream:
       kafka:
         binder:
           brokers: ${KAFKA_BROKERS:localhost:9092}
       bindings:
-        # ProductSagaConsumerConfig#productSagaConsumer -> "productSagaConsumer-in-0"
-        # Ürün satışı Saga'sının doğrulama SONUÇ olayları (account-service'ten).
-        productSagaConsumer-in-0:
-          destination: ${APP_SAGA_TOPIC:crm.ProductSaga.events}
-          group: product-service
         # CartSagaConsumerConfig#cartSagaConsumer -> "cartSagaConsumer-in-0"
-        # Sepet ekleme Saga'sının doğrulama İSTEK olayları (cart-service'ten).
-        # product-service doğrulayıcıdır: teklif/kampanyayı doğrulayıp sonucu geri yayınlar.
+        # Sepet ekleme Saga'sının doğrulama SONUÇ olayları (product-service'ten).
         cartSagaConsumer-in-0:
-          destination: ${APP_CART_SAGA_TOPIC:crm.CartSaga.events}
-          group: product-service
+          destination: ${APP_SAGA_TOPIC:crm.CartSaga.events}
+          group: cart-service
 
 # Uygulamaya özel ayarlar
 app:
   kafka:
     # Kafka consumer'larını aç/kapa (test profilinde false yapılır)
     enabled: true
-  outbox:
-    # Debezium EventRouter'ın route.by.field olarak kullandığı aggregate tipi
-    product-aggregate-type: Product
 
 eureka:
   instance:
