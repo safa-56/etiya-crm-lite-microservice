@@ -1,5 +1,0 @@
-logging:
-  level:
-    # Config server'ın hangi property source'ları çözdüğünü ayrıntılı görmek için.
-    org.springframework.cloud.config: DEBUG
-    org.springframework.cloud.config.server: DEBUG
