@@ -18,8 +18,9 @@ import java.time.LocalDate;
  *
  * <p>Bir {@link ProductSpec}'i <b>fiyatlandıran</b> tekliftir; teklif seçimi
  * (FR-014) ekranında {@code Prod Offer ID} / {@code Prod Offer Name} olarak
- * listelenir. Bir teklif bir kataloga ({@link CatalogOffer}) ve/veya bir
- * kampanyaya ({@link CampaignOffer}) bağlanabilir. Müşteriye satıldığında
+ * listelenir. Her teklif <b>zorunlu olarak</b> tek bir {@link Catalog}'a (kategori)
+ * aittir; ayrıca opsiyonel olarak bir veya daha çok kampanyaya
+ * ({@link CampaignOffer}) bağlanabilir. Müşteriye satıldığında
  * {@link Product} kaydına dönüşür.
  *
  * <p>ERD'deki {@code is_active} ve {@code update_date} alanları {@link BaseEntity}
@@ -34,6 +35,11 @@ public class ProductOffer extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 150)
     private String name;
+
+    /** Teklifin ait olduğu katalog (kategori). Zorunlu — her teklifin bir kataloğu olur. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "catalog_id", nullable = false)
+    private Catalog catalog;
 
     /** Teklifin fiyatlandırdığı teknik özellik. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

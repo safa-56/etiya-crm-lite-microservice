@@ -17,9 +17,11 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProductOfferMapper {
 
-    // İlişki manager'da set edilir; skaler alanlar (name, price, start/end) map edilir.
+    // İlişkiler (catalog, productSpec) manager'da set edilir; skaler alanlar map edilir.
     ProductOffer toEntity(CreateProductOfferRequest request);
 
+    @Mapping(target = "catalogId", source = "catalog.id")
+    @Mapping(target = "catalogName", source = "catalog.name")
     @Mapping(target = "productSpecId", source = "productSpec.id")
     @Mapping(target = "productSpecName", source = "productSpec.name")
     ProductOfferResponse toResponse(ProductOffer entity);

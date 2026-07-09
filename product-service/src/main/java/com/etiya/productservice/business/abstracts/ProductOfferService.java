@@ -9,8 +9,9 @@ import org.springframework.data.domain.Pageable;
 /**
  * Ürün teklifi iş servisi (business abstraction).
  *
- * <p>CRUD'a ek olarak Teklif Seçimi ekranı (FR-014) için katalog/kampanya bazlı
- * arama uçlarını tanımlar.
+ * <p>CRUD'a ek olarak Teklif Seçimi ekranı (FR-014) için katalog (kategori) bazlı
+ * arama ucunu tanımlar. Kampanya bazlı listeleme kampanya detayından
+ * ({@code GET /campaigns/{id}}) beslenir.
  */
 public interface ProductOfferService {
 
@@ -20,11 +21,8 @@ public interface ProductOfferService {
 
     PagedResponse<ProductOfferResponse> getAll(Pageable pageable);
 
-    /** Bir kataloga bağlı teklifler (Catalog sekmesi). */
+    /** Bir kataloga (kategoriye) bağlı teklifler (Catalog sekmesi). */
     PagedResponse<ProductOfferResponse> getByCatalog(Long catalogId, Pageable pageable);
-
-    /** Bir kampanyaya bağlı teklifler (Campaign sekmesi). */
-    PagedResponse<ProductOfferResponse> getByCampaign(Long campaignId, Pageable pageable);
 
     ProductOfferResponse update(Long id, UpdateProductOfferRequest request);
 

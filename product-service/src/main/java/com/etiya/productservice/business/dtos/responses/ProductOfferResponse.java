@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 public record ProductOfferResponse(
         Long id,
         String name,
+        Long catalogId,
+        String catalogName,
         Long productSpecId,
         String productSpecName,
         BigDecimal price,

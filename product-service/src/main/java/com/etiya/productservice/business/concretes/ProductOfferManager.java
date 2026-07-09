@@ -7,20 +7,15 @@ import com.etiya.productservice.business.dtos.requests.UpdateProductOfferRequest
 import com.etiya.productservice.business.dtos.responses.PagedResponse;
 import com.etiya.productservice.business.dtos.responses.ProductOfferResponse;
 import com.etiya.productservice.business.mappers.ProductOfferMapper;
-import com.etiya.productservice.business.rules.CampaignBusinessRules;
 import com.etiya.productservice.business.rules.CatalogBusinessRules;
 import com.etiya.productservice.business.rules.ProductOfferBusinessRules;
 import com.etiya.productservice.business.rules.ProductSpecBusinessRules;
 import com.etiya.productservice.core.constants.CacheNames;
 import com.etiya.productservice.core.crosscutting.exceptions.BusinessException;
-import com.etiya.productservice.dataAccess.CampaignOfferRepository;
-import com.etiya.productservice.dataAccess.CampaignRepository;
-import com.etiya.productservice.dataAccess.CatalogOfferRepository;
 import com.etiya.productservice.dataAccess.CatalogRepository;
 import com.etiya.productservice.dataAccess.ProductOfferRepository;
 import com.etiya.productservice.dataAccess.ProductSpecRepository;
-import com.etiya.productservice.entities.CampaignOffer;
-import com.etiya.productservice.entities.CatalogOffer;
+import com.etiya.productservice.entities.Catalog;
 import com.etiya.productservice.entities.ProductOffer;
 import com.etiya.productservice.entities.ProductSpec;
 import org.springframework.cache.annotation.CacheEvict;
@@ -36,10 +31,11 @@ import java.time.LocalDateTime;
 /**
  * Ürün teklifi iş mantığı (business/concretes).
  *
- * <p>İş kurallarını (tarih aralığı, teknik özellik/katalog/kampanya varlığı)
- * ilgili {@code *BusinessRules} sınıflarına delege eder. Teklif isteğe bağlı
- * olarak katalog ve/veya kampanyaya bağlanır (join kayıtları oluşturulur).
- * Silme soft-delete'tir; okuma sonuçları Redis'te cache'lenir.
+ * <p>Her teklif <b>zorunlu olarak</b> bir kataloga (kategori) ve bir teknik
+ * özelliğe bağlanır; iş kurallarını (tarih aralığı, katalog/özellik varlığı)
+ * ilgili {@code *BusinessRules} sınıflarına delege eder. Kampanya üyeliği burada
+ * değil, kampanya tarafında yönetilir. Silme soft-delete'tir; okuma sonuçları
+ * Redis'te cache'lenir.
  */
 @Service
 public class ProductOfferManager implements ProductOfferService {
@@ -47,37 +43,25 @@ public class ProductOfferManager implements ProductOfferService {
     private final ProductOfferRepository repository;
     private final ProductSpecRepository productSpecRepository;
     private final CatalogRepository catalogRepository;
-    private final CampaignRepository campaignRepository;
-    private final CatalogOfferRepository catalogOfferRepository;
-    private final CampaignOfferRepository campaignOfferRepository;
     private final ProductOfferMapper mapper;
     private final ProductOfferBusinessRules rules;
     private final ProductSpecBusinessRules productSpecRules;
     private final CatalogBusinessRules catalogRules;
-    private final CampaignBusinessRules campaignRules;
 
     public ProductOfferManager(ProductOfferRepository repository,
                                ProductSpecRepository productSpecRepository,
                                CatalogRepository catalogRepository,
-                               CampaignRepository campaignRepository,
-                               CatalogOfferRepository catalogOfferRepository,
-                               CampaignOfferRepository campaignOfferRepository,
                                ProductOfferMapper mapper,
                                ProductOfferBusinessRules rules,
                                ProductSpecBusinessRules productSpecRules,
-                               CatalogBusinessRules catalogRules,
-                               CampaignBusinessRules campaignRules) {
+                               CatalogBusinessRules catalogRules) {
         this.repository = repository;
         this.productSpecRepository = productSpecRepository;
         this.catalogRepository = catalogRepository;
-        this.campaignRepository = campaignRepository;
-        this.catalogOfferRepository = catalogOfferRepository;
-        this.campaignOfferRepository = campaignOfferRepository;
         this.mapper = mapper;
         this.rules = rules;
         this.productSpecRules = productSpecRules;
         this.catalogRules = catalogRules;
-        this.campaignRules = campaignRules;
     }
 
     @Override
@@ -85,35 +69,20 @@ public class ProductOfferManager implements ProductOfferService {
     @CacheEvict(value = CacheNames.PRODUCT_OFFER_LIST, allEntries = true)
     public ProductOfferResponse add(CreateProductOfferRequest request) {
         rules.checkDateRangeValid(request.startDate(), request.endDate());
+        catalogRules.checkIfCatalogExists(request.catalogId());
         productSpecRules.checkIfProductSpecExists(request.productSpecId());
 
+        Catalog catalog = catalogRepository.findByIdAndIsActiveTrue(request.catalogId())
+                .orElseThrow(() -> new BusinessException(Messages.CATALOG_NOT_FOUND));
         ProductSpec spec = productSpecRepository.findByIdAndIsActiveTrue(request.productSpecId())
                 .orElseThrow(() -> new BusinessException(Messages.PRODUCT_SPEC_NOT_FOUND));
 
         ProductOffer offer = mapper.toEntity(request);
+        offer.setCatalog(catalog);
         offer.setProductSpec(spec);
         offer.setIsActive(true);
-        ProductOffer saved = repository.save(offer);
 
-        // Opsiyonel katalog/kampanya bağları (Teklif Seçimi sekmeleri).
-        if (request.catalogId() != null) {
-            catalogRules.checkIfCatalogExists(request.catalogId());
-            CatalogOffer catalogOffer = new CatalogOffer();
-            catalogOffer.setCatalog(catalogRepository.getReferenceById(request.catalogId()));
-            catalogOffer.setProductOffer(saved);
-            catalogOffer.setIsActive(true);
-            catalogOfferRepository.save(catalogOffer);
-        }
-        if (request.campaignId() != null) {
-            campaignRules.checkIfCampaignExists(request.campaignId());
-            CampaignOffer campaignOffer = new CampaignOffer();
-            campaignOffer.setCampaign(campaignRepository.getReferenceById(request.campaignId()));
-            campaignOffer.setProductOffer(saved);
-            campaignOffer.setIsActive(true);
-            campaignOfferRepository.save(campaignOffer);
-        }
-
-        return mapper.toResponse(saved);
+        return mapper.toResponse(repository.save(offer));
     }
 
     @Override
@@ -135,14 +104,8 @@ public class ProductOfferManager implements ProductOfferService {
     @Transactional(readOnly = true)
     public PagedResponse<ProductOfferResponse> getByCatalog(Long catalogId, Pageable pageable) {
         catalogRules.checkIfCatalogExists(catalogId);
-        return PagedResponse.of(repository.findAllByCatalogId(catalogId, pageable).map(mapper::toResponse));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PagedResponse<ProductOfferResponse> getByCampaign(Long campaignId, Pageable pageable) {
-        campaignRules.checkIfCampaignExists(campaignId);
-        return PagedResponse.of(repository.findAllByCampaignId(campaignId, pageable).map(mapper::toResponse));
+        return PagedResponse.of(
+                repository.findAllByCatalogIdAndIsActiveTrue(catalogId, pageable).map(mapper::toResponse));
     }
 
     @Override

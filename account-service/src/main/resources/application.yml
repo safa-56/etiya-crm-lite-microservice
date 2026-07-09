@@ -10,3 +10,18 @@ spring:
     # Merkezi konfigürasyon importu. 'optional:' öneki, config server erişilemezse
     # uygulamanın yereldeki ayarlarla açılmasına izin verir (dayanıklılık).
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+# --- Otomatik test seed'i (yalnızca dev profilinde) --------------------------
+# Hibernate şemayı kurduktan SONRA classpath'teki data.sql çalışır ve DB'yi
+# idempotent şekilde tohumlar. Böylece repoyu pull edip dev'de çalıştıran herkeste
+# veri otomatik oluşur. prod/test bu ayarları almaz (şema/veri güvenliği).
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  sql:
+    init:
+      mode: always
+  jpa:
+    defer-datasource-initialization: true

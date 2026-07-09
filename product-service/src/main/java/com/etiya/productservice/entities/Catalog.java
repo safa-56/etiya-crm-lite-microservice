@@ -10,10 +10,11 @@ import lombok.Setter;
 /**
  * Katalog (Catalog) entity'si.
  *
- * <p>Ürün tekliflerini gruplayan katalogdur; Teklif Seçimi ekranının
- * {@code Catalog} sekmesinde teklifleri filtrelemek için kullanılır (FR-014).
- * Bir katalog, {@link CatalogOffer} üzerinden birden çok {@link ProductOffer}
- * içerir (N-N).
+ * <p>Ürün tekliflerini gruplayan <b>kategoridir</b> (ör. Ev İnterneti, Mobil,
+ * Superbox); Teklif Seçimi ekranının {@code Catalog} sekmesinde teklifleri
+ * filtrelemek için kullanılır (FR-014). Bir katalog birden çok
+ * {@link ProductOffer} içerir; her teklif <b>tam olarak bir</b> kataloğa aittir
+ * ({@code ProductOffer.catalog} zorunlu FK — 1-N).
  */
 @Getter
 @Setter

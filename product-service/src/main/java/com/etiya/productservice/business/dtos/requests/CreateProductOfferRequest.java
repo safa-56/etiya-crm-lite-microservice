@@ -11,16 +11,19 @@ import java.time.LocalDate;
 /**
  * Ürün teklifi oluşturma isteği.
  *
- * <p>Bir teknik özelliği ({@code productSpecId}) fiyatlandırır. Teklif isteğe
- * bağlı olarak bir kataloga ({@code catalogId}) ve/veya bir kampanyaya
- * ({@code campaignId}) bağlanabilir; verilirse ilgili birleşim (join) kayıtları
- * oluşturulur (Teklif Seçimi ekranındaki Catalog/Campaign sekmeleri için).
+ * <p>Bir teknik özelliği ({@code productSpecId}) fiyatlandırır ve <b>zorunlu
+ * olarak</b> bir kataloga (kategori — {@code catalogId}) bağlanır. Kampanya
+ * üyeliği burada değil, kampanya tarafında ({@code POST /campaigns} — offerIds)
+ * yönetilir.
  */
 public record CreateProductOfferRequest(
 
         @NotBlank(message = "Teklif adı (name) zorunludur.")
         @Size(max = 150, message = "Teklif adı en fazla 150 karakter olabilir.")
         String name,
+
+        @NotNull(message = "Katalog (catalogId) zorunludur.")
+        Long catalogId,
 
         @NotNull(message = "Teknik özellik (productSpecId) zorunludur.")
         Long productSpecId,
@@ -31,12 +34,6 @@ public record CreateProductOfferRequest(
 
         LocalDate startDate,
 
-        LocalDate endDate,
-
-        /** Opsiyonel: teklifin bağlanacağı katalog. */
-        Long catalogId,
-
-        /** Opsiyonel: teklifin bağlanacağı kampanya. */
-        Long campaignId
+        LocalDate endDate
 ) {
 }

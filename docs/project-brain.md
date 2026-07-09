@@ -216,6 +216,56 @@ Create ve adres-update **asenkron** tamamlanır (endpoint hemen döner; sonuç s
 gelir). Idempotency: Inbox + sonucu hesap durumuna göre yönlendirme
 (PENDING → create; `pendingAddressId` → update; ikisi de yoksa atla).
 
+## 4.4. product-service — Katalog (kategori) vs. Kampanya (paket) modeli
+
+Teklif Seçimi (FR-014 / UC-EACRML-014) analizindeki iki farklı kavram, domain'de
+**bilinçli olarak farklı** modellenir:
+
+1. **Katalog = zorunlu kategori (1-N).** Her `ProductOffer` **tam olarak bir**
+   `Catalog`'a aittir (`catalog_id` NOT NULL, `@ManyToOne`). Katalog bir kategoridir
+   (Ev İnterneti, Mobil, Superbox, TV, Sabit Hat). Eski `CatalogOffer` N-N join
+   entity'si **kaldırıldı** (kategori tekildir; N-N yanlış modeldi). Teklif
+   oluştururken `catalogId` zorunludur. Catalog sekmesi araması:
+   `GET /product-offers?catalogId=`.
+
+2. **Kampanya = opsiyonel paket/bundle (N-N).** Bir `Campaign` birden çok teklifi
+   `CampaignOffer` (N-N) ile paketler; bir teklif birden çok kampanyada olabilir ve
+   kampanyaya girmesi **zorunlu değildir**. Kampanya, tek `campaignPrice` ile sepete
+   **bir bütün olarak** eklenir. Kampanya, içindeki teklifleriyle birlikte tek
+   çağrıda kurulur: `POST /campaigns` gövdesi `{ name, campaignPrice, offerIds[] }`.
+   `CampaignResponse` paketi + türetilmiş fiyatları döner: `listPriceTotal`
+   (Σ liste), `savings` (indirim = listPriceTotal − campaignPrice) ve `offers[]`
+   (`{offerId, offerName, listPrice}`). Böylece ileride **sipariş (order)** akışı
+   paketi ek sorgu yapmadan tek yanıttan kurabilir.
+
+   **Kural notu:** "kampanya fiyatı < liste toplamı" iş kuralı olarak **zorlanmaz**
+   (yalnızca `savings` hesaplanıp gösterilir); zorlanan tek kural, paketin en az bir
+   **var olan/aktif** teklif içermesi ve aynı teklifin pakette tekrarlanmamasıdır.
+
+**Satış (Product):** `Product`, satılan teklifin son halidir; opsiyonel `campaign_id`
+ile hangi paketten geldiğini taşır (`price_to_be_paid` = ödenen nihai fiyat). Satış
+choreography Saga'sı değişmedi (PENDING → ACTIVE/CANCELLED, bkz. §4.3 mantığı).
+
+### Test seed verisi
+
+İki yol var (ayrıntı ve senaryo tablosu: `infra/seed/README.md`):
+
+1. **Otomatik seed (dev profili).** Her serviste `src/main/resources/data.sql`
+   vardır; servis `dev` profilinde açıldığında Hibernate şemayı kurduktan sonra
+   Spring bu betiği çalıştırıp DB'yi **idempotent** (`ON CONFLICT (id) DO NOTHING`)
+   tohumlar. Aktifleştiren ayarlar servisin yerel `application.yml`'indeki dev
+   dökümanında: `spring.sql.init.mode=always` +
+   `spring.jpa.defer-datasource-initialization=true` (**prod/test almaz**). Böylece
+   repoyu pull edip dev'de çalıştıran herkeste veri kendiliğinden oluşur.
+2. **Manuel tam sıfırlama.** `infra/seed/*.sql` (+ `run-seed.sh`/`run-seed.ps1`)
+   `TRUNCATE ... RESTART IDENTITY CASCADE` ile DB'yi baştan temiz seed'e döndürür.
+
+**Not (şema sıfırlama tuzağı):** DBeaver'da veriyi silmek için `public` şemasını
+DROP ETME; Hibernate tabloları `public`'e kurduğundan şema yoksa `ddl-auto` sessizce
+hiçbir tablo oluşturmaz (uygulama yine "UP" görünür). Sıfırlamak için tabloları
+`TRUNCATE`/`DROP` et ya da şemayı silersen `CREATE SCHEMA public;` ile geri aç ve
+servisi yeniden başlat.
+
 ## 7. Açık Sorular / Yapılacaklar
 
 - [x] Servis keşfi: **Netflix Eureka** (`eureka-server`) + API Gateway
