@@ -48,6 +48,17 @@ spring:
               filters:
                 - StripPrefix=1
 
+            - id: product-service
+              uri: lb://product-service
+              predicates:
+                - Path=/api/v1/product-specs/**
+                - Path=/api/v1/product-offers/**
+                - Path=/api/v1/catalogs/**
+                - Path=/api/v1/campaigns/**
+                - Path=/api/v1/products/**
+              filters:
+                - StripPrefix=1
+
 server:
   # API Gateway'in dış dünyaya açıldığı standart port (SERVER_PORT ile override)
   port: ${SERVER_PORT:8080}

@@ -25,4 +25,13 @@ public final class Messages {
      */
     public static final String BILLING_ACCOUNT_HAS_ACTIVE_PRODUCTS =
             "The billing account cannot be deleted because it has active products.";
+
+    // --- Ürün satışı Saga'sı (doğrulayıcı adım) ---
+
+    /** Ürün satışı Saga'sı: hedef fatura hesabı bulunamadı (telafi nedeni). */
+    public static final String SAGA_BILLING_ACCOUNT_NOT_FOUND = "Fatura hesabı bulunamadı.";
+
+    /** Ürün satışı Saga'sı: fatura hesabı aktif (ACTIVE) durumda değil (telafi nedeni). */
+    public static final String SAGA_BILLING_ACCOUNT_NOT_ACTIVE =
+            "Fatura hesabı aktif olmadığı için ürün bağlanamaz.";
 }

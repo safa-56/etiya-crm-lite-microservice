@@ -1,0 +1,12 @@
+spring:
+  application:
+    # Config server, konfigürasyonu bu isme göre çözer: configs/product-service/
+    name: product-service
+  profiles:
+    # Dışarıdan SPRING_PROFILES_ACTIVE verilmezse geliştirme profili aktif olur.
+    # Docker imajı bu değişkeni 'docker' olarak set eder (bkz. Dockerfile).
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    # Merkezi konfigürasyon importu. 'optional:' öneki, config server erişilemezse
+    # uygulamanın yereldeki ayarlarla açılmasına izin verir (dayanıklılık).
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}

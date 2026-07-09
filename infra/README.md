@@ -1,8 +1,8 @@
 # infra — Altyapı Servisleri
 
-`customer-service` ve `account-service` için gereken altyapıyı ayağa kaldırır:
-**PostgreSQL**, **Redis**, **RedisInsight**, **Kafka (local, KRaft)**, **Kafka UI**
-ve **Debezium (Kafka Connect)**.
+`customer-service`, `account-service` ve `product-service` için gereken altyapıyı
+ayağa kaldırır: **PostgreSQL**, **Redis**, **RedisInsight**, **Kafka (local, KRaft)**,
+**Kafka UI** ve **Debezium (Kafka Connect)**.
 
 > **Kafka (local container):** Kafka broker'ı bu compose'da yer alır (Zookeeper'sız
 > KRaft, tek node). Uygulama **Spring Cloud Stream (Kafka binder)** ile bağlanır;
@@ -17,7 +17,7 @@ docker compose -f infra/docker-compose.yml up -d
 
 | Servis        | Adres                     | Not                                        |
 |---------------|---------------------------|--------------------------------------------|
-| PostgreSQL    | `localhost:5432`          | db'ler: `customerdb`, `accountdb`          |
+| PostgreSQL    | `localhost:5432`          | db'ler: `customerdb`, `accountdb`, `productdb` |
 | Redis         | `localhost:6379`          | cache                                      |
 | RedisInsight  | http://localhost:5540     | Redis host olarak `redis:6379` ekleyin     |
 | Kafka         | `localhost:9092` (host)   | konteyner içi: `kafka:29092`               |
@@ -39,9 +39,15 @@ curl -i -X POST http://localhost:8083/connectors \
   -H "Content-Type: application/json" \
   -d @infra/debezium/register-account-connector.json
 
+# product-service (db: productdb)
+curl -i -X POST http://localhost:8083/connectors \
+  -H "Content-Type: application/json" \
+  -d @infra/debezium/register-product-connector.json
+
 # Durum:
 curl -s http://localhost:8083/connectors/customer-outbox-connector/status | jq
 curl -s http://localhost:8083/connectors/account-outbox-connector/status | jq
+curl -s http://localhost:8083/connectors/product-outbox-connector/status | jq
 ```
 
 > **accountdb var mı?** `accountdb`, postgres ilk açılışında

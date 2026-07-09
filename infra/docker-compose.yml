@@ -347,6 +347,36 @@ services:
 #      - "${ACCOUNT_SERVICE_PORT:-8082}:8082"
 #    networks:
 #      - crm-net
+#
+#  # ---------------------------------------------------------------------------
+#  # product-service (8084) - ürün (product catalog) servisi. config-server +
+#  # eureka-server ve altyapı (postgres, redis, kafka) SAĞLIKLI olunca başlar.
+#  # ---------------------------------------------------------------------------
+#  product-service:
+#    build:
+#      context: ..
+#      dockerfile: product-service/Dockerfile
+#    image: etiya/product-service:1.0.0
+#    container_name: crm-product-service
+#    restart: unless-stopped
+#    depends_on:
+#      config-server:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
+#    environment:
+#      SPRING_PROFILES_ACTIVE: docker
+#      CONFIG_SERVER_URL: http://config-server:8888
+#    ports:
+#      - "${PRODUCT_SERVICE_PORT:-8084}:8084"
+#    networks:
+#      - crm-net
 
 # -----------------------------------------------------------------------------
 # Kalıcı hacimler

@@ -38,13 +38,14 @@ spring:
     # Birden fazla fonksiyonel binding olduğunda Spring Cloud Stream'in hepsini
     # bind etmesi için tanımlar açıkça listelenmelidir (";" ile ayrılır).
     function:
-      definition: productEventConsumer;billingAccountSagaConsumer
+      definition: productEventConsumer;billingAccountSagaConsumer;productSagaConsumer
     stream:
       kafka:
         binder:
           brokers: ${KAFKA_BROKERS:localhost:9092}
       bindings:
         # ProductEventConsumerConfig#productEventConsumer -> "productEventConsumer-in-0"
+        # Ürün olayları (ProductCreated/ProductDeleted) ile aktif ürün sayısı güncellenir.
         productEventConsumer-in-0:
           destination: ${APP_PRODUCT_TOPIC:crm.Product.events}
           group: account-service
@@ -52,6 +53,11 @@ spring:
         # Fatura hesabı oluşturma Saga'sının doğrulama SONUÇ olayları.
         billingAccountSagaConsumer-in-0:
           destination: ${APP_SAGA_TOPIC:crm.BillingAccountSaga.events}
+          group: account-service
+        # ProductSagaConsumerConfig#productSagaConsumer -> "productSagaConsumer-in-0"
+        # Ürün satışı Saga'sının doğrulama İSTEK olayları (account doğrulayıcı taraf).
+        productSagaConsumer-in-0:
+          destination: ${APP_PRODUCT_SAGA_TOPIC:crm.ProductSaga.events}
           group: account-service
 
 # Uygulamaya özel ayarlar
