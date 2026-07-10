@@ -36,6 +36,14 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Güvenlik - OAuth2 Resource Server (JWT). Gateway'de doğrulanan token
+             burada da yeniden doğrulanır (defense-in-depth) ve rol bazlı yetki
+             (@PreAuthorize) için authority'lere dönüştürülür. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
         <!-- JPA + Hibernate (dataAccess katmanı) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

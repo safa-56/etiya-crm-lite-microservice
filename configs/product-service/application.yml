@@ -84,3 +84,16 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+---
+# =============================================================================
+# Güvenlik - OAuth2 Resource Server (JWT). Keycloak 'etiya-crm' realm issuer'ı.
+# Bu ayrı YAML belgesi (---) mevcut ayarlarla birleşir. Host (dev) varsayılanıdır;
+# 'docker' profilinde application-docker.yml issuer'ı keycloak:8080 ile override eder.
+# =============================================================================
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/etiya-crm}

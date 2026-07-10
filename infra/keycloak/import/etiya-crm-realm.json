@@ -3,24 +3,20 @@
   "enabled": true,
   "displayName": "Etiya CRM Lite",
 
-  "//_ssl": "Local dev icin http'ye izin ver (external isteklerde HTTPS zorunlu degil).",
   "sslRequired": "external",
 
-  "//_ac3": "AC-3: Kullanici adi dogrulamasi buyuk/kucuk harf DUYARSIZ. Keycloak kullanici adlarini kucuk harfe cevirerek saklar; giris zaten case-insensitive'dir. Asagidaki attribute bunu acikca isaretler.",
   "attributes": {
     "userProfileEnabled": "true"
   },
 
-  "//_ac6": "AC-6: Kullanici islem yapmayi biraktiktan 8 saat sonra yeniden giris. SSO oturum bosta kalma (idle) suresi = 28800 sn = 8 saat.",
   "ssoSessionIdleTimeout": 28800,
   "ssoSessionMaxLifespan": 36000,
   "ssoSessionIdleTimeoutRememberMe": 28800,
   "ssoSessionMaxLifespanRememberMe": 86400,
-  "accessTokenLifespan": 300,
+  "accessTokenLifespan": 1800,
   "accessTokenLifespanForImplicitFlow": 900,
   "offlineSessionIdleTimeout": 2592000,
 
-  "//_ac5": "AC-5: 5 basarisiz denemeden sonra hesap 15 dk kilitlenir. failureFactor=5, wait/maxFailureWait=900 sn (15 dk), permanentLockout=false.",
   "bruteForceProtected": true,
   "permanentLockout": false,
   "maxTemporaryLockouts": 0,
@@ -31,10 +27,8 @@
   "quickLoginCheckMilliSeconds": 1000,
   "maxDeltaTimeSeconds": 43200,
 
-  "//_ac4": "AC-4: Sifre en fazla 50 karakter (sunucu tarafi zorlama). Ek olarak min 8 karakter guvenlik varsayilani. Girisin fazla karakteri engellemesi (maxlength) icin 'etiya' login temasi kullanilir.",
   "passwordPolicy": "length(8) and maxLength(50)",
 
-  "//_theme": "AC-1/AC-2/AC-4: Login formunda kullanici adi ve sifre alanlarina maxlength=50 uygulayan ve kullanici adinin bas/son bosluklarini kirpan ozel tema.",
   "loginTheme": "etiya",
 
   "registrationAllowed": false,
@@ -80,7 +74,6 @@
     }
   ],
 
-  "//_users": "Ornek kullanici. Giris: demo / Password123 (min 8 / max 50 politikasina uygun).",
   "users": [
     {
       "username": "demo",
