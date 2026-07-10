@@ -26,3 +26,7 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'orderdb')\gexec
 
 SELECT 'CREATE DATABASE searchdb'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'searchdb')\gexec
+
+-- Keycloak (kimlik dogrulama / yetki sunucusu) kendi semasini bu veritabaninda yonetir.
+SELECT 'CREATE DATABASE keycloakdb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'keycloakdb')\gexec

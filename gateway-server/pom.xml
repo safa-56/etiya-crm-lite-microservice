@@ -84,6 +84,19 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!--
+            OAuth2 Resource Server (reaktif/WebFlux) - Keycloak'ın ürettiği JWT
+            access token'larını gateway'de doğrular (imza + issuer). Gateway tek
+            giriş noktası olduğu için kimlik doğrulama/yetki kontrolü burada
+            merkezîleştirilir; arka servisler token doğrulama yükünden kurtulur.
+            spring.security.oauth2.resourceserver.jwt.issuer-uri ile Keycloak
+            realm'ine bağlanır ve JWKS'i otomatik keşfeder.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
     </dependencies>
 
     <!--

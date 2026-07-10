@@ -214,6 +214,64 @@ services:
     networks:
       - crm-net
 
+  # ---------------------------------------------------------------------------
+  # Keycloak - kimlik doğrulama ve yetkilendirme (OpenID Connect / OAuth2) sunucusu
+  #
+  # - Kalıcı verisini PostgreSQL'deki `keycloakdb` şemasında tutar (postgres init
+  #   betiği bu veritabanını oluşturur).
+  # - Açılışta `--import-realm` ile `etiya-crm` realm'ini import/senkronize eder.
+  #   Realm; kabul kriterlerini (kullanıcı adı/şifre 50 kar., trim, case-insensitive,
+  #   5 başarısız denemede 15 dk kilit, 8 saat idle timeout) içerir.
+  # - `etiya` login teması alan bazında maxlength/trim uygular.
+  #
+  # Erişim:
+  #   - Admin konsolu : http://localhost:${KEYCLOAK_PORT:-8180}  (admin / admin)
+  #   - Realm issuer  : http://localhost:${KEYCLOAK_PORT:-8180}/realms/etiya-crm
+  #
+  # NOT: `start-dev` yerel geliştirme içindir (HTTP + esnek hostname). Üretimde
+  #      `start` + HTTPS + KC_HOSTNAME sabitlenmelidir.
+  # ---------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: crm-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # --- Bootstrap admin (ilk açılışta oluşturulur) ---
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+
+      # --- Veritabanı (mevcut postgres container'ındaki keycloakdb) ---
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloakdb
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+      # --- HTTP / hostname (dev) ---
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    volumes:
+      # Açılışta import edilecek realm tanımları (salt-okunur).
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+      # Özel login teması (maxlength/trim).
+      - ./keycloak/themes:/opt/keycloak/themes:ro
+    healthcheck:
+      # Keycloak imajında curl/wget yoktur; bash /dev/tcp ile management portundan (9000) sağlık sorgusu.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q 'UP'"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - crm-net
+
   # ===========================================================================
   # UYGULAMA SERVİSLERİ (dockerize) - başlatma sırası depends_on + healthcheck
   # ile zorlanır. Tüm imajlar REPO KÖKÜ (context: ..) build context'i ile

@@ -2,3 +2,13 @@ eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka/
+
+# Docker ağı içinde Keycloak, servis adıyla (keycloak:8080) erişilir.
+# Token issuer'ının bu adresle eşleşmesi için Keycloak'a da aynı hostname üzerinden
+# istek yapılmalıdır (KC_HOSTNAME_STRICT=false ile issuer istek adresinden türetilir).
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/realms/etiya-crm}

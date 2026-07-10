@@ -80,6 +80,21 @@ spring:
               filters:
                 - StripPrefix=1
 
+  # ---------------------------------------------------------------------------
+  # Güvenlik - OAuth2 Resource Server (JWT doğrulama)
+  # Gateway, Keycloak'ın 'etiya-crm' realm'inde ürettiği access token'ları burada
+  # doğrular. issuer-uri, JWKS ve token issuer'ını otomatik keşfetmek için
+  # kullanılır. Ortam bazında (dev host / docker) KEYCLOAK_ISSUER_URI ile override
+  # edilir; varsayılan yerel geliştirme (host) adresidir.
+  #   - Host (dev)   : http://localhost:8180/realms/etiya-crm
+  #   - Docker ağı   : http://keycloak:8080/realms/etiya-crm  (bkz. application-docker.yml)
+  # ---------------------------------------------------------------------------
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/etiya-crm}
+
 server:
   # API Gateway'in dış dünyaya açıldığı standart port (SERVER_PORT ile override)
   port: ${SERVER_PORT:8080}
