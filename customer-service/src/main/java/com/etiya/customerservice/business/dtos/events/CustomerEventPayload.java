@@ -15,11 +15,21 @@ import java.util.List;
  * EventRouter payload'ı ayrıştırmadan da ayrı bir header üretmediğinden, olay
  * tipini tüketici tarafına taşımak için gövdeye eklenmiştir (product olay
  * sözleşmesiyle aynı yaklaşım).
+ *
+ * <p>{@code secondName}, {@code nationalityId} (TCKN), {@code gsmNumber} ve
+ * {@code role}, müşteri arama read-model'i (search-service, FR-002) için eklenmiştir;
+ * arama sonuç kolonları ve tam-eşleşme kriterleri bu alanlardan beslenir.
+ * {@code gsmNumber}, müşterinin birincil (ilk aktif) iletişim bilgisindeki GSM'dir;
+ * {@code role} şimdilik sabit "B2C"dir (yalnızca bireysel müşteri var).
  */
 public record CustomerEventPayload(
         Long customerId,
         String firstName,
+        String secondName,
         String lastName,
+        String nationalityId,
+        String gsmNumber,
+        String role,
         String eventType,
         List<AddressPayload> addresses,
         LocalDateTime occurredAt

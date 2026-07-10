@@ -136,6 +136,7 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
                 eventType,
                 new BillingAccountEventPayload(
                         account.getId(), account.getCustomerId(), account.getAccountName(),
+                        account.getAccountNumber(), account.getOrderNumber(),
                         account.getAccountStatus(), LocalDateTime.now()));
     }
 }

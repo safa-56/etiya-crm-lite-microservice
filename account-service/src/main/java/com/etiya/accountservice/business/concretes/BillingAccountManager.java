@@ -189,6 +189,8 @@ public class BillingAccountManager implements BillingAccountService {
                 account.getId(),
                 account.getCustomerId(),
                 account.getAccountName(),
+                account.getAccountNumber(),
+                account.getOrderNumber(),
                 account.getAccountStatus(),
                 LocalDateTime.now());
         outboxService.publish(

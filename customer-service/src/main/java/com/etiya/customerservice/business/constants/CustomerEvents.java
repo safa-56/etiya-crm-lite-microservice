@@ -15,4 +15,10 @@ public final class CustomerEvents {
     public static final String CUSTOMER_CREATED = "CustomerCreated";
     public static final String CUSTOMER_UPDATED = "CustomerUpdated";
     public static final String CUSTOMER_DELETED = "CustomerDeleted";
+
+    /**
+     * Müşteri rolü/segmenti — olay gövdesine yazılır (search read-model'i, FR-002).
+     * Şimdilik yalnızca bireysel müşteri (B2C) modellendiğinden sabittir.
+     */
+    public static final String ROLE_B2C = "B2C";
 }

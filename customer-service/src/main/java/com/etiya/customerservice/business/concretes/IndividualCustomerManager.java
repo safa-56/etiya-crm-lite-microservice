@@ -227,10 +227,25 @@ public class IndividualCustomerManager implements IndividualCustomerService {
 
     private void publishEvent(IndividualCustomer customer, String eventType) {
         CustomerEventPayload payload = new CustomerEventPayload(
-                customer.getId(), customer.getFirstName(), customer.getLastName(),
-                eventType, toAddressPayloads(customer), LocalDateTime.now());
+                customer.getId(), customer.getFirstName(), customer.getSecondName(),
+                customer.getLastName(), customer.getNationalityId(), primaryGsmNumber(customer),
+                CustomerEvents.ROLE_B2C, eventType, toAddressPayloads(customer), LocalDateTime.now());
         outboxService.publish(
                 CustomerEvents.AGGREGATE_TYPE, String.valueOf(customer.getId()), eventType, payload);
+    }
+
+    /**
+     * Müşterinin birincil GSM numarasını döndürür (search read-model'i için).
+     * İletişim bilgisinde ayrı bir "birincil" bayrağı olmadığından, ilk aktif
+     * iletişim bilgisinin GSM'i ({@code mobilPhone}) birincil kabul edilir.
+     */
+    private String primaryGsmNumber(IndividualCustomer customer) {
+        return customer.getContactInfos().stream()
+                .filter(contactInfo -> Boolean.TRUE.equals(contactInfo.getIsActive()))
+                .map(CustomerContactInfo::getMobilPhone)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     /**

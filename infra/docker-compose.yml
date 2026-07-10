@@ -439,6 +439,38 @@ services:
 #      - "${ORDER_SERVICE_PORT:-8086}:8086"
 #    networks:
 #      - crm-net
+#
+#  # ---------------------------------------------------------------------------
+#  # search-service (8087) - müşteri arama servisi (CQRS read-model, FR-002).
+#  # config-server + eureka-server ve altyapı (postgres, redis, kafka) SAĞLIKLI
+#  # olunca başlar. customer + account olay akışlarını dinleyip tek denormalize
+#  # arama indeksini besler (kendi outbox'ı/connector'ı yoktur; yalnızca tüketici).
+#  # ---------------------------------------------------------------------------
+#  search-service:
+#    build:
+#      context: ..
+#      dockerfile: search-service/Dockerfile
+#    image: etiya/search-service:1.0.0
+#    container_name: crm-search-service
+#    restart: unless-stopped
+#    depends_on:
+#      config-server:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
+#    environment:
+#      SPRING_PROFILES_ACTIVE: docker
+#      CONFIG_SERVER_URL: http://config-server:8888
+#    ports:
+#      - "${SEARCH_SERVICE_PORT:-8087}:8087"
+#    networks:
+#      - crm-net
 
 # -----------------------------------------------------------------------------
 # Kalıcı hacimler

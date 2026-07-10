@@ -147,8 +147,9 @@ public class AddressManager implements AddressService {
      * olarak outbox'a yazar. Böylece standalone adres ekleme/güncelleme/silme
      * işlemleri de account-service'in yerel müşteri-adres projeksiyonuna yansır.
      *
-     * <p>Ad/soyad bu bağlamda bilinmediğinden {@code null} gönderilir; tüketici
-     * bunları yalnızca dolu geldiğinde günceller, aksi halde mevcut değeri korur.
+     * <p>Ad/soyad/TCKN/GSM bu bağlamda bilinmediğinden {@code null} gönderilir;
+     * tüketici bunları yalnızca dolu geldiğinde günceller, aksi halde mevcut
+     * değeri korur (null-safe upsert).
      */
     private void publishCustomerAddressSnapshot(Long customerId) {
         List<CustomerEventPayload.AddressPayload> addresses =
@@ -160,7 +161,8 @@ public class AddressManager implements AddressService {
                         .toList();
 
         CustomerEventPayload payload = new CustomerEventPayload(
-                customerId, null, null, CustomerEvents.CUSTOMER_UPDATED, addresses, LocalDateTime.now());
+                customerId, null, null, null, null, null, null,
+                CustomerEvents.CUSTOMER_UPDATED, addresses, LocalDateTime.now());
         outboxService.publish(
                 CustomerEvents.AGGREGATE_TYPE, String.valueOf(customerId),
                 CustomerEvents.CUSTOMER_UPDATED, payload);

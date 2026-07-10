@@ -13,7 +13,7 @@ Etiya CRM Lite, mikroservis mimarisiyle geliştirilen bir CRM uygulamasıdır. H
 servis bağımsız olarak paketlenir (`jar`) ve çalıştırılır; ortak yapı ve bağımlılık
 yönetimi merkezi bir **parent POM** üzerinden sağlanır.
 
-**Modüller (8):**
+**Modüller (9):**
 
 | Servis             | Port | DB          | Rolü                                                        |
 |--------------------|------|-------------|--------------------------------------------------------------|
@@ -25,10 +25,13 @@ yönetimi merkezi bir **parent POM** üzerinden sağlanır.
 | `product-service`  | 8084 | `productdb` | Katalog, teknik özellik, teklif, kampanya, satılan ürün        |
 | `cart-service`     | 8085 | `cartdb`    | Sepet (Cart) ve sepet satırları                                |
 | `order-service`    | 8086 | `orderdb`   | Sipariş (Order) — sepetten siparişe geçiş / checkout (FR-016) |
+| `search-service`   | 8087 | `searchdb`  | Müşteri arama (FR-002) — CQRS read-model, olay tüketicisi     |
 
 İş servisleri (`customer` / `account` / `product` / `cart` / `order`) hepsi aynı
 **n-katmanlı** şablonu izler ve aralarındaki dağıtık işlemler **choreography Saga** ile
-yürür (bkz. §6).
+yürür (bkz. §6). `search-service` de aynı n-katmanlı şablonu izler ama saga'ya
+katılmaz: yalnızca customer + account olay akışlarını tüketen bir **CQRS read-model**'dir
+(bkz. §8.6).
 
 ## 2. Teknoloji Yığını (Tech Stack)
 
@@ -499,7 +502,49 @@ ortak desenle aynıdır (**saga başlatıcılığı** dahil).
 - **Cross-service doğrulama = Order Checkout Saga (bkz. §7.4).** order-service
   cart-service'e senkron çağrı yapmaz / yerel projeksiyon tutmaz.
 
-### 8.6. REST API Haritası (gateway üzerinden)
+### 8.6. search-service (port 8087, DB `searchdb`)
+
+FR-002 "Müşteri Arama ve Görüntüleme" ekranını karşılayan bir **CQRS read-model**'dir.
+Yazma tarafına (müşteri/hesap CRUD mantığına) dokunmaz; mevcut Kafka olay akışlarını
+tüketip tek bir denormalize **arama indeksi** tutar ve tek bir uçtan sorgular. Şablonu
+§6'daki ortak n-katmanlı desenle aynıdır (BaseEntity, Inbox, Redis, DTO+MapStruct,
+`GlobalExceptionHandler`, `PagedResponse`) ama **kendi outbox'ı/Debezium connector'ı
+yoktur** (yalnızca tüketici) ve **saga'ya katılmaz**.
+
+- **Model.** `CustomerSearchIndex` (`customer_search_index`): tek satır = bir müşteri;
+  `customerId` (unique iş anahtarı), `firstName`, `secondName`, `lastName`,
+  `nationalityId` (TCKN), `gsmNumber`, `role` (`CustomerRole` = B2C | B2B; şimdilik hep
+  B2C). Bir müşterinin birden çok fatura hesabı olabildiğinden `accountNumbers` ve
+  `orderNumbers` ayrı koleksiyon tablolarında (`search_account_numbers`,
+  `search_order_numbers`, `@ElementCollection`) tutulur. Arama sütunları indekslidir.
+
+- **İki consumer (Inbox ile idempotent).** (1) `customerEventConsumer` →
+  `crm.Customer.events`: create/update satırı `customerId`'ye göre **null-safe upsert**
+  eder (adres-only snapshot'ta boş gelen alanlar mevcut değeri korur), delete satırı
+  kaldırır. (2) `billingAccountEventConsumer` → `crm.Account.events`: hesap `ACTIVE`
+  olduğunda account/order numaralarını ilgili müşteri satırına ekler, `CANCELLED`/
+  `PASSIVE` olduğunda çıkarır. **Sıra bağımsızdır:** account olayı customer satırı
+  oluşmadan gelirse `customerId` ile bir **stub satır** oluşturulur; customer olayı
+  sonradan gelince isim/TCKN/GSM doldurulur.
+
+- **Sorgu (FR-002).** `GET /api/v1/search/customers` — dinamik **JPA Specification**
+  (Criteria API): `customerId`/`idNumber`(TCKN)/`accountNumber`/`gsm`/`orderNumber`
+  **tam eşleşme** (ACC-14), `firstName`/`lastName` **starts-with case-insensitive**
+  (ACC-17), isim bloğu içinde **AND** (ACC-15), isim bloğu ile diğer kriterler arasında
+  **OR** (ACC-16). Koleksiyon aramaları OR-güvenli EXISTS alt sorgusuyla yapılır. İlk
+  sayfa 50 kayıt (ACC-19), varsayılan sıralama `customerId` artan (ACC-20), sonuç
+  kolonları Customer ID / First / Second / Last Name / Role / ID Number (ACC-21).
+  Backend format doğrulaması (ACC-04..10) `business/rules` + `GlobalExceptionHandler`
+  ile 400 döner. Liste sorgusu Redis'te kısa süreli (~2 dk) cache'lenir; indeks
+  değişince cache boşaltılır.
+
+- **Ön koşul (event genişletmesi).** Search index'in ihtiyaç duyduğu alanlar için iki
+  olay sözleşmesi genişletildi: `CustomerEventPayload`'a `secondName`, `nationalityId`,
+  `gsmNumber` (müşterinin birincil/ilk aktif iletişim bilgisindeki GSM), `role` (sabit
+  "B2C"); `BillingAccountEventPayload`'a `accountNumber`, `orderNumber`. Geriye
+  uyumludur (yeni alan ekleme).
+
+### 8.7. REST API Haritası (gateway üzerinden)
 
 Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir; route'lar
 `configs/gateway-server/application.yml`'de açık (explicit) tanımlıdır
@@ -522,15 +567,16 @@ Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir; route'lar
 | cart     | `/api/v1/carts/{id}/items/campaigns` | `POST` — kampanya paketi ekle (**asenkron** saga)                       |
 | cart     | `/api/v1/carts/{cartId}/items/{itemId}` | `DELETE` — satırı çıkar                                                |
 | order    | `/api/v1/orders`                 | `POST` (submit, **asenkron** saga), `GET/{id}`, `GET` list, `GET /customer/{customerId}`, `DELETE/{id}` |
+| search   | `/api/v1/search/customers`       | `GET` — FR-002 müşteri arama (dinamik Specification, sayfalı; olay tüketicili read-model) |
 
-### 8.7. Altyapı Hızlı Referansı (infra)
+### 8.8. Altyapı Hızlı Referansı (infra)
 
 Kök `infra/docker-compose.yml` ile ayağa kalkan bileşenler (ayrıntı:
 `infra/README.md`):
 
 | Bileşen        | Adres                    | Not                                              |
 |----------------|--------------------------|--------------------------------------------------|
-| PostgreSQL     | `localhost:5432`         | `customerdb`, `accountdb`, `productdb`, `cartdb`, `orderdb` |
+| PostgreSQL     | `localhost:5432`         | `customerdb`, `accountdb`, `productdb`, `cartdb`, `orderdb`, `searchdb` |
 | Redis          | `localhost:6379`         | cache                                            |
 | RedisInsight   | http://localhost:5540    | Redis host olarak `redis:6379` ekle              |
 | Kafka          | `localhost:9092` (host)  | konteyner içi: `kafka:29092` (KRaft, tek node)   |
@@ -544,11 +590,14 @@ her servis kendi outbox'ı için ilk açılışta bir kez kaydedilir):
 `register-cart-connector.json` (cartdb), `register-order-connector.json` (orderdb).
 Saga kanalları (`crm.*Saga.events`) bu mevcut connector'lar üzerinden
 `aggregate_type`'a göre yönlenir; ayrı connector gerekmez (bkz. §7).
+**`search-service` için connector yoktur** (kendi outbox'ı olmayan salt tüketici);
+mevcut customer + account connector'larının yaydığı `crm.Customer.events` /
+`crm.Account.events` topic'lerini dinler.
 
-**cartdb notu:** Postgres init betiği (`infra/postgres/init/01-create-databases.sql`)
+**cartdb / searchdb notu:** Postgres init betiği (`infra/postgres/init/01-create-databases.sql`)
 yalnızca **boş volume'de ilk açılışta** çalışır. Var olan bir kurulumda yeni DB
 elle oluşturulur: `docker exec -it crm-postgres psql -U postgres -c "CREATE
-DATABASE cartdb;"`.
+DATABASE searchdb;"`.
 
 ## 9. Test Seed Verisi
 
@@ -600,6 +649,19 @@ açıkça kapatır.
 
 ## 11. Değişiklik Günlüğü
 
+- **2026-07-10:** **search-service** (müşteri arama, n-layered, port 8087, searchdb)
+  eklendi: FR-002 "Müşteri Arama ve Görüntüleme". Cross-service arama için bir **CQRS
+  read-model**'dir — tek denormalize `CustomerSearchIndex` tablosu (+ `search_account_numbers`
+  / `search_order_numbers` koleksiyonları), tek uç `GET /api/v1/search/customers` (dinamik
+  JPA Specification: tam-eşleşme + starts-with, ACC-15 AND / ACC-16 OR, sayfalı, Redis
+  cache). İki consumer **Inbox** ile idempotent: `crm.Customer.events` (upsert/remove) ve
+  `crm.Account.events` (account/order numarası ekle/çıkar); account olayı customer'dan önce
+  gelirse **stub satır** ile sıra-bağımsız çalışır. Servisin kendi outbox'ı/Debezium
+  connector'ı **yoktur** (yalnızca tüketici), saga'ya katılmaz. **Ön iş:** search'in
+  ihtiyaç duyduğu alanlar için iki olay sözleşmesi geriye-uyumlu genişletildi —
+  `CustomerEventPayload` (+`secondName`, `nationalityId`, `gsmNumber`, `role`),
+  `BillingAccountEventPayload` (+`accountNumber`, `orderNumber`). Modül sayısı 8→9.
+  Bkz. §8.6.
 - **2026-07-10:** **order-service** (sipariş, n-layered, port 8086, orderdb)
   eklendi: FR-016 "Siparişin Tamamlanması" (Submit Order). `Order`/`OrderItem`
   modeli (benzersiz `orderNumber`, servis adresi snapshot'ı, kalem/toplam
