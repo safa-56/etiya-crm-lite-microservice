@@ -3,7 +3,7 @@
 > Bu dosya projenin canlı hafızasıdır. Mimari kararlar, standartlar ve ilerleme
 > burada tutulur. Projede ilerledikçe güncellenir.
 
-_Son güncelleme: 2026-07-09_
+_Son güncelleme: 2026-07-10_
 
 ---
 
@@ -13,7 +13,7 @@ Etiya CRM Lite, mikroservis mimarisiyle geliştirilen bir CRM uygulamasıdır. H
 servis bağımsız olarak paketlenir (`jar`) ve çalıştırılır; ortak yapı ve bağımlılık
 yönetimi merkezi bir **parent POM** üzerinden sağlanır.
 
-**Modüller (7):**
+**Modüller (8):**
 
 | Servis             | Port | DB          | Rolü                                                        |
 |--------------------|------|-------------|--------------------------------------------------------------|
@@ -24,9 +24,11 @@ yönetimi merkezi bir **parent POM** üzerinden sağlanır.
 | `account-service`  | 8082 | `accountdb` | Fatura hesabı (Billing Account)                               |
 | `product-service`  | 8084 | `productdb` | Katalog, teknik özellik, teklif, kampanya, satılan ürün        |
 | `cart-service`     | 8085 | `cartdb`    | Sepet (Cart) ve sepet satırları                                |
+| `order-service`    | 8086 | `orderdb`   | Sipariş (Order) — sepetten siparişe geçiş / checkout (FR-016) |
 
-İş servisleri (`customer` / `account` / `product` / `cart`) hepsi aynı **n-katmanlı**
-şablonu izler ve aralarındaki dağıtık işlemler **choreography Saga** ile yürür (bkz. §6).
+İş servisleri (`customer` / `account` / `product` / `cart` / `order`) hepsi aynı
+**n-katmanlı** şablonu izler ve aralarındaki dağıtık işlemler **choreography Saga** ile
+yürür (bkz. §6).
 
 ## 2. Teknoloji Yığını (Tech Stack)
 
@@ -171,7 +173,7 @@ dosyalarını `main`'e push et, servisi yeniden başlat. Private repo için
 
 ## 6. İş Servisi Şablonu (n-layered)
 
-Tüm iş servisleri (`customer`, `account`, `product`, `cart`) **aynı** n-katmanlı
+Tüm iş servisleri (`customer`, `account`, `product`, `cart`, `order`) **aynı** n-katmanlı
 şablonu izler. İlk kurulan `customer-service` referans alınarak sonrakiler
 birebir aynı desenle inşa edildi.
 
@@ -254,7 +256,7 @@ tanımları: `infra/debezium/register-<service>-connector.json`. Bkz.
 Servisler arası **dağıtık işlemler** (bir serviste yazma kararının başka bir
 servisin otoriter verisine bağlı olduğu durumlar) merkezi orkestratör olmadan,
 **choreography-based Saga** ile yürütülür: her servis olayları dinler, kendi
-adımını yapar, doğrulama başarısızsa **telafi (compensation)** eder. Üç saga
+adımını yapar, doğrulama başarısızsa **telafi (compensation)** eder. Dört saga
 mevcuttur; hepsi aynı deseni izler ve mevcut **Outbox + Debezium + Inbox**
 altyapısı üzerine kuruludur.
 
@@ -357,6 +359,37 @@ yalnızca `ACTIVE` satırların Σ(`unitPrice × quantity`)'idir (PENDING satır
 toplama 0 katkı verir). Idempotency: yalnızca `PENDING` satırlar sonuçla ileri
 götürülür/telafi edilir.
 
+### 7.4. Order Checkout Saga — order-service ↔ cart-service
+
+**Kanal:** `crm.OrderCheckoutSaga.events`.
+
+order-service **başlatıcı**, cart-service **doğrulayıcı**dır. Bu saga, FR-016
+"Siparişin Tamamlanması" (Submit Order) akışını karşılar: kullanıcı bir sepeti
+onayladığında sipariş oluşturulur, ama sepetin otoriter içeriği (satırlar, fiyat,
+toplam, sahiplik) cart-service'ten **senkron sorulmaz** — saga ile alınır.
+
+**Akış:**
+1. order-service siparişi `PENDING` açar: sistem tarafından üretilen benzersiz bir
+   sipariş numarası (`orderNumber` = `ORD-XXXXXXXX`) ve FR-015'te seçilen servis
+   adresi (`serviceAddress` metin snapshot'ı) yazılır; satırlar/toplam henüz boştur →
+   `OrderCheckoutRequested` (`OrderCheckoutRequestedPayload{orderId, cartId}`).
+2. cart-service (`OrderCheckoutParticipantManager`) sepeti kendi otoriter DB'sinden
+   doğrular: sepet var/aktif mi ve **en az bir `ACTIVE` (onaylanmış) satırı** var mı?
+   → `OrderCartValidated` (`customerId`, `accountId`, `totalAmount`, `items[]` — her
+   kalemin türü/ad/fiyat/adet snapshot'ı) ya da `OrderCartValidationFailed` (neden:
+   `SAGA_CART_NOT_FOUND` / `SAGA_CART_EMPTY`).
+3. order-service (`OrderSagaManager`): Validated → sipariş `CONFIRMED` olur; sahiplik,
+   toplam ve kalemler `OrderItem` satırlarına snapshot'lanır. Failed → sipariş
+   `CANCELLED` + soft-delete (**telafi**).
+
+**Durumlar:** `OrderStatus` = `PENDING → CONFIRMED | CANCELLED`. Idempotency: yalnızca
+`PENDING` siparişler sonuçla ileri götürülür/telafi edilir (Inbox + durum bazlı
+yönlendirme). **Yeni Debezium connector** order-service'in kendi outbox'ı için gerekir
+(`register-order-connector.json`); saga sonuç kayıtları (cart-service'ten) mevcut cart
+connector'ı üzerinden aynı topic'e yönlenir. cart-service artık **iki** consumer taşır:
+`cartSagaConsumer` (sepete ekleme saga'sının sonuç tüketicisi) + `orderCheckoutRequestConsumer`
+(sipariş saga'sının istek/doğrulayıcı tüketicisi).
+
 ## 8. Servis Bazlı Notlar
 
 ### 8.1. customer-service (ilk iş servisi, port 8081, DB `customerdb`)
@@ -436,10 +469,37 @@ da dahil).
 
 - **Cross-service doğrulama = Cart Item Saga (bkz. §7.3).** Ekleme **asenkron**
   tamamlanır (endpoint hemen döner, satır kısa süre `PENDING` görünür).
-  **Checkout kapsam dışıdır** (sepetten siparişe geçiş henüz yok; ileride
-  ayrı bir order-service ile ele alınacak).
+- **Checkout = Order Checkout Saga (bkz. §7.4).** Sepetin siparişe dönüşü artık
+  order-service ile ele alınır; cart-service bu saga'da **doğrulayıcı** roldedir
+  (`OrderCheckoutParticipantManager`): sepetin var/aktif ve **en az bir `ACTIVE`
+  satırı** olduğunu otoriter kontrol edip satır/toplam/sahiplik snapshot'ını yayınlar.
 
-### 8.5. REST API Haritası (gateway üzerinden)
+### 8.5. order-service (port 8086, DB `orderdb`)
+
+FR-016 "Siparişin Tamamlanması" (Submit Order) akışını karşılar; şablonu §6'daki
+ortak desenle aynıdır (**saga başlatıcılığı** dahil).
+
+- **Model.** `Order` (`orders`): `orderNumber` (sistem üretimi benzersiz sipariş
+  kimliği, `ORD-XXXXXXXX`), `cartId`, `customerId`/`accountId` (**ham referans**,
+  saga ile dolar), `serviceAddressId` + `serviceAddress` (FR-015'te seçilen servis
+  adresi metin snapshot'ı), `status` (PENDING | CONFIRMED | CANCELLED), `totalAmount`
+  (saga ile dolar). `OrderItem` (`order_items`): sipariş anındaki sepet kaleminin
+  snapshot'ı (`itemType`, `productOfferId`/`campaignId`, `name`, `unitPrice`,
+  `quantity`) — sepet sonradan değişse bile sipariş kaydı sabit kalır. Silme
+  soft-delete; sipariş toplamı otoriter olarak saga sonucundan (`totalAmount`) gelir.
+
+- **Submit Order (FR-016).** `POST /orders` gövdesi
+  `{cartId, serviceAddressId?, serviceAddress}`. order-service siparişi `PENDING`
+  açıp benzersiz `orderNumber` üretir ve cart-service'ten doğrulama ister; ekleme
+  **asenkron** tamamlanır (endpoint hemen döner, sipariş kısa süre `PENDING` görünür).
+  Onayda sipariş `CONFIRMED` olur (kalemler + toplam snapshot'lanır), sepet yoksa/boşsa
+  telafi ile `CANCELLED`. Aynı sepet için hâlâ süren bir sipariş varsa yeni submit
+  iş kuralıyla engellenir (`OrderBusinessRules.checkIfCartNotAlreadyOrdered`).
+
+- **Cross-service doğrulama = Order Checkout Saga (bkz. §7.4).** order-service
+  cart-service'e senkron çağrı yapmaz / yerel projeksiyon tutmaz.
+
+### 8.6. REST API Haritası (gateway üzerinden)
 
 Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir; route'lar
 `configs/gateway-server/application.yml`'de açık (explicit) tanımlıdır
@@ -461,15 +521,16 @@ Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir; route'lar
 | cart     | `/api/v1/carts/{id}/items/offers`    | `POST` — katalogdan teklif ekle (**asenkron** saga)                      |
 | cart     | `/api/v1/carts/{id}/items/campaigns` | `POST` — kampanya paketi ekle (**asenkron** saga)                       |
 | cart     | `/api/v1/carts/{cartId}/items/{itemId}` | `DELETE` — satırı çıkar                                                |
+| order    | `/api/v1/orders`                 | `POST` (submit, **asenkron** saga), `GET/{id}`, `GET` list, `GET /customer/{customerId}`, `DELETE/{id}` |
 
-### 8.6. Altyapı Hızlı Referansı (infra)
+### 8.7. Altyapı Hızlı Referansı (infra)
 
 Kök `infra/docker-compose.yml` ile ayağa kalkan bileşenler (ayrıntı:
 `infra/README.md`):
 
 | Bileşen        | Adres                    | Not                                              |
 |----------------|--------------------------|--------------------------------------------------|
-| PostgreSQL     | `localhost:5432`         | `customerdb`, `accountdb`, `productdb`, `cartdb` |
+| PostgreSQL     | `localhost:5432`         | `customerdb`, `accountdb`, `productdb`, `cartdb`, `orderdb` |
 | Redis          | `localhost:6379`         | cache                                            |
 | RedisInsight   | http://localhost:5540    | Redis host olarak `redis:6379` ekle              |
 | Kafka          | `localhost:9092` (host)  | konteyner içi: `kafka:29092` (KRaft, tek node)   |
@@ -480,9 +541,9 @@ Kök `infra/docker-compose.yml` ile ayağa kalkan bileşenler (ayrıntı:
 her servis kendi outbox'ı için ilk açılışta bir kez kaydedilir):
 `register-outbox-connector.json` (customerdb), `register-account-connector.json`
 (accountdb), `register-product-connector.json` (productdb),
-`register-cart-connector.json` (cartdb). Saga kanalları (`crm.*Saga.events`) bu
-mevcut connector'lar üzerinden `aggregate_type`'a göre yönlenir; ayrı connector
-gerekmez (bkz. §7).
+`register-cart-connector.json` (cartdb), `register-order-connector.json` (orderdb).
+Saga kanalları (`crm.*Saga.events`) bu mevcut connector'lar üzerinden
+`aggregate_type`'a göre yönlenir; ayrı connector gerekmez (bkz. §7).
 
 **cartdb notu:** Postgres init betiği (`infra/postgres/init/01-create-databases.sql`)
 yalnızca **boş volume'de ilk açılışta** çalışır. Var olan bir kurulumda yeni DB
@@ -527,10 +588,11 @@ açıkça kapatır.
   backend + kök `configs/` klasörü. Bkz. §5.
 - [x] Veritabanı teknolojisi: **PostgreSQL, per-service DB**.
 - [x] İş servisleri: `customer-service`, `account-service`, `product-service`,
-  `cart-service` (n-layered). Bkz. §6, §8.
-- [x] Choreography Saga: Billing Account, Product Sale, Cart Item. Bkz. §7.
-- [ ] Sepetten siparişe geçiş (checkout) — order-service henüz yok; cart-service
-  şimdilik yalnızca sepet yönetimini kapsıyor.
+  `cart-service`, `order-service` (n-layered). Bkz. §6, §8.
+- [x] Choreography Saga: Billing Account, Product Sale, Cart Item, Order Checkout.
+  Bkz. §7.
+- [x] Sepetten siparişe geçiş (checkout) — `order-service` (FR-016) eklendi;
+  cart-service doğrulayıcı roldedir. Bkz. §7.4, §8.5.
 - [ ] Observability (Actuator, Micrometer, tracing) standardı.
 - [ ] `Gender`/`Nationality` lookup tabloları (şimdilik `gender_id`/
   `nationality_id` ham referans; ilgili servis/tablo eklenince FK'ye
@@ -538,6 +600,18 @@ açıkça kapatır.
 
 ## 11. Değişiklik Günlüğü
 
+- **2026-07-10:** **order-service** (sipariş, n-layered, port 8086, orderdb)
+  eklendi: FR-016 "Siparişin Tamamlanması" (Submit Order). `Order`/`OrderItem`
+  modeli (benzersiz `orderNumber`, servis adresi snapshot'ı, kalem/toplam
+  snapshot'ı), CRUD, Redis cache. Sepetten siparişe geçiş **choreography Saga** ile
+  yapılır (`crm.OrderCheckoutSaga.events`): order-service siparişi PENDING açıp
+  doğrulama ister, cart-service (**doğrulayıcı**) sepeti otoriter kontrol edip
+  sahiplik/satır/toplam snapshot'ıyla sonuç yayınlar, order-service siparişi
+  CONFIRMED yapar ya da telafi ile CANCELLED eder. Inbox ile idempotent; order
+  outbox'ı için yeni Debezium connector (`register-order-connector.json`), saga
+  sonuç kayıtları mevcut cart connector'ı üzerinden yönlenir. cart-service artık
+  iki consumer taşır (`cartSagaConsumer` + `orderCheckoutRequestConsumer`).
+  Bkz. §7.4, §8.5.
 - **2026-07-09:** **cart-service** (sepet, n-layered, port 8085, cartdb)
   eklendi: Cart/CartItem modeli, iki ekleme yolu (katalogdan teklif / kampanya
   paketi), CRUD, Redis cache. Cross-service doğrulama **choreography Saga** ile

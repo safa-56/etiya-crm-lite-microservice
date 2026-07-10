@@ -1,10 +1,10 @@
 # =============================================================================
-# cart-service - ORTAK (profil bağımsız) konfigürasyon
-# Merkezi config server üzerinden sunulur (configs/cart-service/).
+# order-service - ORTAK (profil bağımsız) konfigürasyon
+# Merkezi config server üzerinden sunulur (configs/order-service/).
 # Ortama özel (host/port/şifre) ayarlar dev/docker/prod profillerinde override edilir.
 # =============================================================================
 server:
-  port: ${SERVER_PORT:8085}
+  port: ${SERVER_PORT:8086}
 
 spring:
   jpa:
@@ -32,30 +32,22 @@ spring:
       cache-null-values: false
 
   # --- Kafka (Spring Cloud Stream + Kafka binder) ---
-  # Producer tarafı Outbox + Debezium ile yürür. cart-service, sepete ekleme Saga'sının
-  # başlatıcısıdır: doğrulama isteğini yayınlar ve product-service'in sonuç olaylarını
-  # bu tüketici ile dinler (crm.CartSaga.events).
+  # Producer tarafı Outbox + Debezium ile yürür. order-service, sepetten siparişe
+  # geçiş Saga'sının başlatıcısıdır: sepet doğrulama isteğini yayınlar ve cart-service'in
+  # sonuç olaylarını bu tüketici ile dinler (crm.OrderCheckoutSaga.events).
   cloud:
     function:
-      # İki tüketici: (1) sepete ekleme saga'sının SONUÇ tüketicisi (başlatıcı rol),
-      # (2) sepetten siparişe geçiş saga'sının İSTEK tüketicisi (doğrulayıcı rol).
-      definition: cartSagaConsumer;orderCheckoutRequestConsumer
+      definition: orderCheckoutConsumer
     stream:
       kafka:
         binder:
           brokers: ${KAFKA_BROKERS:localhost:9092}
       bindings:
-        # CartSagaConsumerConfig#cartSagaConsumer -> "cartSagaConsumer-in-0"
-        # Sepet ekleme Saga'sının doğrulama SONUÇ olayları (product-service'ten).
-        cartSagaConsumer-in-0:
-          destination: ${APP_SAGA_TOPIC:crm.CartSaga.events}
-          group: cart-service
-        # OrderCheckoutSagaConsumerConfig#orderCheckoutRequestConsumer -> "orderCheckoutRequestConsumer-in-0"
-        # Sepetten siparişe geçiş Saga'sının doğrulama İSTEK olayları (order-service'ten).
-        # cart-service bu saga'da doğrulayıcıdır: sepeti kontrol edip sonucu geri yayınlar.
-        orderCheckoutRequestConsumer-in-0:
-          destination: ${APP_ORDER_SAGA_TOPIC:crm.OrderCheckoutSaga.events}
-          group: cart-service
+        # OrderCheckoutSagaConsumerConfig#orderCheckoutConsumer -> "orderCheckoutConsumer-in-0"
+        # Sepetten siparişe geçiş Saga'sının doğrulama SONUÇ olayları (cart-service'ten).
+        orderCheckoutConsumer-in-0:
+          destination: ${APP_SAGA_TOPIC:crm.OrderCheckoutSaga.events}
+          group: order-service
 
 # Uygulamaya özel ayarlar
 app:

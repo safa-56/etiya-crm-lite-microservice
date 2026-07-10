@@ -27,4 +27,13 @@ public final class Messages {
     /** Aynı kampanya sepete birden çok kez eklenemez (paket bütünlüğü). */
     public static final String CAMPAIGN_ALREADY_IN_CART =
             "Bu kampanya sepete zaten eklenmiş.";
+
+    // --- Sepetten siparişe geçiş Saga'sı (cart-service doğrulayıcı) nedenleri ---
+    /** Saga: siparişe konu sepet bulunamadı (yok/silinmiş). */
+    public static final String SAGA_CART_NOT_FOUND =
+            "Siparişe konu sepet bulunamadı.";
+
+    /** Saga: sepet boş (onaylanmış/aktif satırı yok), sipariş oluşturulamaz. */
+    public static final String SAGA_CART_EMPTY =
+            "Sepette onaylanmış ürün bulunmadığından sipariş oluşturulamaz.";
 }

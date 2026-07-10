@@ -17,7 +17,7 @@ docker compose -f infra/docker-compose.yml up -d
 
 | Servis        | Adres                     | Not                                        |
 |---------------|---------------------------|--------------------------------------------|
-| PostgreSQL    | `localhost:5432`          | db'ler: `customerdb`, `accountdb`, `productdb`, `cartdb` |
+| PostgreSQL    | `localhost:5432`          | db'ler: `customerdb`, `accountdb`, `productdb`, `cartdb`, `orderdb` |
 | Redis         | `localhost:6379`          | cache                                      |
 | RedisInsight  | http://localhost:5540     | Redis host olarak `redis:6379` ekleyin     |
 | Kafka         | `localhost:9092` (host)   | konteyner içi: `kafka:29092`               |
@@ -49,11 +49,17 @@ curl -i -X POST http://localhost:8083/connectors \
   -H "Content-Type: application/json" \
   -d @infra/debezium/register-cart-connector.json
 
+# order-service (db: orderdb)
+curl -i -X POST http://localhost:8083/connectors \
+  -H "Content-Type: application/json" \
+  -d @infra/debezium/register-order-connector.json
+
 # Durum:
 curl -s http://localhost:8083/connectors/customer-outbox-connector/status | jq
 curl -s http://localhost:8083/connectors/account-outbox-connector/status | jq
 curl -s http://localhost:8083/connectors/product-outbox-connector/status | jq
 curl -s http://localhost:8083/connectors/cart-outbox-connector/status | jq
+curl -s http://localhost:8083/connectors/order-outbox-connector/status | jq
 ```
 
 > **Not (Sepete ekleme Saga'sı):** cart-service sepete ekleme kararını product-service
@@ -62,6 +68,14 @@ curl -s http://localhost:8083/connectors/cart-outbox-connector/status | jq
 > product-service teklifi/kampanyayı doğrulayıp sonucu `productdb` outbox'ına yazar
 > (**mevcut product connector** yönlendirir). İki tarafın `CartSaga` kayıtları da
 > aggregate_type ile aynı topic'e düşer — **ek connector gerekmez**.
+
+> **Not (Sepetten siparişe geçiş Saga'sı):** order-service, checkout kararını (FR-016)
+> cart-service ile bir choreography Saga üzerinden verir (`crm.OrderCheckoutSaga.events`).
+> order, doğrulama isteğini `orderdb` outbox'ına yazar (yeni `order-outbox-connector`
+> bunu yönlendirir); cart-service sepeti doğrulayıp sonucu `cartdb` outbox'ına yazar
+> (**mevcut cart connector** yönlendirir). İki tarafın `OrderCheckoutSaga` kayıtları da
+> aggregate_type ile aynı topic'e düşer — **ek connector gerekmez** (order connector
+> yalnızca order-service'in kendi outbox'ı için gerekir).
 
 > **accountdb var mı?** `accountdb`, postgres ilk açılışında
 > `postgres/init/01-create-databases.sql` ile oluşturulur (yalnızca boş volume'de).

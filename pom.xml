@@ -154,6 +154,7 @@
         <module>account-service</module>
         <module>product-service</module>
         <module>cart-service</module>
+        <module>order-service</module>
     </modules>
 
 </project>

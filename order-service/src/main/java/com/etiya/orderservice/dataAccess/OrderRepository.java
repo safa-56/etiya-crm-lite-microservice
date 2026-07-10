@@ -1,0 +1,35 @@
+package com.etiya.orderservice.dataAccess;
+
+import com.etiya.orderservice.entities.Order;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Sipariş (Order) veri erişimi.
+ *
+ * <p>Soft-delete gereği yalnızca aktif ({@code is_active = true}) kayıtlar dönen
+ * türetilmiş sorgular sağlanır.
+ */
+@Repository
+public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    /** Aktif (silinmemiş) siparişi id ile getirir. */
+    Optional<Order> findByIdAndIsActiveTrue(Long id);
+
+    /** Tüm aktif siparişleri sayfalı getirir. */
+    Page<Order> findAllByIsActiveTrue(Pageable pageable);
+
+    /** Bir müşteriye ait tüm aktif siparişleri getirir. */
+    List<Order> findAllByCustomerIdAndIsActiveTrue(Long customerId);
+
+    /**
+     * Verilen sepet için hâlâ süren (aktif ve iptal edilmemiş) bir sipariş var mı?
+     * Aynı sepetin ikinci kez submit edilmesini engelleyen iş kuralı buna dayanır.
+     */
+    boolean existsByCartIdAndIsActiveTrue(Long cartId);
+}

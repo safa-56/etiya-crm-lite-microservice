@@ -1,0 +1,10 @@
+-- =============================================================================
+-- order-service DEV seed (yalnızca 'dev' profilinde, Hibernate şemayı kurduktan
+-- SONRA çalışır). Idempotent'tir.
+--
+-- Siparişler API/saga üzerinden oluşur: kullanıcı bir sepeti "Submit Order" ile
+-- onaylar (POST /orders), order-service siparişi PENDING açar ve cart-service
+-- doğrulamasıyla CONFIRMED olur. Bu nedenle burada başlangıç verisi tohumlanmaz;
+-- dosya yalnızca dev seed akışıyla tutarlılık için (diğer servislerle aynı desende)
+-- bulunur. Örnek akış için sepet servisine bir sepet ekleyip submit edin.
+-- =============================================================================

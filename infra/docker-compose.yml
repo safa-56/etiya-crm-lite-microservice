@@ -408,6 +408,37 @@ services:
 #      - "${CART_SERVICE_PORT:-8085}:8085"
 #    networks:
 #      - crm-net
+#
+#  # ---------------------------------------------------------------------------
+#  # order-service (8086) - sipariş servisi. config-server + eureka-server ve altyapı
+#  # (postgres, redis, kafka) SAĞLIKLI olunca başlar. Sepetten siparişe geçiş
+#  # (checkout / FR-016) choreography Saga ile cart-service üzerinden doğrulanır.
+#  # ---------------------------------------------------------------------------
+#  order-service:
+#    build:
+#      context: ..
+#      dockerfile: order-service/Dockerfile
+#    image: etiya/order-service:1.0.0
+#    container_name: crm-order-service
+#    restart: unless-stopped
+#    depends_on:
+#      config-server:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
+#    environment:
+#      SPRING_PROFILES_ACTIVE: docker
+#      CONFIG_SERVER_URL: http://config-server:8888
+#    ports:
+#      - "${ORDER_SERVICE_PORT:-8086}:8086"
+#    networks:
+#      - crm-net
 
 # -----------------------------------------------------------------------------
 # Kalıcı hacimler
