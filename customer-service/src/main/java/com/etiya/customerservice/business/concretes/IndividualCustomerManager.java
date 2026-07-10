@@ -97,7 +97,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     @Override
     @Transactional
     @Caching(
-            put = @CachePut(value = CacheNames.INDIVIDUAL_CUSTOMERS, key = "#request.id"),
+            put = @CachePut(value = CacheNames.INDIVIDUAL_CUSTOMERS, key = "#id"),
             evict = @CacheEvict(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST, allEntries = true)
     )
     public IndividualCustomerResponse update(Long id, UpdateIndividualCustomerRequest request) {
