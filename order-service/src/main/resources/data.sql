@@ -7,4 +7,9 @@
 -- doğrulamasıyla CONFIRMED olur. Bu nedenle burada başlangıç verisi tohumlanmaz;
 -- dosya yalnızca dev seed akışıyla tutarlılık için (diğer servislerle aynı desende)
 -- bulunur. Örnek akış için sepet servisine bir sepet ekleyip submit edin.
+--
+-- NOT: Spring'in sql.init'i yalnızca-yorum içeren bir script'i "boş" sayıp
+-- ('script' must not be null or empty) hata verir; bu yüzden aşağıda zararsız,
+-- şemadan bağımsız bir no-op ifade bulunur.
 -- =============================================================================
+SELECT 1;
