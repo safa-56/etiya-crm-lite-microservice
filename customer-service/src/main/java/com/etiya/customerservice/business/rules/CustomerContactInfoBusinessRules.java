@@ -4,7 +4,10 @@ import com.etiya.customerservice.business.constants.Messages;
 import com.etiya.customerservice.core.crosscutting.exceptions.BusinessException;
 import com.etiya.customerservice.dataAccess.CustomerContactInfoRepository;
 import com.etiya.customerservice.dataAccess.CustomerRepository;
+import com.etiya.customerservice.entities.CustomerContactInfo;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 /**
  * Müşteri iletişim bilgisi iş kuralları.
@@ -26,10 +29,12 @@ public class CustomerContactInfoBusinessRules {
     }
 
     /** Aktif bir iletişim bilgisi id ile var olmalı; yoksa iş hatası fırlatılır. */
-    public void checkIfContactInfoExists(Long id) {
-        if (!contactInfoRepository.existsByIdAndIsActiveTrue(id)) {
+    public CustomerContactInfo checkContactInfoIfExists(Long id) {
+        Optional<CustomerContactInfo> existContactInfo = contactInfoRepository.findByIdAndIsActiveTrue(id);
+        if (existContactInfo.isEmpty()) {
             throw new BusinessException(Messages.CONTACT_INFO_NOT_FOUND);
         }
+        return existContactInfo.get();
     }
 
     /** İletişim bilgisinin bağlanacağı aktif müşteri id ile var olmalı; yoksa iş hatası fırlatılır. */

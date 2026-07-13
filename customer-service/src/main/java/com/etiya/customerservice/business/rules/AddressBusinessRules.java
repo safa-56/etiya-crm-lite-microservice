@@ -8,6 +8,7 @@ import com.etiya.customerservice.entities.Address;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Adres iş kuralları.
@@ -29,10 +30,12 @@ public class AddressBusinessRules {
     }
 
     /** Aktif bir adres id ile var olmalı; yoksa iş hatası fırlatılır. */
-    public void checkIfAddressExists(Long id) {
-        if (!addressRepository.existsByIdAndIsActiveTrue(id)) {
+    public Address checkAddressIfExists(Long id) {
+        Optional<Address> existsAddress = addressRepository.findByIdAndIsActiveTrue(id);
+        if (existsAddress.isEmpty()) {
             throw new BusinessException(Messages.ADDRESS_NOT_FOUND);
         }
+        return existsAddress.get();
     }
 
     /** Adresin bağlanacağı aktif müşteri id ile var olmalı; yoksa iş hatası fırlatılır. */

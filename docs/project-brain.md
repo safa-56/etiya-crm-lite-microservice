@@ -393,6 +393,41 @@ connector'ı üzerinden aynı topic'e yönlenir. cart-service artık **iki** con
 `cartSagaConsumer` (sepete ekleme saga'sının sonuç tüketicisi) + `orderCheckoutRequestConsumer`
 (sipariş saga'sının istek/doğrulayıcı tüketicisi).
 
+### 7.5. Order → Product Provizyonu — order-service ↔ product-service
+
+**Kanal:** `crm.Order.events` (saga-dışı entegrasyon olayı).
+
+Order ile Product **ayrı domainlerdir**; sipariş oluşturmak tek başına product-service'te
+`Product` üretmez. Bu adım o boşluğu kapatır: sipariş CONFIRMED olduğunda kalemleri
+otomatik olarak ürünlere provizyone edilir; böylece fatura hesabının
+`activeProductCount` sayacı artar ve ürünler hesap detayında (FR-013) görünür.
+
+**Akış:**
+1. order-service (`OrderSagaManager.confirm`): sipariş CONFIRMED olduktan sonra aynı
+   (Inbox) transaction'ında outbox'a `OrderConfirmed`
+   (`OrderConfirmedPayload{orderId, accountId, addressId, items[]}`) yazar. `items[]`
+   her kalemin türü (OFFER/CAMPAIGN), teklif/kampanya kimliği, ad, fiyat ve adet
+   snapshot'ını taşır.
+2. product-service (`OrderProvisioningConsumerConfig` → `ProductProvisioningManager`):
+   olayı Inbox ile idempotent tüketir ve her kalemi ürüne dönüştürür:
+   - **OFFER** → teklif kimliğinden **tek** `Product` (ödenen fiyat = sipariş snapshot'ı).
+   - **CAMPAIGN** → kampanyanın paket içeriği (aktif `CampaignOffer` bağları)
+     product-service'in **otoriter** DB'sinden çözülür; her teklif için bir `Product`
+     üretilir (kampanya bağı `campaign_id` ile korunur, ödenen fiyat = teklifin liste
+     fiyatı). Sipariş yalnızca `campaignId` taşır; paket açılımı burada yapılır.
+3. Üretilen her ürün `PENDING` açılır ve **mevcut Product Sale Saga'sı** (§7.2,
+   `crm.ProductSaga.events`) ile fatura hesabına karşı doğrulanır — REST üzerinden ürün
+   ekleme (`ProductManager.add`) ile birebir aynı adım. Onayda ürün ACTIVE olur ve
+   `crm.Product.events`'e `ProductCreated` yayınlanır → account-service sayacı artırır.
+
+**Idempotency:** Sipariş olayı `messageId` üzerinden Inbox ile tekilleştirilir (aynı
+sipariş olayı tekrar gelse ürünler bir kez üretilir). Ürün üretimi + saga istekleri
+(outbox) + inbox kaydı **aynı transaction**'da atomik commit edilir. Ek Debezium
+connector gerekmez: order-service'in mevcut connector'ı (`register-order-connector.json`)
+`aggregate_type=Order` kayıtlarını EventRouter ile `crm.Order.events`'e yönlendirir.
+product-service artık **üç** consumer taşır: `productSagaConsumer` + `cartSagaConsumer`
++ `orderProvisioningConsumer`.
+
 ## 8. Servis Bazlı Notlar
 
 ### 8.1. customer-service (ilk iş servisi, port 8081, DB `customerdb`)

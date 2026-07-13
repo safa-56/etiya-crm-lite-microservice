@@ -37,7 +37,7 @@ spring:
   cloud:
     # Fonksiyonel binding tanımı açıkça listelenir (birden fazla olursa ";" ile ayrılır).
     function:
-      definition: productSagaConsumer;cartSagaConsumer
+      definition: productSagaConsumer;cartSagaConsumer;orderProvisioningConsumer
     stream:
       kafka:
         binder:
@@ -53,6 +53,13 @@ spring:
         # product-service doğrulayıcıdır: teklif/kampanyayı doğrulayıp sonucu geri yayınlar.
         cartSagaConsumer-in-0:
           destination: ${APP_CART_SAGA_TOPIC:crm.CartSaga.events}
+          group: product-service
+        # OrderProvisioningConsumerConfig#orderProvisioningConsumer -> "orderProvisioningConsumer-in-0"
+        # order-service'in "sipariş kesinleşti" olayları. product-service sipariş
+        # kalemlerinden Product üretir (provizyon); ürünler mevcut Product Sale Saga'sı
+        # ile doğrulanıp account-service aktif ürün sayacını artırır.
+        orderProvisioningConsumer-in-0:
+          destination: ${APP_ORDER_TOPIC:crm.Order.events}
           group: product-service
 
 # Uygulamaya özel ayarlar

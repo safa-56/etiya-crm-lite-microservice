@@ -84,7 +84,8 @@ public class AddressManager implements AddressService {
     @Override
     @Transactional(readOnly = true)
     public AddressResponse getById(Long id) {
-        return mapper.toResponse(findActiveAddress(id));
+        Address address = rules.checkAddressIfExists(id);
+        return mapper.toResponse(address);
     }
 
     @Override
@@ -98,9 +99,8 @@ public class AddressManager implements AddressService {
     @Override
     @Transactional
     public AddressResponse update(Long id, UpdateAddressRequest request) {
-        rules.checkIfAddressExists(id);
 
-        Address address = findActiveAddress(id);
+        Address address = rules.checkAddressIfExists(id);
 
         // Skaler alanları güncelle (müşteri ilişkisi değiştirilmez).
         address.setCity(request.city());
@@ -124,7 +124,7 @@ public class AddressManager implements AddressService {
     @Override
     @Transactional
     public void delete(Long id) {
-        Address address = findActiveAddress(id);
+        Address address = rules.checkAddressIfExists(id);
         Long customerId = address.getCustomer().getId();
 
         // Soft-delete: fiziksel silme yok; pasifleştir ve silinme zamanını işaretle.
@@ -137,10 +137,10 @@ public class AddressManager implements AddressService {
 
     // ------------------------------------------------------------------ yardımcılar
 
-    private Address findActiveAddress(Long id) {
-        return repository.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new BusinessException(Messages.ADDRESS_NOT_FOUND));
-    }
+//    private Address findActiveAddress(Long id) {
+//        return repository.findByIdAndIsActiveTrue(id)
+//                .orElseThrow(() -> new BusinessException(Messages.ADDRESS_NOT_FOUND));
+//    }
 
     /**
      * Müşterinin güncel (aktif) adres kümesini bir {@code CustomerUpdated} olayı

@@ -1,7 +1,11 @@
 package com.etiya.orderservice.business.concretes;
 
 import com.etiya.orderservice.business.abstracts.OrderSagaService;
+import com.etiya.orderservice.business.abstracts.OutboxService;
+import com.etiya.orderservice.business.constants.OrderEvents;
 import com.etiya.orderservice.business.dtos.events.OrderCheckoutValidationPayload;
+import com.etiya.orderservice.business.dtos.events.OrderConfirmedPayload;
+import com.etiya.orderservice.business.dtos.events.OrderProvisionLine;
 import com.etiya.orderservice.business.dtos.events.OrderSagaItemLine;
 import com.etiya.orderservice.core.constants.CacheNames;
 import com.etiya.orderservice.dataAccess.OrderRepository;
@@ -33,9 +37,11 @@ public class OrderSagaManager implements OrderSagaService {
     private static final Logger log = LoggerFactory.getLogger(OrderSagaManager.class);
 
     private final OrderRepository orderRepository;
+    private final OutboxService outboxService;
 
-    public OrderSagaManager(OrderRepository orderRepository) {
+    public OrderSagaManager(OrderRepository orderRepository, OutboxService outboxService) {
         this.orderRepository = orderRepository;
+        this.outboxService = outboxService;
     }
 
     @Override
@@ -94,6 +100,43 @@ public class OrderSagaManager implements OrderSagaService {
 
         orderRepository.save(order);
         log.info("Sipariş saga onaylandı: CONFIRMED. id={}, toplam={}", order.getId(), payload.totalAmount());
+
+        requestProvisioning(order);
+    }
+
+    /**
+     * Ürün provizyon adımı (choreography): kesinleşmiş siparişin kalemlerini
+     * {@code crm.Order.events} kanalına yayınlar. Aynı transaction (Inbox) içinde
+     * outbox'a yazıldığından, durum güncellemesiyle atomik olur (ghost event yok).
+     * product-service bu olayı tüketip her kalem için {@code Product} üretir.
+     */
+    private void requestProvisioning(Order order) {
+        List<OrderProvisionLine> lines = order.getItems().stream()
+                .filter(OrderItem::getIsActive)
+                .map(item -> new OrderProvisionLine(
+                        item.getItemType() != null ? item.getItemType().name() : null,
+                        item.getProductOfferId(),
+                        item.getCampaignId(),
+                        item.getName(),
+                        item.getUnitPrice(),
+                        item.getQuantity()))
+                .toList();
+
+        if (lines.isEmpty()) {
+            log.warn("Sipariş provizyone edilecek kalem içermiyor, olay yayınlanmıyor. id={}", order.getId());
+            return;
+        }
+
+        outboxService.publish(
+                OrderEvents.AGGREGATE_TYPE,
+                String.valueOf(order.getId()),
+                OrderEvents.ORDER_CONFIRMED,
+                new OrderConfirmedPayload(
+                        OrderEvents.ORDER_CONFIRMED,
+                        order.getId(),
+                        order.getAccountId(),
+                        order.getServiceAddressId(),
+                        lines));
     }
 
     /** Telafi (compensation): siparişi CANCELLED yapar ve pasifleştirir. */

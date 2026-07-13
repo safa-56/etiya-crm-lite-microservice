@@ -69,7 +69,8 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
     @Override
     @Transactional(readOnly = true)
     public ContactInfoResponse getById(Long id) {
-        return mapper.toResponse(findActiveContactInfo(id));
+        CustomerContactInfo customerContactInfo = rules.checkContactInfoIfExists(id);
+        return mapper.toResponse(customerContactInfo);
     }
 
     @Override
@@ -83,9 +84,8 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
     @Override
     @Transactional
     public ContactInfoResponse update(Long id, UpdateContactInfoRequest request) {
-        rules.checkIfContactInfoExists(id);
 
-        CustomerContactInfo contactInfo = findActiveContactInfo(id);
+        CustomerContactInfo contactInfo = rules.checkContactInfoIfExists(id);
 
         // E-posta değişiyorsa benzersizliği tekrar doğrula.
         if (request.email() != null && !Objects.equals(request.email(), contactInfo.getEmail())) {
@@ -104,7 +104,7 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
     @Override
     @Transactional
     public void delete(Long id) {
-        CustomerContactInfo contactInfo = findActiveContactInfo(id);
+        CustomerContactInfo contactInfo = rules.checkContactInfoIfExists(id);
 
         // Soft-delete: fiziksel silme yok; pasifleştir ve silinme zamanını işaretle.
         contactInfo.setIsActive(false);
@@ -114,8 +114,8 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
 
     // ------------------------------------------------------------------ yardımcılar
 
-    private CustomerContactInfo findActiveContactInfo(Long id) {
-        return repository.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new BusinessException(Messages.CONTACT_INFO_NOT_FOUND));
-    }
+//    private CustomerContactInfo findActiveContactInfo(Long id) {
+//        return repository.findByIdAndIsActiveTrue(id)
+//                .orElseThrow(() -> new BusinessException(Messages.CONTACT_INFO_NOT_FOUND));
+//    }
 }
