@@ -4,6 +4,7 @@ import com.etiya.productservice.business.dtos.requests.CreateProductSpecRequest;
 import com.etiya.productservice.business.dtos.requests.UpdateProductSpecRequest;
 import com.etiya.productservice.business.dtos.responses.PagedResponse;
 import com.etiya.productservice.business.dtos.responses.ProductSpecResponse;
+import com.etiya.productservice.entities.ProductSpec;
 import org.springframework.data.domain.Pageable;
 
 /**
@@ -14,6 +15,9 @@ public interface ProductSpecService {
     ProductSpecResponse add(CreateProductSpecRequest request);
 
     ProductSpecResponse getById(Long id);
+
+    /** İlişki kurulumu için aktif ürün özelliği entity'sini döner; yoksa iş hatası fırlatır. */
+    ProductSpec getProductSpecById(Long id);
 
     PagedResponse<ProductSpecResponse> getAll(Pageable pageable);
 

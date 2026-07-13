@@ -4,6 +4,7 @@ import com.etiya.productservice.business.dtos.requests.CreateCatalogRequest;
 import com.etiya.productservice.business.dtos.requests.UpdateCatalogRequest;
 import com.etiya.productservice.business.dtos.responses.CatalogResponse;
 import com.etiya.productservice.business.dtos.responses.PagedResponse;
+import com.etiya.productservice.entities.Catalog;
 import org.springframework.data.domain.Pageable;
 
 /**
@@ -14,6 +15,9 @@ public interface CatalogService {
     CatalogResponse add(CreateCatalogRequest request);
 
     CatalogResponse getById(Long id);
+
+    /** İlişki kurulumu için aktif katalog entity'sini döner; yoksa iş hatası fırlatır. */
+    Catalog getCatalogById(Long id);
 
     PagedResponse<CatalogResponse> getAll(Pageable pageable);
 

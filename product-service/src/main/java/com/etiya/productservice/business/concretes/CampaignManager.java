@@ -179,6 +179,12 @@ public class CampaignManager implements CampaignService {
                 campaign.getUpdatedDate());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Campaign getCampaignById(Long id) {
+        return findActiveOrThrow(id);
+    }
+
     private Campaign findActiveOrThrow(Long id) {
         return repository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new BusinessException(Messages.CAMPAIGN_NOT_FOUND));

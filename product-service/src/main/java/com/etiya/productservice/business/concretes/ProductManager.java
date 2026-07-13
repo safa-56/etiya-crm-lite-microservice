@@ -1,6 +1,8 @@
 package com.etiya.productservice.business.concretes;
 
+import com.etiya.productservice.business.abstracts.CampaignService;
 import com.etiya.productservice.business.abstracts.OutboxService;
+import com.etiya.productservice.business.abstracts.ProductOfferService;
 import com.etiya.productservice.business.abstracts.ProductService;
 import com.etiya.productservice.business.constants.Messages;
 import com.etiya.productservice.business.constants.ProductEvents;
@@ -16,8 +18,6 @@ import com.etiya.productservice.business.rules.CampaignBusinessRules;
 import com.etiya.productservice.business.rules.ProductOfferBusinessRules;
 import com.etiya.productservice.core.constants.CacheNames;
 import com.etiya.productservice.core.crosscutting.exceptions.BusinessException;
-import com.etiya.productservice.dataAccess.CampaignRepository;
-import com.etiya.productservice.dataAccess.ProductOfferRepository;
 import com.etiya.productservice.dataAccess.ProductRepository;
 import com.etiya.productservice.entities.Campaign;
 import com.etiya.productservice.entities.Product;
@@ -49,23 +49,23 @@ import java.util.List;
 public class ProductManager implements ProductService {
 
     private final ProductRepository repository;
-    private final ProductOfferRepository productOfferRepository;
-    private final CampaignRepository campaignRepository;
+    private final ProductOfferService productOfferService;
+    private final CampaignService campaignService;
     private final ProductMapper mapper;
     private final ProductOfferBusinessRules productOfferRules;
     private final CampaignBusinessRules campaignRules;
     private final OutboxService outboxService;
 
     public ProductManager(ProductRepository repository,
-                          ProductOfferRepository productOfferRepository,
-                          CampaignRepository campaignRepository,
+                          ProductOfferService productOfferService,
+                          CampaignService campaignService,
                           ProductMapper mapper,
                           ProductOfferBusinessRules productOfferRules,
                           CampaignBusinessRules campaignRules,
                           OutboxService outboxService) {
         this.repository = repository;
-        this.productOfferRepository = productOfferRepository;
-        this.campaignRepository = campaignRepository;
+        this.productOfferService = productOfferService;
+        this.campaignService = campaignService;
         this.mapper = mapper;
         this.productOfferRules = productOfferRules;
         this.campaignRules = campaignRules;
@@ -78,8 +78,7 @@ public class ProductManager implements ProductService {
         // --- ürün-lokal kurallar (senkron) ---
         productOfferRules.checkIfProductOfferExists(request.productOfferId());
 
-        ProductOffer offer = productOfferRepository.findByIdAndIsActiveTrue(request.productOfferId())
-                .orElseThrow(() -> new BusinessException(Messages.PRODUCT_OFFER_NOT_FOUND));
+        ProductOffer offer = productOfferService.getProductOfferById(request.productOfferId());
 
         Product product = new Product();
         product.setProductOffer(offer);
@@ -91,7 +90,7 @@ public class ProductManager implements ProductService {
 
         if (request.campaignId() != null) {
             campaignRules.checkIfCampaignExists(request.campaignId());
-            Campaign campaign = campaignRepository.getReferenceById(request.campaignId());
+            Campaign campaign = campaignService.getCampaignById(request.campaignId());
             product.setCampaign(campaign);
         }
 

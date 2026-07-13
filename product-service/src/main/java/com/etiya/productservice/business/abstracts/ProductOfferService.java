@@ -4,6 +4,7 @@ import com.etiya.productservice.business.dtos.requests.CreateProductOfferRequest
 import com.etiya.productservice.business.dtos.requests.UpdateProductOfferRequest;
 import com.etiya.productservice.business.dtos.responses.PagedResponse;
 import com.etiya.productservice.business.dtos.responses.ProductOfferResponse;
+import com.etiya.productservice.entities.ProductOffer;
 import org.springframework.data.domain.Pageable;
 
 /**
@@ -18,6 +19,9 @@ public interface ProductOfferService {
     ProductOfferResponse add(CreateProductOfferRequest request);
 
     ProductOfferResponse getById(Long id);
+
+    /** İlişki kurulumu için aktif ürün teklifi entity'sini döner; yoksa iş hatası fırlatır. */
+    ProductOffer getProductOfferById(Long id);
 
     PagedResponse<ProductOfferResponse> getAll(Pageable pageable);
 

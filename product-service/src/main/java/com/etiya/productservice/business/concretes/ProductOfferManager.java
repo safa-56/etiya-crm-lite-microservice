@@ -1,6 +1,8 @@
 package com.etiya.productservice.business.concretes;
 
+import com.etiya.productservice.business.abstracts.CatalogService;
 import com.etiya.productservice.business.abstracts.ProductOfferService;
+import com.etiya.productservice.business.abstracts.ProductSpecService;
 import com.etiya.productservice.business.constants.Messages;
 import com.etiya.productservice.business.dtos.requests.CreateProductOfferRequest;
 import com.etiya.productservice.business.dtos.requests.UpdateProductOfferRequest;
@@ -12,9 +14,7 @@ import com.etiya.productservice.business.rules.ProductOfferBusinessRules;
 import com.etiya.productservice.business.rules.ProductSpecBusinessRules;
 import com.etiya.productservice.core.constants.CacheNames;
 import com.etiya.productservice.core.crosscutting.exceptions.BusinessException;
-import com.etiya.productservice.dataAccess.CatalogRepository;
 import com.etiya.productservice.dataAccess.ProductOfferRepository;
-import com.etiya.productservice.dataAccess.ProductSpecRepository;
 import com.etiya.productservice.entities.Catalog;
 import com.etiya.productservice.entities.ProductOffer;
 import com.etiya.productservice.entities.ProductSpec;
@@ -41,23 +41,23 @@ import java.time.LocalDateTime;
 public class ProductOfferManager implements ProductOfferService {
 
     private final ProductOfferRepository repository;
-    private final ProductSpecRepository productSpecRepository;
-    private final CatalogRepository catalogRepository;
+    private final ProductSpecService productSpecService;
+    private final CatalogService catalogService;
     private final ProductOfferMapper mapper;
     private final ProductOfferBusinessRules rules;
     private final ProductSpecBusinessRules productSpecRules;
     private final CatalogBusinessRules catalogRules;
 
     public ProductOfferManager(ProductOfferRepository repository,
-                               ProductSpecRepository productSpecRepository,
-                               CatalogRepository catalogRepository,
+                               ProductSpecService productSpecService,
+                               CatalogService catalogService,
                                ProductOfferMapper mapper,
                                ProductOfferBusinessRules rules,
                                ProductSpecBusinessRules productSpecRules,
                                CatalogBusinessRules catalogRules) {
         this.repository = repository;
-        this.productSpecRepository = productSpecRepository;
-        this.catalogRepository = catalogRepository;
+        this.productSpecService = productSpecService;
+        this.catalogService = catalogService;
         this.mapper = mapper;
         this.rules = rules;
         this.productSpecRules = productSpecRules;
@@ -72,10 +72,8 @@ public class ProductOfferManager implements ProductOfferService {
         catalogRules.checkIfCatalogExists(request.catalogId());
         productSpecRules.checkIfProductSpecExists(request.productSpecId());
 
-        Catalog catalog = catalogRepository.findByIdAndIsActiveTrue(request.catalogId())
-                .orElseThrow(() -> new BusinessException(Messages.CATALOG_NOT_FOUND));
-        ProductSpec spec = productSpecRepository.findByIdAndIsActiveTrue(request.productSpecId())
-                .orElseThrow(() -> new BusinessException(Messages.PRODUCT_SPEC_NOT_FOUND));
+        Catalog catalog = catalogService.getCatalogById(request.catalogId());
+        ProductSpec spec = productSpecService.getProductSpecById(request.productSpecId());
 
         ProductOffer offer = mapper.toEntity(request);
         offer.setCatalog(catalog);
@@ -135,6 +133,12 @@ public class ProductOfferManager implements ProductOfferService {
         offer.setIsActive(false);
         offer.setDeletedDate(LocalDateTime.now());
         repository.save(offer);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductOffer getProductOfferById(Long id) {
+        return findActiveOrThrow(id);
     }
 
     private ProductOffer findActiveOrThrow(Long id) {

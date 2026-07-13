@@ -4,6 +4,7 @@ import com.etiya.productservice.business.dtos.requests.CreateCampaignRequest;
 import com.etiya.productservice.business.dtos.requests.UpdateCampaignRequest;
 import com.etiya.productservice.business.dtos.responses.CampaignResponse;
 import com.etiya.productservice.business.dtos.responses.PagedResponse;
+import com.etiya.productservice.entities.Campaign;
 import org.springframework.data.domain.Pageable;
 
 /**
@@ -14,6 +15,9 @@ public interface CampaignService {
     CampaignResponse add(CreateCampaignRequest request);
 
     CampaignResponse getById(Long id);
+
+    /** İlişki kurulumu için aktif kampanya entity'sini döner; yoksa iş hatası fırlatır. */
+    Campaign getCampaignById(Long id);
 
     PagedResponse<CampaignResponse> getAll(Pageable pageable);
 

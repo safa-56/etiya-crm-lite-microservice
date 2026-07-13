@@ -85,6 +85,12 @@ public class CatalogManager implements CatalogService {
         repository.save(entity);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Catalog getCatalogById(Long id) {
+        return findActiveOrThrow(id);
+    }
+
     private Catalog findActiveOrThrow(Long id) {
         return repository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new BusinessException(Messages.CATALOG_NOT_FOUND));

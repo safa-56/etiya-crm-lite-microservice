@@ -88,6 +88,12 @@ public class ProductSpecManager implements ProductSpecService {
         repository.save(entity);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ProductSpec getProductSpecById(Long id) {
+        return findActiveOrThrow(id);
+    }
+
     private ProductSpec findActiveOrThrow(Long id) {
         return repository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new BusinessException(Messages.PRODUCT_SPEC_NOT_FOUND));
