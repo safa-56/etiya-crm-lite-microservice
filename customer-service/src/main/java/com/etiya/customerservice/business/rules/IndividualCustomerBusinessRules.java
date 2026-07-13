@@ -4,10 +4,12 @@ import com.etiya.customerservice.business.constants.Messages;
 import com.etiya.customerservice.core.crosscutting.exceptions.BusinessException;
 import com.etiya.customerservice.dataAccess.CustomerContactInfoRepository;
 import com.etiya.customerservice.dataAccess.IndividualCustomerRepository;
+import com.etiya.customerservice.entities.IndividualCustomer;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Bireysel müşteri iş kuralları.
@@ -36,6 +38,13 @@ public class IndividualCustomerBusinessRules {
         }
     }
 
+    public IndividualCustomer checkIndividualCustomerIsExists(Long id){
+        Optional<IndividualCustomer> existsIndividualCustomer = individualCustomerRepository.findByIdAndIsActiveTrue(id);
+        if (existsIndividualCustomer.isEmpty()){
+            throw new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND);
+        }
+        return existsIndividualCustomer.get();
+    }
     /**
      * Yeni müşteri oluşturmada TC kimlik numarası (Nationality ID) tekilliğini
      * doğrular: aynı numaraya sahip aktif bir müşteri varsa iş hatası fırlatılır

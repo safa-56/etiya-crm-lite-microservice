@@ -1,6 +1,7 @@
 package com.etiya.customerservice.business.concretes;
 
 import com.etiya.customerservice.business.abstracts.AddressService;
+import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.abstracts.OutboxService;
 import com.etiya.customerservice.business.constants.CustomerEvents;
 import com.etiya.customerservice.business.constants.Messages;
@@ -36,18 +37,19 @@ import java.util.List;
 public class AddressManager implements AddressService {
 
     private final AddressRepository repository;
-    private final CustomerRepository customerRepository;
+    //private final CustomerRepository customerRepository;
+    private IndividualCustomerService individualCustomerService;
     private final AddressMapper mapper;
     private final AddressBusinessRules rules;
     private final OutboxService outboxService;
 
     public AddressManager(AddressRepository repository,
-                          CustomerRepository customerRepository,
+                          IndividualCustomerService individualCustomerService,
                           AddressMapper mapper,
                           AddressBusinessRules rules,
                           OutboxService outboxService) {
         this.repository = repository;
-        this.customerRepository = customerRepository;
+        this.individualCustomerService = individualCustomerService;
         this.mapper = mapper;
         this.rules = rules;
         this.outboxService = outboxService;
@@ -60,8 +62,7 @@ public class AddressManager implements AddressService {
         rules.checkIfCustomerExists(request.customerId());
 
         // --- dönüşüm + ilişki kurulumu ---
-        Customer customer = customerRepository.findByIdAndIsActiveTrue(request.customerId())
-                .orElseThrow(() -> new BusinessException(Messages.CUSTOMER_NOT_FOUND));
+        Customer customer = individualCustomerService.getIndividualCustomerById(request.customerId());
 
         Address address = mapper.toEntity(request);
         address.setCustomer(customer);

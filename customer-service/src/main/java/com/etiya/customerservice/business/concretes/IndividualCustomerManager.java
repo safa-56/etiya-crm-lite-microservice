@@ -101,12 +101,10 @@ public class IndividualCustomerManager implements IndividualCustomerService {
             evict = @CacheEvict(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST, allEntries = true)
     )
     public IndividualCustomerResponse update(Long id, UpdateIndividualCustomerRequest request) {
-        rules.checkIfIndividualCustomerExists(id);
         // Nationality ID başka bir müşteriye ait olmamalı (kendisi hariç).
         rules.checkIfNationalityIdBelongsToAnotherCustomer(request.nationalityId(), id);
 
-        IndividualCustomer customer = repository.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
+        IndividualCustomer customer = rules.checkIndividualCustomerIsExists(id);
 
         // Skaler alanları güncelle
         customer.setFirstName(request.firstName());
@@ -144,8 +142,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     public void delete(Long id) {
         rules.checkIfIndividualCustomerExists(id);
 
-        IndividualCustomer customer = repository.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
+        IndividualCustomer customer = rules.checkIndividualCustomerIsExists(id);
 
         // Soft-delete: fiziksel silme yok; pasifleştir ve silinme zamanını işaretle.
         // Çocuk kayıtlar (adresler + iletişim bilgileri) de aynı anda pasifleştirilir.
@@ -157,6 +154,12 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         deactivateAddresses(customer);
 
         publishEvent(customer, CustomerEvents.CUSTOMER_DELETED);
+    }
+
+    @Override
+    public IndividualCustomer getIndividualCustomerById(Long id) {
+        IndividualCustomer individualCustomer = rules.checkIndividualCustomerIsExists(id);
+        return individualCustomer;
     }
 
     // ------------------------------------------------------------------ yardımcılar

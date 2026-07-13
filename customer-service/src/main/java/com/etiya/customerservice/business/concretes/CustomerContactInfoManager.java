@@ -1,15 +1,13 @@
 package com.etiya.customerservice.business.concretes;
 
 import com.etiya.customerservice.business.abstracts.CustomerContactInfoService;
-import com.etiya.customerservice.business.constants.Messages;
+import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.dtos.requests.CreateContactInfoRequest;
 import com.etiya.customerservice.business.dtos.requests.UpdateContactInfoRequest;
 import com.etiya.customerservice.business.dtos.responses.ContactInfoResponse;
 import com.etiya.customerservice.business.mappers.CustomerContactInfoMapper;
 import com.etiya.customerservice.business.rules.CustomerContactInfoBusinessRules;
-import com.etiya.customerservice.core.crosscutting.exceptions.BusinessException;
 import com.etiya.customerservice.dataAccess.CustomerContactInfoRepository;
-import com.etiya.customerservice.dataAccess.CustomerRepository;
 import com.etiya.customerservice.entities.Customer;
 import com.etiya.customerservice.entities.CustomerContactInfo;
 import org.springframework.stereotype.Service;
@@ -34,16 +32,16 @@ import java.util.Objects;
 public class CustomerContactInfoManager implements CustomerContactInfoService {
 
     private final CustomerContactInfoRepository repository;
-    private final CustomerRepository customerRepository;
+    private final IndividualCustomerService individualCustomerService;
     private final CustomerContactInfoMapper mapper;
     private final CustomerContactInfoBusinessRules rules;
 
     public CustomerContactInfoManager(CustomerContactInfoRepository repository,
-                                      CustomerRepository customerRepository,
+                                      IndividualCustomerService individualCustomerService,
                                       CustomerContactInfoMapper mapper,
                                       CustomerContactInfoBusinessRules rules) {
         this.repository = repository;
-        this.customerRepository = customerRepository;
+        this.individualCustomerService = individualCustomerService;
         this.mapper = mapper;
         this.rules = rules;
     }
@@ -56,8 +54,7 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
         rules.checkIfEmailAlreadyExists(request.email());
 
         // --- dönüşüm + ilişki kurulumu ---
-        Customer customer = customerRepository.findByIdAndIsActiveTrue(request.customerId())
-                .orElseThrow(() -> new BusinessException(Messages.CUSTOMER_NOT_FOUND));
+        Customer customer = individualCustomerService.getIndividualCustomerById(request.customerId());
 
         CustomerContactInfo contactInfo = mapper.toEntity(request);
         contactInfo.setCustomer(customer);
