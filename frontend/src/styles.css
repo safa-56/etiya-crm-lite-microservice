@@ -1,0 +1,26 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import 'tailwindcss';
+
+@theme {
+  --color-etiya-orange: #f58220;
+  --color-etiya-orange-dark: #d96d13;
+  --color-etiya-navy: #242441;
+  --color-etiya-navy-light: #35355c;
+  --color-etiya-gray: #f5f7fa;
+
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
