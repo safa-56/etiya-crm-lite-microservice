@@ -70,15 +70,18 @@ export class LanguageSwitcher {
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
+// Butona tıklanınca menüyü aç/kapa
   protected toggle(): void {
     this.open.update((open) => !open);
   }
 
+// bir dil seçilince servise bildir ve menüyü kapat
   protected select(language: Language): void {
     this.i18n.setLanguage(language);
     this.open.set(false);
   }
 
+// dil menüsü dışına tıklanınca kapan mantığı
   protected onDocumentClick(event: MouseEvent): void {
     if (this.open() && !this.host.nativeElement.contains(event.target as Node)) {
       this.open.set(false);
