@@ -20,6 +20,16 @@ public final class Messages {
     public static final String ORDER_ALREADY_EXISTS_FOR_CART =
             "Bu sepet için zaten devam eden bir sipariş bulunuyor.";
 
+    // --- Referans veri (GNL_ST / GNL_TP dilimi) ---
+
+    /**
+     * Beklenen referans veri satırı bu servisin diliminde bulunamadı.
+     *
+     * <p>Tipik sebep: {@code data.sql} seed'i çalışmamış ya da ilgili
+     * {@code ENT_CODE_NAME}/{@code SHRT_CODE} satırı pasifleştirilmiş.
+     */
+    public static final String REFERENCE_DATA_NOT_FOUND = "Referans veri bulunamadı: ";
+
     // --- Saga doğrulama nedenleri (cart-service doğrulayıcı tarafında üretilir) ---
     /** Saga: siparişe konu sepet bulunamadı (yok/silinmiş). */
     public static final String SAGA_CART_NOT_FOUND =

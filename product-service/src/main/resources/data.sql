@@ -10,6 +10,52 @@
 -- düşüktür (indirim); bu kural kodda zorlanmaz, burada da öyle kurgulandı.
 -- =============================================================================
 
+-- =============================================================================
+-- REFERANS VERİ (Bounded Context Ownership)
+-- -----------------------------------------------------------------------------
+-- Legacy'de GNL_ST/GNL_TP kurum genelinde TEK tablodur; satırlar ENT_CODE_NAME
+-- ile bölümlenir. Mikroserviste bu tabloyu paylaşmak "shared database" anti
+-- pattern'i olurdu. Bunun yerine HER SERVİS KENDİ DİLİMİNE SAHİPTİR:
+--
+--   PROD / PROD_SPEC / PROD_CHAR_VAL /
+--   PROD_SPEC_SRVC_SPEC / RSRC_SPEC   -> product-service   (bu dosya)
+--   PARTY / PARTY_ROLE / IND          -> customer-service
+--   CUST_ORD                          -> order-service
+--   CUST_ACCT / CUST_ACCT_PROD_INVL   -> account-service
+--
+-- Dilimler ayrık olduğundan legacy id'ler ÇAKIŞMADAN birebir korunabilir; bu da
+-- ileride legacy DB'den ETL/migrasyonu kolaylaştırır.
+--
+-- KULLANIM NOTU: Bu servisin çalışan durum alanı (products.status) bir saga
+-- durum makinesidir ve ProductStatus enum'u ile modellenir; bu tabloya FK
+-- VERMEZ. Satırlar şu an legacy/ETL hizası için tutulur.
+-- =============================================================================
+
+-- --- GNL_ST dilimi (id'ler legacy GNL_ST tablosundan birebir) ---------------
+INSERT INTO general_status
+    (id, created_date, is_active, name, description, short_code, entity_code_name, entity_name)
+VALUES
+    (   115, now(), true, 'Silinmis',      'Silinmis',      'DEL',       'PROD',                'PROD'),
+    (   116, now(), true, 'Aktif',         'Aktif',         'ACTV',      'PROD',                'PROD'),
+    (  1500, now(), true, 'Beklemede',     'Beklemede',     'PNDG',      'PROD',                'PROD'),
+    ( 10600, now(), true, 'Askida',        'Askida',        'SPND',      'PROD',                'PROD'),
+    ( 75690, now(), true, 'Siparis Iptal', 'Siparis Iptal', 'QUOTE_DEL', 'PROD',                'PROD'),
+    (    10, now(), true, 'Aktif',         'Aktif',         'ACTV',      'PROD_SPEC',           'PROD_SPEC'),
+    (    13, now(), true, 'Pasif',         'Pasif',         'PASS',      'PROD_SPEC',           'PROD_SPEC'),
+    (   123, now(), true, 'Silinmis',      'Silinmis',      'DEL',       'PROD_CHAR_VAL',       'PROD_CHAR_VAL'),
+    (   124, now(), true, 'Aktif',         'Aktif',         'ACTV',      'PROD_CHAR_VAL',       'PROD_CHAR_VAL'),
+    (   239, now(), true, 'Aktif',         'Aktif',         'ACTV',      'PROD_SPEC_SRVC_SPEC', 'PROD_SPEC_SRVC_SPEC'),
+    (   240, now(), true, 'Silinmis',      'Silinmis',      'DEL',       'PROD_SPEC_SRVC_SPEC', 'PROD_SPEC_SRVC_SPEC'),
+    (    14, now(), true, 'Pasif',         'Pasif',         'PASS',      'RSRC_SPEC',           'RSRC_SPEC')
+ON CONFLICT (id) DO NOTHING;
+
+-- --- GNL_TP dilimi ----------------------------------------------------------
+-- Legacy GNL_TP dökümü henüz elimizde olmadığından tohumlanmadı. Döküm geldiğinde
+-- bu servisin dilimi kadar ve legacy id'leri korunarak eklenmelidir. Uydurma satır
+-- basmak ETL hizasını bozacağından bilinçli olarak boş bırakıldı.
+
+SELECT setval(pg_get_serial_sequence('general_status','id'), (SELECT MAX(id) FROM general_status), true);
+
 INSERT INTO catalogs (id, created_date, is_active, name, description) VALUES
     (1, now(), true, 'Ev İnterneti', 'Fiber ve ADSL ev interneti teklifleri'),
     (2, now(), true, 'Mobil',        'Cep telefonu ses + data paketleri'),

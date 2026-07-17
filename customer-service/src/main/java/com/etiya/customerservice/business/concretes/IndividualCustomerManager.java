@@ -2,6 +2,7 @@ package com.etiya.customerservice.business.concretes;
 
 import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.abstracts.OutboxService;
+import com.etiya.customerservice.business.abstracts.PartyRoleService;
 import com.etiya.customerservice.business.constants.CustomerEvents;
 import com.etiya.customerservice.business.constants.Messages;
 import com.etiya.customerservice.business.dtos.events.CustomerEventPayload;
@@ -40,19 +41,22 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     private final IndividualCustomerMapper mapper;
     private final IndividualCustomerBusinessRules rules;
     private final OutboxService outboxService;
+    private final PartyRoleService partyRoleService;
 
     public IndividualCustomerManager(IndividualCustomerRepository repository,
                                      CustomerContactInfoRepository contactInfoRepository,
                                      AddressRepository addressRepository,
                                      IndividualCustomerMapper mapper,
                                      IndividualCustomerBusinessRules rules,
-                                     OutboxService outboxService) {
+                                     OutboxService outboxService,
+                                     PartyRoleService partyRoleService) {
         this.repository = repository;
         this.contactInfoRepository = contactInfoRepository;
         this.addressRepository = addressRepository;
         this.mapper = mapper;
         this.rules = rules;
         this.outboxService = outboxService;
+        this.partyRoleService = partyRoleService;
     }
 
     @Override
@@ -63,8 +67,12 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         rules.checkIfNationalityIdAlreadyExists(request.nationalityId());
         rules.checkIfEmailsAlreadyExist(extractEmails(request.contactInfos()));
 
+        // --- party zincirini kur: PARTY -> PARTY_ROLE (CUST) -> customers.party_role_id ---
+        IndividualCustomer customer = mapper.toEntity(request);
+        customer.setPartyRole(partyRoleService.createCustomerRoleForIndividual());
+
         // --- müşteriyi tek başına persist et (cascade yok) ---
-        IndividualCustomer saved = repository.save(mapper.toEntity(request));
+        IndividualCustomer saved = repository.save(customer);
 
         // --- çocuk kayıtları açıkça persist et (kendi repository'leri üzerinden) ---
         persistContactInfos(saved, request.contactInfos());
@@ -152,6 +160,9 @@ public class IndividualCustomerManager implements IndividualCustomerService {
 
         deactivateContactInfos(customer);
         deactivateAddresses(customer);
+
+        // Zincirin üst halkaları da pasifleşir (party rolü + party).
+        partyRoleService.deactivate(customer.getPartyRole());
 
         publishEvent(customer, CustomerEvents.CUSTOMER_DELETED);
     }

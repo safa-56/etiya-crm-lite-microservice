@@ -18,6 +18,16 @@ public final class Messages {
     /** Hesap numarası zaten kullanımda. */
     public static final String ACCOUNT_NUMBER_ALREADY_EXISTS = "Bu hesap numarası zaten kayıtlı.";
 
+    // --- Referans veri (GNL_ST / GNL_TP dilimi) ---
+
+    /**
+     * Beklenen referans veri satırı bu servisin diliminde bulunamadı.
+     *
+     * <p>Tipik sebep: {@code data.sql} seed'i çalışmamış ya da ilgili
+     * {@code ENT_CODE_NAME}/{@code SHRT_CODE} satırı pasifleştirilmiş.
+     */
+    public static final String REFERENCE_DATA_NOT_FOUND = "Referans veri bulunamadı: ";
+
     /**
      * Aktif ürünü olan hesap silinemez.
      *

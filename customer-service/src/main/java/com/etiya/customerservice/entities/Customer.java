@@ -16,6 +16,23 @@ import java.util.List;
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Customer extends BaseEntity {
 
+    /**
+     * Müşterinin oynadığı party rolü (legacy {@code CUST.PARTY_ROLE_ID}).
+     *
+     * <p>{@code CUST -> PARTY_ROLE -> PARTY} zincirini kurar. Bir müşteri tam olarak
+     * bir müşteri rolüne karşılık geldiğinden ilişki 1-1'dir.
+     *
+     * <p><b>Nullable olma sebebi (expand-migrate-contract):</b> Kolon, veri barındıran
+     * mevcut {@code customers} tablosuna sonradan eklendi. Dev'de {@code ddl-auto: update}
+     * çalıştığından NOT NULL olarak eklenmesi mevcut satırlarda hata verirdi. Yeni
+     * kayıtlarda zincirin kurulması business katmanında (IndividualCustomerManager)
+     * garanti edilir; eski satırlar {@code data.sql} ile backfill edilir. NOT NULL'a
+     * sıkıştırma, backfill tamamlandıktan sonra ayrı bir migration işidir.
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "party_role_id", unique = true)
+    private PartyRole partyRole;
+
     // Cascade yok: çocuk kayıtlar (contactInfos/addresses) manager katmanında
     // kendi repository'leri üzerinden açıkça persist/pasifleştirilir.
     @OneToMany(mappedBy = "customer")

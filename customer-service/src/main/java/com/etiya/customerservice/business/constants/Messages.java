@@ -39,6 +39,16 @@ public final class Messages {
     /** Doğum tarihi gelecekte olamaz. */
     public static final String BIRTH_DATE_CANNOT_BE_IN_FUTURE = "Doğum tarihi gelecekte olamaz.";
 
+    // --- Referans veri (Party modeli lookup'ları) ---
+
+    /**
+     * Beklenen referans veri satırı bu servisin diliminde bulunamadı.
+     *
+     * <p>Tipik sebep: {@code data.sql} seed'i çalışmamış ya da ilgili
+     * {@code ENT_CODE_NAME}/{@code SHRT_CODE} satırı pasifleştirilmiş.
+     */
+    public static final String REFERENCE_DATA_NOT_FOUND = "Referans veri bulunamadı: ";
+
     // --- Saga (fatura hesabı oluşturma) doğrulama nedenleri ---
 
     /** Saga: fatura hesabının bağlanmak istendiği müşteri aktif değil/yok. */
