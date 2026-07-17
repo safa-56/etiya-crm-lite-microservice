@@ -278,11 +278,11 @@ services:
   # multi-stage Dockerfile'lardan üretilir.
   # ===========================================================================
 
-   ---------------------------------------------------------------------------
-   1) config-server (8888) - merkezi konfigürasyon. İlk açılan uygulamadır;
-      diğer servisler konfigürasyonlarını buradan çeker. Git backend uzak
-      repoyu klonlar (CONFIG_GIT_* ile özelleştirilebilir).
-   ---------------------------------------------------------------------------
+#   ---------------------------------------------------------------------------
+#   1) config-server (8888) - merkezi konfigürasyon. İlk açılan uygulamadır;
+#      diğer servisler konfigürasyonlarını buradan çeker. Git backend uzak
+#      repoyu klonlar (CONFIG_GIT_* ile özelleştirilebilir).
+#   ---------------------------------------------------------------------------
   config-server:
     build:
       context: ..
