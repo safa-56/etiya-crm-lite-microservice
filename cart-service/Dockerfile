@@ -24,6 +24,8 @@ COPY customer-service/pom.xml customer-service/pom.xml
 COPY account-service/pom.xml account-service/pom.xml
 COPY product-service/pom.xml product-service/pom.xml
 COPY cart-service/pom.xml cart-service/pom.xml
+COPY order-service/pom.xml order-service/pom.xml
+COPY search-service/pom.xml search-service/pom.xml
 RUN mvn -B -pl cart-service -am dependency:go-offline
 
 # Kaynak kodu kopyala ve yalnızca cart-service modülünü paketle.

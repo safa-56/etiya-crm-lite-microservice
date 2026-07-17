@@ -27,6 +27,11 @@ COPY config-server/pom.xml config-server/pom.xml
 COPY eureka-server/pom.xml eureka-server/pom.xml
 COPY gateway-server/pom.xml gateway-server/pom.xml
 COPY customer-service/pom.xml customer-service/pom.xml
+COPY account-service/pom.xml account-service/pom.xml
+COPY product-service/pom.xml product-service/pom.xml
+COPY cart-service/pom.xml cart-service/pom.xml
+COPY order-service/pom.xml order-service/pom.xml
+COPY search-service/pom.xml search-service/pom.xml
 RUN mvn -B -pl eureka-server -am dependency:go-offline
 
 # Şimdi kaynak kodu kopyalayıp yalnızca eureka-server modülünü paketliyoruz.
