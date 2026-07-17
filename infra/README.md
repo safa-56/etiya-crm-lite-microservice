@@ -24,43 +24,59 @@ docker compose -f infra/docker-compose.yml up -d
 | Kafka UI      | http://localhost:8090     | topic/mesaj/consumer group izleme          |
 | Kafka Connect | http://localhost:8083     | Debezium REST API                          |
 
-## 2. Debezium Outbox Connector kaydı
+## 2. Debezium Outbox Connector kaydı (otomatik)
 
-Servis en az bir kez çalışıp `outbox_events` tablosunu oluşturduktan sonra:
+**Elle bir şey yapmanıza gerek yok.** `docker compose up` ile birlikte gelen
+`debezium-registrar` servisi, `infra/debezium/register-*.json` dosyalarının
+hepsini Kafka Connect'e kaydeder ve işi bitince durur.
+
+Nasıl çalışır:
+
+1. `debezium-connect` healthcheck'i geçene (REST API hazır olana) kadar bekler.
+2. Her JSON için `PUT /connectors/<name>/config` çağırır. Bu **idempotent**'tir:
+   connector yoksa oluşturulur, varsa config'i güncellenir — replication slot ve
+   offset'ler korunduğu için tekrar tekrar çalıştırmak güvenlidir.
+3. Connector'lar `outbox_events` tablosunu ister. Servis henüz ayağa kalkmadıysa
+   tablo yoktur ve task `FAILED` olur; registrar bu durumda connector'ı
+   `RUNNING` olana kadar restart ederek yeniden dener (varsayılan: 10 sn arayla
+   30 deneme ≈ 5 dk). Yani servislerin şemayı oluşturmasını beklemeye gerek yok.
+
+Kayıtları görmek / doğrulamak:
 
 ```bash
-# customer-service (db: customerdb)
+docker compose -f infra/docker-compose.yml logs debezium-registrar
+curl -s http://localhost:8083/connectors | jq
+curl -s http://localhost:8083/connectors/customer-outbox-connector/status | jq
+```
+
+Kafka UI'dan da izlenebilir: http://localhost:8090 → **Kafka Connect** sekmesi.
+
+### Yeni connector eklemek
+
+`infra/debezium/` altına `register-<servis>-connector.json` adında bir dosya
+bırakın — dosya adı deseni `register-*.json` ile eşleştiği sürece registrar onu
+otomatik alır. Sonra registrar'ı tekrar çalıştırın (compose'un tamamını yeniden
+başlatmaya gerek yok):
+
+```bash
+docker compose -f infra/docker-compose.yml up debezium-registrar
+```
+
+Aynı komut, mevcut bir connector'ın JSON'unu değiştirdiğinizde config'i
+güncellemek için de kullanılır.
+
+### Elle kayıt (opsiyonel)
+
+Registrar'ı devre dışı bırakmadan da REST API'yi doğrudan kullanabilirsiniz:
+
+```bash
 curl -i -X POST http://localhost:8083/connectors \
   -H "Content-Type: application/json" \
   -d @infra/debezium/register-outbox-connector.json
-
-# account-service (db: accountdb)
-curl -i -X POST http://localhost:8083/connectors \
-  -H "Content-Type: application/json" \
-  -d @infra/debezium/register-account-connector.json
-
-# product-service (db: productdb)
-curl -i -X POST http://localhost:8083/connectors \
-  -H "Content-Type: application/json" \
-  -d @infra/debezium/register-product-connector.json
-
-# cart-service (db: cartdb)
-curl -i -X POST http://localhost:8083/connectors \
-  -H "Content-Type: application/json" \
-  -d @infra/debezium/register-cart-connector.json
-
-# order-service (db: orderdb)
-curl -i -X POST http://localhost:8083/connectors \
-  -H "Content-Type: application/json" \
-  -d @infra/debezium/register-order-connector.json
-
-# Durum:
-curl -s http://localhost:8083/connectors/customer-outbox-connector/status | jq
-curl -s http://localhost:8083/connectors/account-outbox-connector/status | jq
-curl -s http://localhost:8083/connectors/product-outbox-connector/status | jq
-curl -s http://localhost:8083/connectors/cart-outbox-connector/status | jq
-curl -s http://localhost:8083/connectors/order-outbox-connector/status | jq
 ```
+
+Connector adları: `customer-outbox-connector`, `account-outbox-connector`,
+`product-outbox-connector`, `cart-outbox-connector`, `order-outbox-connector`.
 
 > **Not (Sepete ekleme Saga'sı):** cart-service sepete ekleme kararını product-service
 > ile bir choreography Saga üzerinden verir (`crm.CartSaga.events`). cart, doğrulama
