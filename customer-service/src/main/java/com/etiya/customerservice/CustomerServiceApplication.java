@@ -20,6 +20,8 @@ import org.springframework.cache.annotation.EnableCaching;
  * tüketimde <b>Inbox Pattern</b> ile tekilleştirme yapılır (duplicate consume yok).
  * Cacheleme <b>Redis</b> (Spring Cache) ile sağlanır.
  */
+
+// değişiklik
 @SpringBootApplication
 @EnableCaching
 public class CustomerServiceApplication {
