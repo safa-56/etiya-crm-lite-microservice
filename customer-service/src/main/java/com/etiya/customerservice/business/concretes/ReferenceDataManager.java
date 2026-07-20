@@ -40,7 +40,7 @@ public class ReferenceDataManager implements ReferenceDataService {
         return generalTypeRepository
                 .findByEntityCodeNameAndShortCode(entityCodeName, shortCode)
                 .orElseThrow(() -> new BusinessException(
-                        Messages.REFERENCE_DATA_NOT_FOUND + "general_type[" + entityCodeName + "/" + shortCode + "]"));
+                        Messages.REFERENCE_DATA_NOT_FOUND, "general_type[" + entityCodeName + "/" + shortCode + "]"));
     }
 
     @Override
@@ -49,7 +49,7 @@ public class ReferenceDataManager implements ReferenceDataService {
         return generalStatusRepository
                 .findByEntityCodeNameAndShortCode(entityCodeName, shortCode)
                 .orElseThrow(() -> new BusinessException(
-                        Messages.REFERENCE_DATA_NOT_FOUND + "general_status[" + entityCodeName + "/" + shortCode + "]"));
+                        Messages.REFERENCE_DATA_NOT_FOUND, "general_status[" + entityCodeName + "/" + shortCode + "]"));
     }
 
     @Override
@@ -58,6 +58,6 @@ public class ReferenceDataManager implements ReferenceDataService {
         return partyRoleTypeRepository
                 .findByShortCode(shortCode)
                 .orElseThrow(() -> new BusinessException(
-                        Messages.REFERENCE_DATA_NOT_FOUND + "party_role_types[" + shortCode + "]"));
+                        Messages.REFERENCE_DATA_NOT_FOUND, "party_role_types[" + shortCode + "]"));
     }
 }

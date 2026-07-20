@@ -18,18 +18,18 @@ import java.time.LocalDate;
  */
 public record CreateProductOfferRequest(
 
-        @NotBlank(message = "Teklif adı (name) zorunludur.")
-        @Size(max = 150, message = "Teklif adı en fazla 150 karakter olabilir.")
+        @NotBlank(message = "{validation.offerName.notBlank}")
+        @Size(max = 150, message = "{validation.offerName.size}")
         String name,
 
-        @NotNull(message = "Katalog (catalogId) zorunludur.")
+        @NotNull(message = "{validation.catalogId.notNull}")
         Long catalogId,
 
-        @NotNull(message = "Teknik özellik (productSpecId) zorunludur.")
+        @NotNull(message = "{validation.productSpecId.notNull}")
         Long productSpecId,
 
-        @NotNull(message = "Fiyat (price) zorunludur.")
-        @DecimalMin(value = "0.0", message = "Fiyat negatif olamaz.")
+        @NotNull(message = "{validation.price.notNull}")
+        @DecimalMin(value = "0.0", message = "{validation.price.decimalMin}")
         BigDecimal price,
 
         LocalDate startDate,

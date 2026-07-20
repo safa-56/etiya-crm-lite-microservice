@@ -9,8 +9,8 @@ public record CreateContactInfoRequest(
         /** İletişim bilgisinin ait olduğu müşteri; yalnızca standalone oluşturmada gönderilir. */
         Long customerId,
 
-        @Email(message = "Geçerli bir e-posta adresi giriniz.")
-        @NotBlank(message = "Email (email) zorunludur.")
+        @Email(message = "{validation.email.email}")
+        @NotBlank(message = "{validation.email.notBlank}")
         @Size(max = 150)
         String email,
 
@@ -18,7 +18,7 @@ public record CreateContactInfoRequest(
         String homePhone,
 
         @Size(min = 11, max = 15)
-        @NotBlank(message = "Telefon numarası (mobilPhone) zorunludur.")
+        @NotBlank(message = "{validation.mobilePhone.notBlank}")
         String mobilPhone,
 
         @Size(max = 20)

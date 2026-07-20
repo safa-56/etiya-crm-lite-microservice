@@ -25,25 +25,25 @@ import jakarta.validation.constraints.Size;
  */
 public record CreateBillingAccountRequest(
 
-        @NotNull(message = "Müşteri (customerId) zorunludur.")
+        @NotNull(message = "{validation.customerId.notNull}")
         Long customerId,
 
-        @NotBlank(message = "Hesap adı (accountName) zorunludur.")
-        @Size(max = 150, message = "Hesap adı en fazla 150 karakter olabilir.")
+        @NotBlank(message = "{validation.accountName.notBlank}")
+        @Size(max = 150, message = "{validation.accountName.size}")
         String accountName,
 
-        @Size(max = 500, message = "Hesap açıklaması en fazla 500 karakter olabilir.")
+        @Size(max = 500, message = "{validation.accountDescription.size}")
         String accountDescription,
 
-        @NotNull(message = "Adres (addressId) zorunludur.")
+        @NotNull(message = "{validation.addressId.notNull}")
         Long addressId,
 
-        @Size(max = 30, message = "Hesap numarası en fazla 30 karakter olabilir.")
-        @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "Hesap numarası yalnızca alfanümerik karakter içerebilir.")
+        @Size(max = 30, message = "{validation.accountNumber.size}")
+        @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "{validation.accountNumber.pattern}")
         String accountNumber,
 
-        @Size(max = 20, message = "Sipariş numarası en fazla 20 karakter olabilir.")
-        @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "Sipariş numarası yalnızca alfanümerik karakter içerebilir.")
+        @Size(max = 20, message = "{validation.orderNumber.size}")
+        @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "{validation.orderNumber.pattern}")
         String orderNumber
 ) {
 }

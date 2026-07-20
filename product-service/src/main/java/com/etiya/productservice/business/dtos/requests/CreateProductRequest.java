@@ -18,13 +18,13 @@ import java.math.BigDecimal;
  */
 public record CreateProductRequest(
 
-        @NotNull(message = "Ürün teklifi (productOfferId) zorunludur.")
+        @NotNull(message = "{validation.productOfferId.notNull}")
         Long productOfferId,
 
-        @NotNull(message = "Fatura hesabı (accountId) zorunludur.")
+        @NotNull(message = "{validation.accountId.notNull}")
         Long accountId,
 
-        @Size(max = 150, message = "Ürün adı en fazla 150 karakter olabilir.")
+        @Size(max = 150, message = "{validation.productName.size}")
         String name,
 
         /** Opsiyonel: ürünün ait olduğu kampanya. */
@@ -33,8 +33,8 @@ public record CreateProductRequest(
         /** Opsiyonel: servis adresi (customer-service adres id'si). */
         Long addressId,
 
-        @NotNull(message = "Satış fiyatı (priceToBePaid) zorunludur.")
-        @DecimalMin(value = "0.0", message = "Satış fiyatı negatif olamaz.")
+        @NotNull(message = "{validation.priceToBePaid.notNull}")
+        @DecimalMin(value = "0.0", message = "{validation.priceToBePaid.decimalMin}")
         BigDecimal priceToBePaid
 ) {
 }

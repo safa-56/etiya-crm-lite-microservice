@@ -19,15 +19,15 @@ import java.util.List;
  */
 public record CreateCampaignRequest(
 
-        @NotBlank(message = "Kampanya adı (name) zorunludur.")
-        @Size(max = 150, message = "Kampanya adı en fazla 150 karakter olabilir.")
+        @NotBlank(message = "{validation.campaignName.notBlank}")
+        @Size(max = 150, message = "{validation.campaignName.size}")
         String name,
 
-        @NotNull(message = "Paket fiyatı (campaignPrice) zorunludur.")
-        @DecimalMin(value = "0.0", message = "Paket fiyatı negatif olamaz.")
+        @NotNull(message = "{validation.campaignPrice.notNull}")
+        @DecimalMin(value = "0.0", message = "{validation.campaignPrice.decimalMin}")
         BigDecimal campaignPrice,
 
-        @NotEmpty(message = "Kampanya en az bir ürün teklifi (offerIds) içermelidir.")
+        @NotEmpty(message = "{validation.offerIds.notEmpty}")
         List<Long> offerIds
 ) {
 }

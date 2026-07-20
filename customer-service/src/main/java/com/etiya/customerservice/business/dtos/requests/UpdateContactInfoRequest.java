@@ -6,8 +6,8 @@ import jakarta.validation.constraints.Size;
 
 public record UpdateContactInfoRequest(
 
-        @Email(message = "Geçerli bir e-posta adresi giriniz.")
-        @NotBlank(message = "Email (email) zorunludur.")
+        @Email(message = "{validation.email.email}")
+        @NotBlank(message = "{validation.email.notBlank}")
         @Size(max = 150)
         String email,
 
@@ -15,7 +15,7 @@ public record UpdateContactInfoRequest(
         String homePhone,
 
         @Size(min = 11, max = 15)
-        @NotBlank(message = "Telefon numarası (mobilPhone) zorunludur.")
+        @NotBlank(message = "{validation.mobilePhone.notBlank}")
         String mobilPhone,
 
         @Size(max = 20)

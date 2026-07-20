@@ -12,7 +12,7 @@ import jakarta.validation.constraints.NotNull;
  */
 public record AddCampaignToCartRequest(
 
-        @NotNull(message = "Kampanya (campaignId) zorunludur.")
+        @NotNull(message = "{validation.campaignId.notNull}")
         Long campaignId
 ) {
 }

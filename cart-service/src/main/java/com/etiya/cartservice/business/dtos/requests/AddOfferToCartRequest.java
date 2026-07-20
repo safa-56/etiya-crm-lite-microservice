@@ -12,10 +12,10 @@ import jakarta.validation.constraints.NotNull;
  */
 public record AddOfferToCartRequest(
 
-        @NotNull(message = "Ürün teklifi (productOfferId) zorunludur.")
+        @NotNull(message = "{validation.productOfferId.notNull}")
         Long productOfferId,
 
-        @Min(value = 1, message = "Adet en az 1 olmalıdır.")
+        @Min(value = 1, message = "{validation.quantity.min}")
         Integer quantity
 ) {
 

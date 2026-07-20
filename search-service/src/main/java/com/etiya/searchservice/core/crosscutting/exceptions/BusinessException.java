@@ -1,16 +1,34 @@
 package com.etiya.searchservice.core.crosscutting.exceptions;
 
 /**
- * İş kuralı ihlallerinde fırlatılan özel (custom) exception.
+ * Is kurali ihlallerinde firlatilan ozel (custom) exception.
  *
- * <p>Arama parametrelerinin format doğrulaması (rules) bir kısıt sağlanmadığında
- * bunu fırlatır. Mesajlar magic string değil, {@code Messages} sabitlerinden gelir.
- * {@code GlobalExceptionHandler} tarafından yakalanıp anlamlı bir HTTP yanıtına
- * (RFC 7807 ProblemDetail) çevrilir.
+ * <p>Is katmanindaki kural siniflari (rules) ve manager'lar, bir is kisiti
+ * saglanmadiginda bunu firlatir. {@code getMessage()} artik dogrudan metin degil,
+ * {@code messages*.properties} icindeki bir <b>mesaj anahtari</b> tasir; cozumleme
+ * (ve dile gore ceviri) {@code GlobalExceptionHandler} icinde {@code MessageSource}
+ * ile yapilir. Parametreli mesajlar icin {@code args} ({@code {0}, {1} ...})
+ * gecirilebilir.
  */
 public class BusinessException extends RuntimeException {
 
-    public BusinessException(String message) {
-        super(message);
+    /** Mesaj sablonundaki {@code {0}, {1} ...} yer tutucularina karsilik gelen degerler. */
+    private final transient Object[] args;
+
+    /** Parametresiz mesaj anahtari ile. */
+    public BusinessException(String messageKey) {
+        super(messageKey);
+        this.args = null;
+    }
+
+    /** Parametreli mesaj anahtari ile ({@code {0}, {1} ...}). */
+    public BusinessException(String messageKey, Object... args) {
+        super(messageKey);
+        this.args = args;
+    }
+
+    /** Mesaj sablonu parametreleri (yoksa {@code null}). */
+    public Object[] getArgs() {
+        return args;
     }
 }

@@ -1,11 +1,9 @@
 package com.etiya.productservice.business.constants;
 
 /**
- * İş katmanı mesaj sabitleri.
- *
- * <p>Kullanıcıya/istemciye dönen tüm iş mesajları magic string olarak değil,
- * buradaki sabitler üzerinden verilir. Böylece mesajlar tek yerden yönetilir
- * ve ileride i18n'e taşınması kolaylaşır.
+ * İş katmanı mesaj <b>anahtarları</b> (i18n). Gerçek metin isteğin diline göre
+ * {@code messages*.properties} üzerinden çözülür. {@code SAGA_*} sabitleri
+ * servisler arası event yükünde taşındığı için sabit metin olarak kalır.
  */
 public final class Messages {
 
@@ -13,35 +11,26 @@ public final class Messages {
     }
 
     // --- ProductSpec ---
-    public static final String PRODUCT_SPEC_NOT_FOUND = "Ürün teknik özelliği bulunamadı.";
+    public static final String PRODUCT_SPEC_NOT_FOUND = "productSpec.notFound";
 
     // --- ProductOffer ---
-    public static final String PRODUCT_OFFER_NOT_FOUND = "Ürün teklifi bulunamadı.";
-    public static final String PRODUCT_OFFER_DATE_RANGE_INVALID =
-            "Teklif bitiş tarihi başlangıç tarihinden önce olamaz.";
+    public static final String PRODUCT_OFFER_NOT_FOUND = "productOffer.notFound";
+    public static final String PRODUCT_OFFER_DATE_RANGE_INVALID = "productOffer.dateRangeInvalid";
 
     // --- Catalog ---
-    public static final String CATALOG_NOT_FOUND = "Katalog bulunamadı.";
+    public static final String CATALOG_NOT_FOUND = "catalog.notFound";
 
     // --- Campaign ---
-    public static final String CAMPAIGN_NOT_FOUND = "Kampanya bulunamadı.";
-    public static final String CAMPAIGN_DUPLICATE_OFFER =
-            "Aynı ürün teklifi bir kampanyada birden çok kez yer alamaz.";
+    public static final String CAMPAIGN_NOT_FOUND = "campaign.notFound";
+    public static final String CAMPAIGN_DUPLICATE_OFFER = "campaign.duplicateOffer";
 
     // --- Product ---
-    public static final String PRODUCT_NOT_FOUND = "Ürün bulunamadı.";
+    public static final String PRODUCT_NOT_FOUND = "product.notFound";
 
-    // --- Referans veri (GNL_ST / GNL_TP dilimi) ---
+    /** Beklenen referans veri satırı bulunamadı. Parametreli: {@code {0}} = detay. */
+    public static final String REFERENCE_DATA_NOT_FOUND = "reference.data.notFound";
 
-    /**
-     * Beklenen referans veri satırı bu servisin diliminde bulunamadı.
-     *
-     * <p>Tipik sebep: {@code data.sql} seed'i çalışmamış ya da ilgili
-     * {@code ENT_CODE_NAME}/{@code SHRT_CODE} satırı pasifleştirilmiş.
-     */
-    public static final String REFERENCE_DATA_NOT_FOUND = "Referans veri bulunamadı: ";
-
-    // --- Sepete ekleme Saga'sı (doğrulayıcı adım) ---
+    // --- Sepete ekleme Saga'sı (event yükü; locale'e göre çevrilmez) ---
 
     /** Sepet saga'sı: eklenmek istenen ürün teklifi bulunamadı/aktif değil (telafi nedeni). */
     public static final String SAGA_CART_PRODUCT_OFFER_NOT_FOUND =

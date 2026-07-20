@@ -34,7 +34,7 @@ public class ReferenceDataManager implements ReferenceDataService {
         return generalTypeRepository
                 .findByEntityCodeNameAndShortCode(entityCodeName, shortCode)
                 .orElseThrow(() -> new BusinessException(
-                        Messages.REFERENCE_DATA_NOT_FOUND + "general_type[" + entityCodeName + "/" + shortCode + "]"));
+                        Messages.REFERENCE_DATA_NOT_FOUND, "general_type[" + entityCodeName + "/" + shortCode + "]"));
     }
 
     @Override
@@ -43,6 +43,6 @@ public class ReferenceDataManager implements ReferenceDataService {
         return generalStatusRepository
                 .findByEntityCodeNameAndShortCode(entityCodeName, shortCode)
                 .orElseThrow(() -> new BusinessException(
-                        Messages.REFERENCE_DATA_NOT_FOUND + "general_status[" + entityCodeName + "/" + shortCode + "]"));
+                        Messages.REFERENCE_DATA_NOT_FOUND, "general_status[" + entityCodeName + "/" + shortCode + "]"));
     }
 }

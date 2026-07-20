@@ -9,19 +9,19 @@ import java.util.List;
 
 public record UpdateIndividualCustomerRequest(
 
-        @NotBlank(message = "İsim (first_name) zorunludur.")
+        @NotBlank(message = "{validation.firstName.notBlank}")
         @Size(max = 50)
         String firstName,
 
         @Size(max = 100)
         String secondName,
 
-        @NotBlank(message = "Soyisim (last_name) zorunludur.")
+        @NotBlank(message = "{validation.lastName.notBlank}")
         @Size(max = 50)
         String lastName,
 
-        @Past(message = "Doğum tarihi geçmiş bir tarih olmalıdır.")
-        @NotNull(message = "Doğum tarihi (birthDate) zorunludur.")
+        @Past(message = "{validation.birthDate.past}")
+        @NotNull(message = "{validation.birthDate.notNull}")
         LocalDate birthDate,
 
         @Size(max = 100)
@@ -30,11 +30,11 @@ public record UpdateIndividualCustomerRequest(
         @Size(max = 100)
         String motherName,
 
-        @NotBlank(message = "TC kimlik numarası (nationality_id) zorunludur.")
-        @Pattern(regexp = "\\d{11}", message = "TC kimlik numarası 11 haneli olmalıdır.")
+        @NotBlank(message = "{validation.nationalityId.notBlank}")
+        @Pattern(regexp = "\\d{11}", message = "{validation.nationalityId.pattern}")
         String nationalityId,
 
-        @NotNull(message = "Cinsiyet (genderType) zorunludur.")
+        @NotNull(message = "{validation.genderType.notNull}")
         GenderType genderType,
 
         @Valid

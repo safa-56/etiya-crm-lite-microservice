@@ -12,10 +12,10 @@ import jakarta.validation.constraints.NotNull;
  */
 public record CreateCartRequest(
 
-        @NotNull(message = "Müşteri (customerId) zorunludur.")
+        @NotNull(message = "{validation.customerId.notNull}")
         Long customerId,
 
-        @NotNull(message = "Fatura hesabı (accountId) zorunludur.")
+        @NotNull(message = "{validation.accountId.notNull}")
         Long accountId
 ) {
 }

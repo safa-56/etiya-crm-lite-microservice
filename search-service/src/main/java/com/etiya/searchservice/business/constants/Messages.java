@@ -1,10 +1,11 @@
 package com.etiya.searchservice.business.constants;
 
 /**
- * İş/validasyon mesajları için sabitler (magic string kullanılmaz).
+ * Arama format/validasyon mesaj <b>anahtarları</b> (i18n).
  *
- * <p>Format mesajları FR-002 kabul kriterlerinden (ACC-04..10) alınmıştır; UI ile
- * birebir aynı metinler kullanılır.
+ * <p>Format mesajları FR-002 kabul kriterlerinden (ACC-04..10) alınmıştır. Gerçek
+ * metin isteğin diline göre {@code messages*.properties} üzerinden çözülür;
+ * İngilizce değerler UI ile birebir aynı metinleri korur.
  */
 public final class Messages {
 
@@ -12,20 +13,20 @@ public final class Messages {
     }
 
     /** ACC-04: ID Number yalnızca 11 haneli rakam. */
-    public static final String INVALID_ID_NUMBER = "Please enter a valid 11-digit ID number.";
+    public static final String INVALID_ID_NUMBER = "search.idNumber.invalid";
 
     /** ACC-05: GSM Number yalnızca rakam, en fazla 15 karakter. */
-    public static final String INVALID_GSM_NUMBER = "Please enter a valid GSM number.";
+    public static final String INVALID_GSM_NUMBER = "search.gsmNumber.invalid";
 
     /** ACC-06: Customer ID yalnızca rakam, en fazla 20 karakter. */
-    public static final String INVALID_CUSTOMER_ID = "Please enter a valid customer ID (digits only, max 20).";
+    public static final String INVALID_CUSTOMER_ID = "search.customerId.invalid";
 
     /** ACC-07: Account Number alfanümerik, en fazla 30 karakter. */
-    public static final String INVALID_ACCOUNT_NUMBER = "Please enter a valid account number (alphanumeric, max 30).";
+    public static final String INVALID_ACCOUNT_NUMBER = "search.accountNumber.invalid";
 
     /** ACC-08: Order Number alfanümerik, en fazla 20 karakter. */
-    public static final String INVALID_ORDER_NUMBER = "Please enter a valid order number (alphanumeric, max 20).";
+    public static final String INVALID_ORDER_NUMBER = "search.orderNumber.invalid";
 
     /** ACC-09: First Name / Last Name en fazla 50 karakter. */
-    public static final String INVALID_NAME_LENGTH = "First name and last name must be at most 50 characters.";
+    public static final String INVALID_NAME_LENGTH = "search.nameLength.invalid";
 }

@@ -8,11 +8,11 @@ import jakarta.validation.constraints.Size;
  */
 public record UpdateProductSpecRequest(
 
-        @NotBlank(message = "Özellik adı (name) zorunludur.")
-        @Size(max = 150, message = "Özellik adı en fazla 150 karakter olabilir.")
+        @NotBlank(message = "{validation.specName.notBlank}")
+        @Size(max = 150, message = "{validation.specName.size}")
         String name,
 
-        @Size(max = 1000, message = "Açıklama en fazla 1000 karakter olabilir.")
+        @Size(max = 1000, message = "{validation.description.size}")
         String description
 ) {
 }

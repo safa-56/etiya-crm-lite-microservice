@@ -18,14 +18,14 @@ import jakarta.validation.constraints.Size;
  */
 public record SubmitOrderRequest(
 
-        @NotNull(message = "Sepet (cartId) zorunludur.")
+        @NotNull(message = "{validation.cartId.notNull}")
         Long cartId,
 
         // customer-service adres kimliği (opsiyonel referans; yeni eklenen adreste dolar).
         Long serviceAddressId,
 
-        @NotBlank(message = "Servis adresi (serviceAddress) zorunludur.")
-        @Size(max = 500, message = "Servis adresi en fazla 500 karakter olabilir.")
+        @NotBlank(message = "{validation.serviceAddress.notBlank}")
+        @Size(max = 500, message = "{validation.serviceAddress.size}")
         String serviceAddress
 ) {
 }

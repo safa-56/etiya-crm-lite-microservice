@@ -11,19 +11,19 @@ public record CreateAddressRequest(
         Long customerId,
 
         @Size(max = 100)
-        @NotBlank(message = "Şehir (city) zorunludur.")
+        @NotBlank(message = "{validation.city.notBlank}")
         String city,
 
         @Size(max = 150)
-        @NotBlank(message = "Sokak (street) zorunludur.")
+        @NotBlank(message = "{validation.street.notBlank}")
         String street,
 
         @Size(max = 30)
-        @NotBlank(message = "Ev no (houseNumber) zorunludur.")
+        @NotBlank(message = "{validation.houseNumber.notBlank}")
         String houseNumber,
 
         @Size(max = 500)
-        @NotBlank(message = "Adres açıklaması (addressDescription) zorunludur.")
+        @NotBlank(message = "{validation.addressDescription.notBlank}")
         String addressDescription,
 
         @NotNull

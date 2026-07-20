@@ -8,11 +8,11 @@ import jakarta.validation.constraints.Size;
  */
 public record CreateCatalogRequest(
 
-        @NotBlank(message = "Katalog adı (name) zorunludur.")
-        @Size(max = 150, message = "Katalog adı en fazla 150 karakter olabilir.")
+        @NotBlank(message = "{validation.catalogName.notBlank}")
+        @Size(max = 150, message = "{validation.catalogName.size}")
         String name,
 
-        @Size(max = 1000, message = "Açıklama en fazla 1000 karakter olabilir.")
+        @Size(max = 1000, message = "{validation.description.size}")
         String description
 ) {
 }
