@@ -17,14 +17,14 @@ import java.util.Optional;
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
     /** Bir sepetin tüm aktif satırlarını getirir. */
-    List<CartItem> findAllByCartIdAndIsActiveTrue(Long cartId);
+    List<CartItem> findAllByCartIdAndDeletedDateIsNull(Long cartId);
 
     /** Sepette belirli bir teklife ait aktif satırı getirir (adet artırımı için). */
-    Optional<CartItem> findByCartIdAndProductOfferIdAndIsActiveTrue(Long cartId, Long productOfferId);
+    Optional<CartItem> findByCartIdAndProductOfferIdAndDeletedDateIsNull(Long cartId, Long productOfferId);
 
     /** Sepette belirli bir kampanyaya ait aktif satır zaten var mı? */
-    boolean existsByCartIdAndCampaignIdAndIsActiveTrue(Long cartId, Long campaignId);
+    boolean existsByCartIdAndCampaignIdAndDeletedDateIsNull(Long cartId, Long campaignId);
 
     /** Sepetteki bir satırı id + sepet ile aktif olarak getirir. */
-    Optional<CartItem> findByIdAndCartIdAndIsActiveTrue(Long id, Long cartId);
+    Optional<CartItem> findByIdAndCartIdAndDeletedDateIsNull(Long id, Long cartId);
 }

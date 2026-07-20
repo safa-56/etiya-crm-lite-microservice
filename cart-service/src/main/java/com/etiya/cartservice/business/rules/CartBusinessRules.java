@@ -23,7 +23,7 @@ public class CartBusinessRules {
 
     /** Aktif bir sepet id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfCartExists(Long id) {
-        if (!cartRepository.existsByIdAndIsActiveTrue(id)) {
+        if (!cartRepository.existsByIdAndDeletedDateIsNull(id)) {
             throw new BusinessException(Messages.CART_NOT_FOUND);
         }
     }
@@ -33,7 +33,7 @@ public class CartBusinessRules {
      * (bir müşteri-hesap ikilisi için tek aktif sepet ilkesi).
      */
     public void checkIfCartNotAlreadyExists(Long customerId, Long accountId) {
-        if (cartRepository.existsByCustomerIdAndAccountIdAndIsActiveTrue(customerId, accountId)) {
+        if (cartRepository.existsByCustomerIdAndAccountIdAndDeletedDateIsNull(customerId, accountId)) {
             throw new BusinessException(Messages.CART_ALREADY_EXISTS);
         }
     }

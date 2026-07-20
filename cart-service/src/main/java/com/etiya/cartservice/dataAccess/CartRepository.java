@@ -19,17 +19,17 @@ import java.util.Optional;
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
     /** Aktif (silinmemiş) sepeti id ile getirir. */
-    Optional<Cart> findByIdAndIsActiveTrue(Long id);
+    Optional<Cart> findByIdAndDeletedDateIsNull(Long id);
 
     /** Tüm aktif sepetleri sayfalı getirir. */
-    Page<Cart> findAllByIsActiveTrue(Pageable pageable);
+    Page<Cart> findAllByDeletedDateIsNull(Pageable pageable);
 
     /** Bir müşteriye ait tüm aktif sepetleri getirir. */
-    List<Cart> findAllByCustomerIdAndIsActiveTrue(Long customerId);
+    List<Cart> findAllByCustomerIdAndDeletedDateIsNull(Long customerId);
 
     /** Aktif bir sepetin id ile var olup olmadığını kontrol eder. */
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 
     /** Verilen müşteri + fatura hesabı için zaten aktif bir sepet var mı? */
-    boolean existsByCustomerIdAndAccountIdAndIsActiveTrue(Long customerId, Long accountId);
+    boolean existsByCustomerIdAndAccountIdAndDeletedDateIsNull(Long customerId, Long accountId);
 }

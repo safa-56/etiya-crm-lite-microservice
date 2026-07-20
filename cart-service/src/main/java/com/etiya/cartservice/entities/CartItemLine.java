@@ -25,7 +25,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Entity
 @Table(name = "cart_item_lines")
-public class CartItemLine extends BaseEntity {
+public class CartItemLine extends StatusAwareEntity {
 
     /** Bu satırın ait olduğu sepet satırı (kampanya). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

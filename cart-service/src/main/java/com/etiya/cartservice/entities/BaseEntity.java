@@ -13,10 +13,13 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * Tüm entity'lerin miras aldığı taban sınıf.
+ * Tüm entity'lerin miras aldığı taban sınıf — ortak kimlik ve denetim (audit) alanları.
  *
- * <p>Ortak kimlik ve denetim (audit) alanlarını tutar: {@code id}, oluşturulma/
- * güncellenme/silinme zamanları ve soft-delete bayrağı {@code isActive}.
+ * <p><b>Durum (status) alanı burada tutulmaz.</b> Eskiden bu sınıfta bulunan
+ * {@code isActive} bayrağı kaldırılmıştır; bir kaydın durumu artık
+ * {@code general_status} referans tablosuna FK ile taşınır (bkz.
+ * {@link StatusAwareEntity}). {@code deletedDate} bir denetim zaman damgasıdır
+ * (durum alanı değildir) ve soft-delete filtrelerinde kullanılır.
  */
 @Getter
 @Setter
@@ -37,15 +40,9 @@ public abstract class BaseEntity {
     @Column(name = "deleted_date")
     private LocalDateTime deletedDate;
 
-    @Column(name = "is_active")
-    private Boolean isActive;
-
     @PrePersist
     protected void onCreate() {
         this.createdDate = LocalDateTime.now();
-        if (this.isActive == null) {
-            this.isActive = Boolean.TRUE;
-        }
     }
 
     @PreUpdate

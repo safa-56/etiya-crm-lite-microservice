@@ -2,6 +2,7 @@ package com.etiya.cartservice.business.concretes;
 
 import com.etiya.cartservice.business.abstracts.OrderCheckoutParticipantService;
 import com.etiya.cartservice.business.abstracts.OutboxService;
+import com.etiya.cartservice.business.constants.CartReferenceCodes;
 import com.etiya.cartservice.business.constants.Messages;
 import com.etiya.cartservice.business.constants.OrderCheckoutSagaEvents;
 import com.etiya.cartservice.business.dtos.events.OrderCheckoutRequestedPayload;
@@ -11,7 +12,6 @@ import com.etiya.cartservice.dataAccess.CartItemRepository;
 import com.etiya.cartservice.dataAccess.CartRepository;
 import com.etiya.cartservice.entities.Cart;
 import com.etiya.cartservice.entities.CartItem;
-import com.etiya.cartservice.entities.enums.CartItemStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -59,15 +59,15 @@ public class OrderCheckoutParticipantManager implements OrderCheckoutParticipant
 
         // 1) Sepet otoriter olarak var/aktif mi?
         Cart cart = cartId == null ? null
-                : cartRepository.findByIdAndIsActiveTrue(cartId).orElse(null);
+                : cartRepository.findByIdAndDeletedDateIsNull(cartId).orElse(null);
         if (cart == null) {
             publishFailed(orderId, cartId, Messages.SAGA_CART_NOT_FOUND);
             return;
         }
 
         // 2) Sepette onaylanmış (ACTIVE) en az bir satır var mı? (PENDING/CANCELLED sayılmaz)
-        List<CartItem> activeItems = cartItemRepository.findAllByCartIdAndIsActiveTrue(cartId).stream()
-                .filter(item -> item.getStatus() == CartItemStatus.ACTIVE)
+        List<CartItem> activeItems = cartItemRepository.findAllByCartIdAndDeletedDateIsNull(cartId).stream()
+                .filter(item -> CartReferenceCodes.STATUS_ACTIVE_CODE.equals(item.getGeneralStatus().getShortCode()))
                 .sorted(Comparator.comparing(CartItem::getId))
                 .toList();
         if (activeItems.isEmpty()) {

@@ -21,15 +21,16 @@ import java.util.List;
  * gevşek bağlılık için burada FK değil ham referans (Long) olarak tutulur (per-service
  * DB ilkesi). Sepetin içeriği {@link CartItem} satırlarında yaşar.
  *
- * <p>Silme soft-delete'tir ({@link BaseEntity#getIsActive()}); "sepeti boşalt"
- * işlemi sepeti ve tüm satırlarını pasifleştirir.
+ * <p>Silme soft-delete'tir: durum {@code CART/DEL} yapılır + {@code deletedDate}
+ * yazılır; "sepeti boşalt" işlemi sepeti ve tüm satırlarını soft-delete eder.
+ * Durum {@link StatusAwareEntity#getGeneralStatus()} FK'siyle tutulur.
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "carts")
-public class Cart extends BaseEntity {
+public class Cart extends StatusAwareEntity {
 
     /** Sepetin sahibi müşteri (customer-service kimliği). Zorunlu. */
     @Column(name = "customer_id", nullable = false)

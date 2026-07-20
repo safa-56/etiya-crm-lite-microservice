@@ -1,6 +1,5 @@
 package com.etiya.cartservice.entities;
 
-import com.etiya.cartservice.entities.enums.CartItemStatus;
 import com.etiya.cartservice.entities.enums.CartItemType;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -39,7 +38,7 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "cart_items")
-public class CartItem extends BaseEntity {
+public class CartItem extends StatusAwareEntity {
 
     /** Satırın ait olduğu sepet. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -50,11 +49,6 @@ public class CartItem extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "item_type", nullable = false, length = 20)
     private CartItemType itemType;
-
-    /** Saga durumu: PENDING → ACTIVE | CANCELLED. */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private CartItemStatus status;
 
     /** Doğrulama başarısızsa telafi nedeni (aksi halde boş). */
     @Column(name = "status_reason", length = 300)

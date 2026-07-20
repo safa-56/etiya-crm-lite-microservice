@@ -2,6 +2,8 @@ package com.etiya.cartservice.business.concretes;
 
 import com.etiya.cartservice.business.abstracts.CartService;
 import com.etiya.cartservice.business.abstracts.OutboxService;
+import com.etiya.cartservice.business.abstracts.ReferenceDataService;
+import com.etiya.cartservice.business.constants.CartReferenceCodes;
 import com.etiya.cartservice.business.constants.CartSagaEvents;
 import com.etiya.cartservice.business.constants.Messages;
 import com.etiya.cartservice.business.dtos.events.CartItemSagaRequestedPayload;
@@ -22,7 +24,6 @@ import com.etiya.cartservice.dataAccess.CartRepository;
 import com.etiya.cartservice.entities.Cart;
 import com.etiya.cartservice.entities.CartItem;
 import com.etiya.cartservice.entities.CartItemLine;
-import com.etiya.cartservice.entities.enums.CartItemStatus;
 import com.etiya.cartservice.entities.enums.CartItemType;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -63,19 +64,22 @@ public class CartManager implements CartService {
     private final CartBusinessRules cartRules;
     private final CartItemBusinessRules itemRules;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
     public CartManager(CartRepository cartRepository,
                        CartItemRepository cartItemRepository,
                        CartMapper mapper,
                        CartBusinessRules cartRules,
                        CartItemBusinessRules itemRules,
-                       OutboxService outboxService) {
+                       OutboxService outboxService,
+                       ReferenceDataService referenceDataService) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.mapper = mapper;
         this.cartRules = cartRules;
         this.itemRules = itemRules;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -85,7 +89,8 @@ public class CartManager implements CartService {
         cartRules.checkIfCartNotAlreadyExists(request.customerId(), request.accountId());
 
         Cart cart = mapper.toEntity(request);
-        cart.setIsActive(true);
+        cart.setGeneralStatus(referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART, CartReferenceCodes.STATUS_ACTIVE_CODE));
         return buildResponse(cartRepository.save(cart));
     }
 
@@ -101,13 +106,13 @@ public class CartManager implements CartService {
     @Cacheable(value = CacheNames.CART_LIST,
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
     public PagedResponse<CartResponse> getAll(Pageable pageable) {
-        return PagedResponse.of(cartRepository.findAllByIsActiveTrue(pageable).map(this::buildResponse));
+        return PagedResponse.of(cartRepository.findAllByDeletedDateIsNull(pageable).map(this::buildResponse));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CartResponse> getByCustomer(Long customerId) {
-        return cartRepository.findAllByCustomerIdAndIsActiveTrue(customerId).stream()
+        return cartRepository.findAllByCustomerIdAndDeletedDateIsNull(customerId).stream()
                 .map(this::buildResponse)
                 .toList();
     }
@@ -127,8 +132,8 @@ public class CartManager implements CartService {
         item.setItemType(CartItemType.OFFER);
         item.setProductOfferId(request.productOfferId());
         item.setQuantity(request.quantityOrDefault());
-        item.setStatus(CartItemStatus.PENDING);
-        item.setIsActive(true);
+        item.setGeneralStatus(referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART_ITEM, CartReferenceCodes.STATUS_PENDING_CODE));
         CartItem saved = cartItemRepository.save(item);
 
         requestValidation(saved);
@@ -151,8 +156,8 @@ public class CartManager implements CartService {
         item.setItemType(CartItemType.CAMPAIGN);
         item.setCampaignId(request.campaignId());
         item.setQuantity(1);
-        item.setStatus(CartItemStatus.PENDING);
-        item.setIsActive(true);
+        item.setGeneralStatus(referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART_ITEM, CartReferenceCodes.STATUS_PENDING_CODE));
         CartItem saved = cartItemRepository.save(item);
 
         requestValidation(saved);
@@ -167,10 +172,11 @@ public class CartManager implements CartService {
     })
     public CartResponse removeItem(Long cartId, Long itemId) {
         Cart cart = findActiveOrThrow(cartId);
-        CartItem item = cartItemRepository.findByIdAndCartIdAndIsActiveTrue(itemId, cartId)
+        CartItem item = cartItemRepository.findByIdAndCartIdAndDeletedDateIsNull(itemId, cartId)
                 .orElseThrow(() -> new BusinessException(Messages.CART_ITEM_NOT_FOUND));
 
-        item.setIsActive(false);
+        item.setGeneralStatus(referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART_ITEM, CartReferenceCodes.STATUS_DELETED_CODE));
         item.setDeletedDate(LocalDateTime.now());
         cartItemRepository.save(item);
 
@@ -187,15 +193,18 @@ public class CartManager implements CartService {
         Cart cart = findActiveOrThrow(id);
         LocalDateTime now = LocalDateTime.now();
 
-        // Sepeti ve tüm aktif satırlarını pasifleştir (soft-delete).
-        List<CartItem> items = cartItemRepository.findAllByCartIdAndIsActiveTrue(id);
+        // Sepeti ve tüm silinmemiş satırlarını soft-delete et (durum DEL).
+        var itemDeletedStatus = referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART_ITEM, CartReferenceCodes.STATUS_DELETED_CODE);
+        List<CartItem> items = cartItemRepository.findAllByCartIdAndDeletedDateIsNull(id);
         for (CartItem item : items) {
-            item.setIsActive(false);
+            item.setGeneralStatus(itemDeletedStatus);
             item.setDeletedDate(now);
         }
         cartItemRepository.saveAll(items);
 
-        cart.setIsActive(false);
+        cart.setGeneralStatus(referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART, CartReferenceCodes.STATUS_DELETED_CODE));
         cart.setDeletedDate(now);
         cartRepository.save(cart);
     }
@@ -218,7 +227,7 @@ public class CartManager implements CartService {
 
     /** Sepeti, satırları ve türetilmiş toplam tutarıyla birlikte yanıta dönüştürür. */
     private CartResponse buildResponse(Cart cart) {
-        List<CartItemResponse> items = cartItemRepository.findAllByCartIdAndIsActiveTrue(cart.getId())
+        List<CartItemResponse> items = cartItemRepository.findAllByCartIdAndDeletedDateIsNull(cart.getId())
                 .stream()
                 .sorted(Comparator.comparing(CartItem::getId))
                 .map(this::toItemResponse)
@@ -235,7 +244,7 @@ public class CartManager implements CartService {
                 cart.getAccountId(),
                 items,
                 totalPrice,
-                cart.getIsActive(),
+                cart.getGeneralStatus().getShortCode(),
                 cart.getCreatedDate(),
                 cart.getUpdatedDate());
     }
@@ -250,7 +259,7 @@ public class CartManager implements CartService {
         return new CartItemResponse(
                 item.getId(),
                 item.getItemType(),
-                item.getStatus(),
+                item.getGeneralStatus().getShortCode(),
                 item.getStatusReason(),
                 item.getProductOfferId(),
                 item.getCampaignId(),
@@ -262,7 +271,7 @@ public class CartManager implements CartService {
     }
 
     private Cart findActiveOrThrow(Long id) {
-        return cartRepository.findByIdAndIsActiveTrue(id)
+        return cartRepository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.CART_NOT_FOUND));
     }
 }

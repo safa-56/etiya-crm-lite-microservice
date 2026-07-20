@@ -1,6 +1,5 @@
 package com.etiya.cartservice.business.dtos.responses;
 
-import com.etiya.cartservice.entities.enums.CartItemStatus;
 import com.etiya.cartservice.entities.enums.CartItemType;
 
 import java.math.BigDecimal;
@@ -19,7 +18,7 @@ import java.util.List;
 public record CartItemResponse(
         Long id,
         CartItemType itemType,
-        CartItemStatus status,
+        String status,
         String statusReason,
         Long productOfferId,
         Long campaignId,

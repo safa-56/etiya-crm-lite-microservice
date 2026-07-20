@@ -1,13 +1,14 @@
 package com.etiya.cartservice.business.concretes;
 
 import com.etiya.cartservice.business.abstracts.CartSagaService;
+import com.etiya.cartservice.business.abstracts.ReferenceDataService;
+import com.etiya.cartservice.business.constants.CartReferenceCodes;
 import com.etiya.cartservice.business.dtos.events.CartItemSagaLine;
 import com.etiya.cartservice.business.dtos.events.CartItemSagaValidationPayload;
 import com.etiya.cartservice.core.constants.CacheNames;
 import com.etiya.cartservice.dataAccess.CartItemRepository;
 import com.etiya.cartservice.entities.CartItem;
 import com.etiya.cartservice.entities.CartItemLine;
-import com.etiya.cartservice.entities.enums.CartItemStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -32,9 +33,12 @@ public class CartSagaManager implements CartSagaService {
     private static final Logger log = LoggerFactory.getLogger(CartSagaManager.class);
 
     private final CartItemRepository cartItemRepository;
+    private final ReferenceDataService referenceDataService;
 
-    public CartSagaManager(CartItemRepository cartItemRepository) {
+    public CartSagaManager(CartItemRepository cartItemRepository,
+                           ReferenceDataService referenceDataService) {
         this.cartItemRepository = cartItemRepository;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -54,10 +58,10 @@ public class CartSagaManager implements CartSagaService {
             return;
         }
 
-        // Idempotency: yalnızca PENDING satırlar ileri götürülür/telafi edilir.
-        if (item.getStatus() != CartItemStatus.PENDING) {
+        // Idempotency: yalnızca PNDG (Beklemede) satırlar ileri götürülür/telafi edilir.
+        if (!CartReferenceCodes.STATUS_PENDING_CODE.equals(item.getGeneralStatus().getShortCode())) {
             log.debug("Sepet satırının bekleyen saga'sı yok (durum={}), sonuç atlanıyor. id={}",
-                    item.getStatus(), item.getId());
+                    item.getGeneralStatus().getShortCode(), item.getId());
             return;
         }
 
@@ -70,20 +74,23 @@ public class CartSagaManager implements CartSagaService {
 
     /** Onay: satırı ACTIVE yapar; ad/fiyat ve (varsa) paket içeriği snapshot'ını yazar. */
     private void confirm(CartItem item, CartItemSagaValidationPayload payload) {
-        item.setStatus(CartItemStatus.ACTIVE);
+        item.setGeneralStatus(referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART_ITEM, CartReferenceCodes.STATUS_ACTIVE_CODE));
         item.setStatusReason(null);
         item.setName(payload.name());
         item.setUnitPrice(payload.unitPrice());
 
         // Kampanya paket içeriği snapshot'ı (varsa) satıra yazılır.
         item.getLines().clear();
+        var lineActiveStatus = referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART_ITEM_LINE, CartReferenceCodes.STATUS_ACTIVE_CODE);
         List<CartItemSagaLine> offers = payload.offers() == null ? List.of() : payload.offers();
         for (CartItemSagaLine offer : offers) {
             CartItemLine line = new CartItemLine();
             line.setOfferId(offer.offerId());
             line.setOfferName(offer.offerName());
             line.setListPrice(offer.listPrice());
-            line.setIsActive(true);
+            line.setGeneralStatus(lineActiveStatus);
             item.addLine(line);
         }
 
@@ -91,13 +98,13 @@ public class CartSagaManager implements CartSagaService {
         log.info("Sepet saga onaylandı: satır ACTIVE. id={}", item.getId());
     }
 
-    /** Telafi (compensation): satırı CANCELLED yapar ve pasifleştirir. */
+    /** Telafi (compensation): satırı CNCL (iptal) yapar ve soft-delete eder. */
     private void cancel(CartItem item, String reason) {
-        item.setStatus(CartItemStatus.CANCELLED);
+        item.setGeneralStatus(referenceDataService.getStatus(
+                CartReferenceCodes.ENTITY_CART_ITEM, CartReferenceCodes.STATUS_CANCELLED_CODE));
         item.setStatusReason(reason);
-        item.setIsActive(false);
         item.setDeletedDate(LocalDateTime.now());
         cartItemRepository.save(item);
-        log.info("Sepet saga telafi edildi: satır CANCELLED (neden={}). id={}", reason, item.getId());
+        log.info("Sepet saga telafi edildi: satır iptal (CNCL) (neden={}). id={}", reason, item.getId());
     }
 }

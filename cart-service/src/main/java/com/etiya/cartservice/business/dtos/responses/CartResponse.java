@@ -25,7 +25,7 @@ public record CartResponse(
         Long accountId,
         List<CartItemResponse> items,
         BigDecimal totalPrice,
-        Boolean isActive,
+        String status,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

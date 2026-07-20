@@ -27,7 +27,7 @@ public class CartItemBusinessRules {
      * (paket bir kez eklenir).
      */
     public void checkCampaignNotAlreadyInCart(Long cartId, Long campaignId) {
-        if (cartItemRepository.existsByCartIdAndCampaignIdAndIsActiveTrue(cartId, campaignId)) {
+        if (cartItemRepository.existsByCartIdAndCampaignIdAndDeletedDateIsNull(cartId, campaignId)) {
             throw new BusinessException(Messages.CAMPAIGN_ALREADY_IN_CART);
         }
     }
