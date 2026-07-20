@@ -20,7 +20,7 @@ public record IndividualCustomerResponse(
         Long genderId,
         String nationalityId,
         GenderType genderType,
-        Boolean isActive,
+        String status,
         LocalDateTime createdDate,
         LocalDateTime updatedDate,
         List<ContactInfoResponse> contactInfos,

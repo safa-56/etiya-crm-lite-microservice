@@ -14,8 +14,8 @@ import java.util.Optional;
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     /** Aktif (silinmemiş) müşteriyi id ile getirir. */
-    Optional<Customer> findByIdAndIsActiveTrue(Long id);
+    Optional<Customer> findByIdAndDeletedDateIsNull(Long id);
 
     /** Aktif bir müşterinin id ile var olup olmadığını kontrol eder. */
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 }

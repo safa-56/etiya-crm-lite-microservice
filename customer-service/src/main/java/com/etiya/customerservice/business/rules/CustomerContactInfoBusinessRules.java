@@ -30,7 +30,7 @@ public class CustomerContactInfoBusinessRules {
 
     /** Aktif bir iletişim bilgisi id ile var olmalı; yoksa iş hatası fırlatılır. */
     public CustomerContactInfo checkContactInfoIfExists(Long id) {
-        Optional<CustomerContactInfo> existContactInfo = contactInfoRepository.findByIdAndIsActiveTrue(id);
+        Optional<CustomerContactInfo> existContactInfo = contactInfoRepository.findByIdAndDeletedDateIsNull(id);
         if (existContactInfo.isEmpty()) {
             throw new BusinessException(Messages.CONTACT_INFO_NOT_FOUND);
         }
@@ -39,7 +39,7 @@ public class CustomerContactInfoBusinessRules {
 
     /** İletişim bilgisinin bağlanacağı aktif müşteri id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfCustomerExists(Long customerId) {
-        if (customerId == null || !customerRepository.existsByIdAndIsActiveTrue(customerId)) {
+        if (customerId == null || !customerRepository.existsByIdAndDeletedDateIsNull(customerId)) {
             throw new BusinessException(Messages.CUSTOMER_NOT_FOUND);
         }
     }
@@ -47,7 +47,7 @@ public class CustomerContactInfoBusinessRules {
     /** Verilen e-posta aktif bir kayıtta zaten kullanılıyorsa hata verir. */
     public void checkIfEmailAlreadyExists(String email) {
         if (email != null && !email.isBlank()
-                && contactInfoRepository.existsByEmailIgnoreCaseAndIsActiveTrue(email)) {
+                && contactInfoRepository.existsByEmailIgnoreCaseAndDeletedDateIsNull(email)) {
             throw new BusinessException(Messages.EMAIL_ALREADY_EXISTS);
         }
     }

@@ -38,7 +38,7 @@ public class ReferenceDataManager implements ReferenceDataService {
     @Transactional(readOnly = true)
     public GeneralType getType(String entityCodeName, String shortCode) {
         return generalTypeRepository
-                .findByEntityCodeNameAndShortCodeAndIsActiveTrue(entityCodeName, shortCode)
+                .findByEntityCodeNameAndShortCode(entityCodeName, shortCode)
                 .orElseThrow(() -> new BusinessException(
                         Messages.REFERENCE_DATA_NOT_FOUND + "general_type[" + entityCodeName + "/" + shortCode + "]"));
     }
@@ -47,7 +47,7 @@ public class ReferenceDataManager implements ReferenceDataService {
     @Transactional(readOnly = true)
     public GeneralStatus getStatus(String entityCodeName, String shortCode) {
         return generalStatusRepository
-                .findByEntityCodeNameAndShortCodeAndIsActiveTrue(entityCodeName, shortCode)
+                .findByEntityCodeNameAndShortCode(entityCodeName, shortCode)
                 .orElseThrow(() -> new BusinessException(
                         Messages.REFERENCE_DATA_NOT_FOUND + "general_status[" + entityCodeName + "/" + shortCode + "]"));
     }
@@ -56,7 +56,7 @@ public class ReferenceDataManager implements ReferenceDataService {
     @Transactional(readOnly = true)
     public PartyRoleType getPartyRoleType(String shortCode) {
         return partyRoleTypeRepository
-                .findByShortCodeAndIsActiveTrue(shortCode)
+                .findByShortCode(shortCode)
                 .orElseThrow(() -> new BusinessException(
                         Messages.REFERENCE_DATA_NOT_FOUND + "party_role_types[" + shortCode + "]"));
     }

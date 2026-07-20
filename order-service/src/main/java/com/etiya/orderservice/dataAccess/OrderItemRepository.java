@@ -16,5 +16,5 @@ import java.util.List;
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     /** Bir siparişin tüm aktif satırlarını getirir. */
-    List<OrderItem> findAllByOrderIdAndIsActiveTrue(Long orderId);
+    List<OrderItem> findAllByOrderIdAndDeletedDateIsNull(Long orderId);
 }

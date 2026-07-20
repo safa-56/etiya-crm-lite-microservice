@@ -42,7 +42,7 @@ public class PartyRoleManager implements PartyRoleService {
         partyRole.setParty(party);
         partyRole.setPartyRoleType(referenceDataService.getPartyRoleType(
                 PartyReferenceCodes.PARTY_ROLE_TYPE_CUSTOMER_CODE));
-        partyRole.setStatus(referenceDataService.getStatus(
+        partyRole.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY_ROLE, PartyReferenceCodes.STATUS_ACTIVE_CODE));
 
         return partyRoleRepository.save(partyRole);
@@ -54,9 +54,8 @@ public class PartyRoleManager implements PartyRoleService {
         if (partyRole == null) {
             return;
         }
-        partyRole.setIsActive(false);
         partyRole.setDeletedDate(LocalDateTime.now());
-        partyRole.setStatus(referenceDataService.getStatus(
+        partyRole.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY_ROLE, PartyReferenceCodes.STATUS_DELETED_CODE));
         partyRoleRepository.save(partyRole);
 

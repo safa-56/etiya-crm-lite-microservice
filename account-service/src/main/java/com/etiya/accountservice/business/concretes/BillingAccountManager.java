@@ -2,7 +2,9 @@ package com.etiya.accountservice.business.concretes;
 
 import com.etiya.accountservice.business.abstracts.BillingAccountService;
 import com.etiya.accountservice.business.abstracts.OutboxService;
+import com.etiya.accountservice.business.abstracts.ReferenceDataService;
 import com.etiya.accountservice.business.constants.AccountEvents;
+import com.etiya.accountservice.business.constants.AccountReferenceCodes;
 import com.etiya.accountservice.business.constants.BillingAccountSagaEvents;
 import com.etiya.accountservice.business.constants.Messages;
 import com.etiya.accountservice.business.dtos.events.BillingAccountEventPayload;
@@ -17,7 +19,6 @@ import com.etiya.accountservice.core.constants.CacheNames;
 import com.etiya.accountservice.core.crosscutting.exceptions.BusinessException;
 import com.etiya.accountservice.dataAccess.BillingAccountRepository;
 import com.etiya.accountservice.entities.BillingAccount;
-import com.etiya.accountservice.entities.enums.AccountStatus;
 import com.etiya.accountservice.entities.enums.AccountType;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -48,15 +49,18 @@ public class BillingAccountManager implements BillingAccountService {
     private final BillingAccountMapper mapper;
     private final BillingAccountBusinessRules rules;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
     public BillingAccountManager(BillingAccountRepository repository,
                                  BillingAccountMapper mapper,
                                  BillingAccountBusinessRules rules,
-                                 OutboxService outboxService) {
+                                 OutboxService outboxService,
+                                 ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.mapper = mapper;
         this.rules = rules;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -72,9 +76,9 @@ public class BillingAccountManager implements BillingAccountService {
         // Müşteri/adres doğrulaması otoriter olarak customer-service'e bırakılır;
         // hesap, doğrulama sonucu gelene kadar PENDING kalır (henüz kullanılamaz).
         account.setAccountType(AccountType.BILLING_ACCOUNT);
-        account.setAccountStatus(AccountStatus.PENDING);
+        account.setGeneralStatus(referenceDataService.getStatus(
+                AccountReferenceCodes.ENTITY_CUSTOMER_ACCOUNT, AccountReferenceCodes.STATUS_PENDING_CODE));
         account.setActiveProductCount(0);
-        account.setIsActive(true);
         // Adres metni henüz bilinmiyor; otoriter değer saga doğrulamasında
         // (CustomerValidated) yazılır. Kolon NOT NULL olduğundan boş bırakılır.
         account.setAddress("");
@@ -97,7 +101,7 @@ public class BillingAccountManager implements BillingAccountService {
     @Transactional(readOnly = true)
     @Cacheable(value = CacheNames.BILLING_ACCOUNTS, key = "#id")
     public BillingAccountResponse getById(Long id) {
-        BillingAccount account = repository.findByIdAndIsActiveTrue(id)
+        BillingAccount account = repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND));
         return mapper.toResponse(account);
     }
@@ -108,7 +112,7 @@ public class BillingAccountManager implements BillingAccountService {
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
     public PagedResponse<BillingAccountResponse> getAll(Pageable pageable) {
         return PagedResponse.of(
-                repository.findAllByIsActiveTrue(pageable).map(mapper::toResponse));
+                repository.findAllByDeletedDateIsNull(pageable).map(mapper::toResponse));
     }
 
     @Override
@@ -118,7 +122,7 @@ public class BillingAccountManager implements BillingAccountService {
             evict = @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
     )
     public BillingAccountResponse update(Long id, UpdateBillingAccountRequest request) {
-        BillingAccount account = repository.findByIdAndIsActiveTrue(id)
+        BillingAccount account = repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND));
 
         // Hesap numarası değiştiyse tekilliği doğrula (hesap-lokal kural).
@@ -166,16 +170,16 @@ public class BillingAccountManager implements BillingAccountService {
             @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
     })
     public void delete(Long id) {
-        BillingAccount account = repository.findByIdAndIsActiveTrue(id)
+        BillingAccount account = repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND));
 
         // Kabul kriteri: aktif ürünü olan hesap silinemez (kullanıcı Customer
         // Account ekranında kalır; iş hatası döner).
         rules.checkIfBillingAccountHasNoActiveProducts(account);
 
-        // Fiziksel silme yok: soft-delete + durum PASSIVE.
-        account.setIsActive(false);
-        account.setAccountStatus(AccountStatus.PASSIVE);
+        // Fiziksel silme yok: durum CUST_ACCT/DEL + deletedDate (soft-delete).
+        account.setGeneralStatus(referenceDataService.getStatus(
+                AccountReferenceCodes.ENTITY_CUSTOMER_ACCOUNT, AccountReferenceCodes.STATUS_DELETED_CODE));
         account.setDeletedDate(LocalDateTime.now());
         repository.save(account);
 
@@ -191,7 +195,7 @@ public class BillingAccountManager implements BillingAccountService {
                 account.getAccountName(),
                 account.getAccountNumber(),
                 account.getOrderNumber(),
-                account.getAccountStatus(),
+                account.getGeneralStatus().getShortCode(),
                 LocalDateTime.now());
         outboxService.publish(
                 AccountEvents.AGGREGATE_TYPE, String.valueOf(account.getId()), eventType, payload);

@@ -25,7 +25,7 @@ public class BillingAccountBusinessRules {
 
     /** Aktif bir fatura hesabı id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfBillingAccountExists(Long id) {
-        if (!billingAccountRepository.existsByIdAndIsActiveTrue(id)) {
+        if (!billingAccountRepository.existsByIdAndDeletedDateIsNull(id)) {
             throw new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND);
         }
     }
@@ -33,7 +33,7 @@ public class BillingAccountBusinessRules {
     /** Verilen hesap numarası aktif bir kayıtta zaten kullanılıyorsa hata verir. */
     public void checkIfAccountNumberAlreadyExists(String accountNumber) {
         if (accountNumber != null && !accountNumber.isBlank()
-                && billingAccountRepository.existsByAccountNumberAndIsActiveTrue(accountNumber)) {
+                && billingAccountRepository.existsByAccountNumberAndDeletedDateIsNull(accountNumber)) {
             throw new BusinessException(Messages.ACCOUNT_NUMBER_ALREADY_EXISTS);
         }
     }

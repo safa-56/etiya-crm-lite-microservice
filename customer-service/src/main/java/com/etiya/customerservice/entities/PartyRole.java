@@ -1,6 +1,5 @@
 package com.etiya.customerservice.entities;
 
-import com.etiya.customerservice.entities.reference.GeneralStatus;
 import com.etiya.customerservice.entities.reference.PartyRoleType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -24,23 +23,21 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "party_roles")
-public class PartyRole extends BaseEntity {
+public class PartyRole extends StatusAwareEntity {
 
     /** Rolü oynayan taraf (legacy {@code PARTY_ID}). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "party_id", nullable = false)
     private Party party;
 
-    /** Rol tipi (legacy {@code PARTY_ROLE_TP_ID}), ör. {@code CUST}. */
+    /**
+     * Rol tipi (legacy {@code PARTY_ROLE_TP_ID}), ör. {@code CUST}.
+     *
+     * <p>İş yaşam döngüsü durumu (Aktif/Pasif/Silinmiş) {@code entity_code_name = PARTY_ROLE}
+     * dilimindeki {@code general_status} satırlarına {@link StatusAwareEntity#getGeneralStatus()}
+     * FK'si ile bağlanır.
+     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "party_role_type_id", nullable = false)
     private PartyRoleType partyRoleType;
-
-    /**
-     * İş yaşam döngüsü durumu (legacy {@code ST_ID}); {@code entity_code_name = PARTY_ROLE}
-     * dilimindeki {@link GeneralStatus} satırlarına bağlanır.
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "status_id")
-    private GeneralStatus status;
 }

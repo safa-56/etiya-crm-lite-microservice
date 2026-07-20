@@ -9,95 +9,92 @@
 --
 -- SIRALAMA ÖNEMLİ: referans veri -> parties -> party_roles -> customers, çünkü
 -- customers.party_role_id bu zincire FK verir.
+--
+-- DURUM MODELİ: Entity'ler ayrı bir durum kolonu (is_active / status_id) TAŞIMAZ;
+-- her kaydın durumu general_status tablosuna general_status_id FK'si ile bağlanır.
+-- Referans tabloları (general_status, general_type, party_role_types) durum taşımaz.
 -- =============================================================================
 
 -- =============================================================================
 -- REFERANS VERİ (Bounded Context Ownership)
 -- -----------------------------------------------------------------------------
 -- Legacy'de GNL_ST/GNL_TP kurum genelinde TEK tablodur; satırlar ENT_CODE_NAME
--- ile bölümlenir. Mikroserviste bu tabloyu paylaşmak "shared database" anti
--- pattern'i olurdu. Bunun yerine HER SERVİS KENDİ DİLİMİNE SAHİPTİR:
---
+-- ile bölümlenir. Mikroserviste HER SERVİS KENDİ DİLİMİNE SAHİPTİR:
 --   PARTY / PARTY_ROLE / IND  -> customer-service   (bu dosya)
 --   PROD / PROD_SPEC / ...    -> product-service
 --   CUST_ORD                  -> order-service
 --   CUST_ACCT / ...           -> account-service
---
--- Dilimler ayrık olduğundan legacy id'ler ÇAKIŞMADAN birebir korunabilir; bu da
--- ileride legacy DB'den ETL/migrasyonu kolaylaştırır.
 -- =============================================================================
 
 -- --- GNL_ST dilimi: PARTY (16-18), PARTY_ROLE (79-81), IND (156-158) ---------
 -- id'ler legacy GNL_ST tablosundan birebir alınmıştır.
 INSERT INTO general_status
-    (id, created_date, is_active, name, description, short_code, entity_code_name, entity_name)
+    (id, created_date, name, description, short_code, entity_code_name, entity_name)
 VALUES
-    ( 16, now(), true, 'Silinmis', 'Silinmis', 'DEL',  'PARTY',      'PARTY'),
-    ( 17, now(), true, 'Aktif',    'Aktif',    'ACTV', 'PARTY',      'PARTY'),
-    ( 18, now(), true, 'Pasif',    'Pasif',    'PASS', 'PARTY',      'PARTY'),
-    ( 79, now(), true, 'Silinmis', 'Silinmis', 'DEL',  'PARTY_ROLE', 'PARTY_ROLE'),
-    ( 80, now(), true, 'Aktif',    'Aktif',    'ACTV', 'PARTY_ROLE', 'PARTY_ROLE'),
-    ( 81, now(), true, 'Pasif',    'Pasif',    'PASS', 'PARTY_ROLE', 'PARTY_ROLE'),
-    -- IND dilimi: bu servisin sahipliğindedir. IndividualCustomer'a henüz durum
-    -- alanı eklenmedi; satırlar dilim bütünlüğü ve ETL hizası için tutulur.
-    (156, now(), true, 'Silinmis', 'Silinmis', 'DEL',  'IND',        'INDIVIDUAL'),
-    (157, now(), true, 'Aktif',    'Aktif',    'ACTV', 'IND',        'INDIVIDUAL'),
-    (158, now(), true, 'Pasif',    'Pasif',    'PASS', 'IND',        'INDIVIDUAL')
+    ( 16, now(), 'Silinmis', 'Silinmis', 'DEL',  'PARTY',      'PARTY'),
+    ( 17, now(), 'Aktif',    'Aktif',    'ACTV', 'PARTY',      'PARTY'),
+    ( 18, now(), 'Pasif',    'Pasif',    'PASS', 'PARTY',      'PARTY'),
+    ( 79, now(), 'Silinmis', 'Silinmis', 'DEL',  'PARTY_ROLE', 'PARTY_ROLE'),
+    ( 80, now(), 'Aktif',    'Aktif',    'ACTV', 'PARTY_ROLE', 'PARTY_ROLE'),
+    ( 81, now(), 'Pasif',    'Pasif',    'PASS', 'PARTY_ROLE', 'PARTY_ROLE'),
+    (156, now(), 'Silinmis', 'Silinmis', 'DEL',  'IND',        'INDIVIDUAL'),
+    (157, now(), 'Aktif',    'Aktif',    'ACTV', 'IND',        'INDIVIDUAL'),
+    (158, now(), 'Pasif',    'Pasif',    'PASS', 'IND',        'INDIVIDUAL')
+ON CONFLICT (id) DO NOTHING;
+
+-- --- Yeni dilimler: durum FK'si veren entity'ler için (legacy dökümü yok) -----
+-- id'ler legacy GNL_ST aralığıyla çakışmayacak biçimde yüksek bloktan verildi.
+INSERT INTO general_status
+    (id, created_date, name, description, short_code, entity_code_name, entity_name)
+VALUES
+    (300101, now(), 'Aktif',    'Aktif',    'ACTV', 'ADDRESS',      'ADDRESS'),
+    (300102, now(), 'Silinmis', 'Silinmis', 'DEL',  'ADDRESS',      'ADDRESS'),
+    (300201, now(), 'Aktif',    'Aktif',    'ACTV', 'CUST_CONTACT', 'CUST_CONTACT'),
+    (300202, now(), 'Silinmis', 'Silinmis', 'DEL',  'CUST_CONTACT', 'CUST_CONTACT')
 ON CONFLICT (id) DO NOTHING;
 
 -- --- GNL_TP dilimi: CAM_PARTY_TYPE (party tipi) ------------------------------
 -- id'ler ve kodlar legacy GNL_TP tablosundan birebir alınmıştır.
---
--- Dikkat edilecek üç nokta:
---   1) Tipler GNL_ST'deki 'PARTY' diliminde DEĞİL, 'CAM_PARTY_TYPE' dilimindedir.
---      (Durum -> PARTY, tip -> CAM_PARTY_TYPE; ayrı isim alanları.)
---   2) Bireysel'in kısa kodu 'INDV'dir ('IND' değil; 'IND' GNL_ST'de birey
---      DURUMLARININ dilim adıdır).
---   3) ENT_NAME legacy'de NULL'dır; ayrım ENT_CODE_NAME ile yapılır.
---
--- NOT: GNL_TP id 164 ile GNL_ST id 164 farklı TABLOLARDADIR; çakışma değildir.
 INSERT INTO general_type
-    (id, created_date, is_active, name, description, short_code, entity_code_name, entity_name)
+    (id, created_date, name, description, short_code, entity_code_name, entity_name)
 VALUES
-    (164, now(), true, 'Bireysel', 'Bireysel', 'INDV', 'CAM_PARTY_TYPE', NULL),
-    (163, now(), true, 'Kurumsal', 'Kurumsal', 'ORG',  'CAM_PARTY_TYPE', NULL)
+    (164, now(), 'Bireysel', 'Bireysel', 'INDV', 'CAM_PARTY_TYPE', NULL),
+    (163, now(), 'Kurumsal', 'Kurumsal', 'ORG',  'CAM_PARTY_TYPE', NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- --- PARTY_ROLE_TP: party rol tipleri ---------------------------------------
 INSERT INTO party_role_types
-    (id, created_date, is_active, name, description, short_code)
+    (id, created_date, name, description, short_code)
 VALUES
-    (1, now(), true, 'Müşteri', 'Müşteri rolü', 'CUST')
+    (1, now(), 'Müşteri', 'Müşteri rolü', 'CUST')
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
 -- PARTY ZİNCİRİ: parties -> party_roles -> customers
 -- -----------------------------------------------------------------------------
--- Mevcut 6 müşterinin her biri için bir bireysel party ve onun üzerinde bir
--- CUST rolü oluşturulur. Hizalama kasıtlıdır: customer N <-> party_role N <-> party N.
+-- Hizalama kasıtlıdır: customer N <-> party_role N <-> party N.
 -- =============================================================================
 
--- party_type_id = 164 (CAM_PARTY_TYPE/INDV), status_id = 17 (PARTY/ACTV)
-INSERT INTO parties (id, created_date, is_active, party_type_id, status_id) VALUES
-    (1, now(), true, 164, 17), (2, now(), true, 164, 17), (3, now(), true, 164, 17),
-    (4, now(), true, 164, 17), (5, now(), true, 164, 17), (6, now(), true, 164, 17)
+-- party_type_id = 164 (CAM_PARTY_TYPE/INDV), general_status_id = 17 (PARTY/ACTV)
+INSERT INTO parties (id, created_date, party_type_id, general_status_id) VALUES
+    (1, now(), 164, 17), (2, now(), 164, 17), (3, now(), 164, 17),
+    (4, now(), 164, 17), (5, now(), 164, 17), (6, now(), 164, 17)
 ON CONFLICT (id) DO NOTHING;
 
--- party_role_type_id = 1 (CUST), status_id = 80 (PARTY_ROLE/ACTV)
-INSERT INTO party_roles (id, created_date, is_active, party_id, party_role_type_id, status_id) VALUES
-    (1, now(), true, 1, 1, 80), (2, now(), true, 2, 1, 80), (3, now(), true, 3, 1, 80),
-    (4, now(), true, 4, 1, 80), (5, now(), true, 5, 1, 80), (6, now(), true, 6, 1, 80)
+-- party_role_type_id = 1 (CUST), general_status_id = 80 (PARTY_ROLE/ACTV)
+INSERT INTO party_roles (id, created_date, party_id, party_role_type_id, general_status_id) VALUES
+    (1, now(), 1, 1, 80), (2, now(), 2, 1, 80), (3, now(), 3, 1, 80),
+    (4, now(), 4, 1, 80), (5, now(), 5, 1, 80), (6, now(), 6, 1, 80)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO customers (id, created_date, is_active, party_role_id) VALUES
-    (1, now(), true, 1), (2, now(), true, 2), (3, now(), true, 3),
-    (4, now(), true, 4), (5, now(), true, 5), (6, now(), true, 6)
+-- general_status_id = 157 (IND/ACTV)
+INSERT INTO customers (id, created_date, general_status_id, party_role_id) VALUES
+    (1, now(), 157, 1), (2, now(), 157, 2), (3, now(), 157, 3),
+    (4, now(), 157, 4), (5, now(), 157, 5), (6, now(), 157, 6)
 ON CONFLICT (id) DO NOTHING;
 
 -- Backfill (expand-migrate-contract'ın "migrate" adımı): party_role_id kolonu
--- dolu bir tabloya sonradan eklendiğinden, ON CONFLICT DO NOTHING yüzünden
--- yukarıdaki INSERT'in atlandığı mevcut DB'lerde eski satırlar NULL kalır.
--- Hizalama customer N <-> party_role N olduğu için id eşlemesi yeterlidir.
+-- dolu bir tabloya sonradan eklendiğinden, eski satırlar NULL kalabilir.
 UPDATE customers SET party_role_id = id
 WHERE id BETWEEN 1 AND 6 AND party_role_id IS NULL;
 
@@ -112,28 +109,30 @@ VALUES
     (6, '10000000638', 'Zeynep', 'Nur', 'Aydın',   DATE '1988-05-05', 'Ahmet',   'Meryem',  'FEMALE')
 ON CONFLICT (id) DO NOTHING;
 
+-- general_status_id = 300101 (ADDRESS/ACTV)
 INSERT INTO addresses
-    (id, created_date, is_active, customer_id, city, street, house_number, address_description, is_primary)
+    (id, created_date, general_status_id, customer_id, city, street, house_number, address_description, is_primary)
 VALUES
-    (1, now(), true, 1, 'İstanbul', 'Bağdat Caddesi',   'No:12 D:4',  'Kadıköy - ev adresi',    true),
-    (2, now(), true, 1, 'Ankara',   'Atatürk Bulvarı',  'No:88',      'Çankaya - iş adresi',    false),
-    (3, now(), true, 2, 'İzmir',    'Kordon',           'No:5 D:2',   'Konak - ev adresi',      true),
-    (4, now(), true, 3, 'Bursa',    'Nilüfer Caddesi',  'No:34',      'Nilüfer - ev adresi',    true),
-    (5, now(), true, 3, 'Antalya',  'Lara Yolu',        'No:120',     'Muratpaşa - yazlık',     false),
-    (6, now(), true, 4, 'İstanbul', 'İstiklal Caddesi', 'No:200 D:9', 'Beyoğlu - ev adresi',    true),
-    (7, now(), true, 5, 'Ankara',   'Tunalı Hilmi',     'No:45 D:3',  'Kavaklıdere - ev adresi',true),
-    (8, now(), true, 6, 'Konya',    'Mevlana Caddesi',  'No:7',       'Selçuklu - ev adresi',   true)
+    (1, now(), 300101, 1, 'İstanbul', 'Bağdat Caddesi',   'No:12 D:4',  'Kadıköy - ev adresi',    true),
+    (2, now(), 300101, 1, 'Ankara',   'Atatürk Bulvarı',  'No:88',      'Çankaya - iş adresi',    false),
+    (3, now(), 300101, 2, 'İzmir',    'Kordon',           'No:5 D:2',   'Konak - ev adresi',      true),
+    (4, now(), 300101, 3, 'Bursa',    'Nilüfer Caddesi',  'No:34',      'Nilüfer - ev adresi',    true),
+    (5, now(), 300101, 3, 'Antalya',  'Lara Yolu',        'No:120',     'Muratpaşa - yazlık',     false),
+    (6, now(), 300101, 4, 'İstanbul', 'İstiklal Caddesi', 'No:200 D:9', 'Beyoğlu - ev adresi',    true),
+    (7, now(), 300101, 5, 'Ankara',   'Tunalı Hilmi',     'No:45 D:3',  'Kavaklıdere - ev adresi',true),
+    (8, now(), 300101, 6, 'Konya',    'Mevlana Caddesi',  'No:7',       'Selçuklu - ev adresi',   true)
 ON CONFLICT (id) DO NOTHING;
 
+-- general_status_id = 300201 (CUST_CONTACT/ACTV)
 INSERT INTO customer_contact_info
-    (id, created_date, is_active, customer_id, email, home_phone, mobil_phone, fax)
+    (id, created_date, general_status_id, customer_id, email, home_phone, mobil_phone, fax)
 VALUES
-    (1, now(), true, 1, 'ahmet.yilmaz@example.com', '02161112233', '05321112233', NULL),
-    (2, now(), true, 2, 'ayse.demir@example.com',   NULL,          '05334445566', NULL),
-    (3, now(), true, 3, 'mehmet.kaya@example.com',  '02247778899', '05357778899', '02247778800'),
-    (4, now(), true, 4, 'fatma.sahin@example.com',  NULL,          '05369990011', NULL),
-    (5, now(), true, 5, 'can.ozturk@example.com',   NULL,          '05312223344', NULL),
-    (6, now(), true, 6, 'zeynep.aydin@example.com', '03325556677', '05345556677', NULL)
+    (1, now(), 300201, 1, 'ahmet.yilmaz@example.com', '02161112233', '05321112233', NULL),
+    (2, now(), 300201, 2, 'ayse.demir@example.com',   NULL,          '05334445566', NULL),
+    (3, now(), 300201, 3, 'mehmet.kaya@example.com',  '02247778899', '05357778899', '02247778800'),
+    (4, now(), 300201, 4, 'fatma.sahin@example.com',  NULL,          '05369990011', NULL),
+    (5, now(), 300201, 5, 'can.ozturk@example.com',   NULL,          '05312223344', NULL),
+    (6, now(), 300201, 6, 'zeynep.aydin@example.com', '03325556677', '05345556677', NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- identity sekanslarını en büyük id'ye çek (uygulamanın sonraki insert'leri çakışmasın)

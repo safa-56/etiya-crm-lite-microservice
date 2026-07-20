@@ -20,7 +20,7 @@ public interface BillingAccountMapper {
     // --- request -> entity (yalnızca skaler alanlar; tip/durum manager'da) ---
 
     @Mapping(target = "accountType", ignore = true)
-    @Mapping(target = "accountStatus", ignore = true)
+    @Mapping(target = "generalStatus", ignore = true)
     @Mapping(target = "activeProductCount", ignore = true)
     // Adres metni (snapshot) request'te yok; manager, addressId'yi müşteri
     // projeksiyonundan doğrulayıp adres metnini oradan çözerek set eder.
@@ -29,5 +29,6 @@ public interface BillingAccountMapper {
 
     // --- entity -> response ---
 
+    @Mapping(target = "status", source = "generalStatus.shortCode")
     BillingAccountResponse toResponse(BillingAccount entity);
 }

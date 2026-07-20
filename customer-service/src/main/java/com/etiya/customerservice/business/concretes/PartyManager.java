@@ -35,7 +35,7 @@ public class PartyManager implements PartyService {
         Party party = new Party();
         party.setPartyType(referenceDataService.getType(
                 PartyReferenceCodes.ENTITY_CAM_PARTY_TYPE, PartyReferenceCodes.PARTY_TYPE_INDIVIDUAL_CODE));
-        party.setStatus(referenceDataService.getStatus(
+        party.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY, PartyReferenceCodes.STATUS_ACTIVE_CODE));
         return partyRepository.save(party);
     }
@@ -46,9 +46,8 @@ public class PartyManager implements PartyService {
         if (party == null) {
             return;
         }
-        party.setIsActive(false);
         party.setDeletedDate(LocalDateTime.now());
-        party.setStatus(referenceDataService.getStatus(
+        party.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY, PartyReferenceCodes.STATUS_DELETED_CODE));
         partyRepository.save(party);
     }

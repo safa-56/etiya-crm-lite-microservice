@@ -3,8 +3,10 @@ package com.etiya.customerservice.business.concretes;
 import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.abstracts.OutboxService;
 import com.etiya.customerservice.business.abstracts.PartyRoleService;
+import com.etiya.customerservice.business.abstracts.ReferenceDataService;
 import com.etiya.customerservice.business.constants.CustomerEvents;
 import com.etiya.customerservice.business.constants.Messages;
+import com.etiya.customerservice.business.constants.PartyReferenceCodes;
 import com.etiya.customerservice.business.dtos.events.CustomerEventPayload;
 import com.etiya.customerservice.business.dtos.requests.CreateAddressRequest;
 import com.etiya.customerservice.business.dtos.requests.CreateContactInfoRequest;
@@ -42,6 +44,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     private final IndividualCustomerBusinessRules rules;
     private final OutboxService outboxService;
     private final PartyRoleService partyRoleService;
+    private final ReferenceDataService referenceDataService;
 
     public IndividualCustomerManager(IndividualCustomerRepository repository,
                                      CustomerContactInfoRepository contactInfoRepository,
@@ -49,7 +52,8 @@ public class IndividualCustomerManager implements IndividualCustomerService {
                                      IndividualCustomerMapper mapper,
                                      IndividualCustomerBusinessRules rules,
                                      OutboxService outboxService,
-                                     PartyRoleService partyRoleService) {
+                                     PartyRoleService partyRoleService,
+                                     ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.contactInfoRepository = contactInfoRepository;
         this.addressRepository = addressRepository;
@@ -57,6 +61,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         this.rules = rules;
         this.outboxService = outboxService;
         this.partyRoleService = partyRoleService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -70,6 +75,8 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         // --- party zincirini kur: PARTY -> PARTY_ROLE (CUST) -> customers.party_role_id ---
         IndividualCustomer customer = mapper.toEntity(request);
         customer.setPartyRole(partyRoleService.createCustomerRoleForIndividual());
+        customer.setGeneralStatus(referenceDataService.getStatus(
+                PartyReferenceCodes.ENTITY_INDIVIDUAL, PartyReferenceCodes.STATUS_ACTIVE_CODE));
 
         // --- müşteriyi tek başına persist et (cascade yok) ---
         IndividualCustomer saved = repository.save(customer);
@@ -88,7 +95,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     @Transactional(readOnly = true)
     @Cacheable(value = CacheNames.INDIVIDUAL_CUSTOMERS, key = "#id")
     public IndividualCustomerResponse getById(Long id) {
-        IndividualCustomer customer = repository.findByIdAndIsActiveTrue(id)
+        IndividualCustomer customer = repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
         return mapper.toResponse(customer);
     }
@@ -97,7 +104,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     @Transactional(readOnly = true)
     @Cacheable(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST)
     public List<IndividualCustomerResponse> getAll() {
-        return repository.findAllByIsActiveTrue().stream()
+        return repository.findAllByDeletedDateIsNull().stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -154,7 +161,8 @@ public class IndividualCustomerManager implements IndividualCustomerService {
 
         // Soft-delete: fiziksel silme yok; pasifleştir ve silinme zamanını işaretle.
         // Çocuk kayıtlar (adresler + iletişim bilgileri) de aynı anda pasifleştirilir.
-        customer.setIsActive(false);
+        customer.setGeneralStatus(referenceDataService.getStatus(
+                PartyReferenceCodes.ENTITY_INDIVIDUAL, PartyReferenceCodes.STATUS_DELETED_CODE));
         customer.setDeletedDate(LocalDateTime.now());
         repository.save(customer);
 
@@ -183,6 +191,8 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         requests.forEach(req -> {
             CustomerContactInfo contactInfo = mapper.toContactInfo(req);
             customer.addContactInfo(contactInfo);     // iki yönlü ilişki + koleksiyon
+            contactInfo.setGeneralStatus(referenceDataService.getStatus(
+                    PartyReferenceCodes.ENTITY_CONTACT_INFO, PartyReferenceCodes.STATUS_ACTIVE_CODE));
             contactInfoRepository.save(contactInfo);  // açıkça persist
         });
     }
@@ -195,6 +205,8 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         requests.forEach(req -> {
             Address address = mapper.toAddress(req);
             customer.addAddress(address);       // iki yönlü ilişki + koleksiyon
+            address.setGeneralStatus(referenceDataService.getStatus(
+                    PartyReferenceCodes.ENTITY_ADDRESS, PartyReferenceCodes.STATUS_ACTIVE_CODE));
             addressRepository.save(address);    // açıkça persist
         });
     }
@@ -206,8 +218,10 @@ public class IndividualCustomerManager implements IndividualCustomerService {
             return;
         }
         LocalDateTime now = LocalDateTime.now();
+        var deletedStatus = referenceDataService.getStatus(
+                PartyReferenceCodes.ENTITY_CONTACT_INFO, PartyReferenceCodes.STATUS_DELETED_CODE);
         contactInfos.forEach(contactInfo -> {
-            contactInfo.setIsActive(false);
+            contactInfo.setGeneralStatus(deletedStatus);
             contactInfo.setDeletedDate(now);
         });
         contactInfoRepository.saveAll(contactInfos);
@@ -221,8 +235,10 @@ public class IndividualCustomerManager implements IndividualCustomerService {
             return;
         }
         LocalDateTime now = LocalDateTime.now();
+        var deletedStatus = referenceDataService.getStatus(
+                PartyReferenceCodes.ENTITY_ADDRESS, PartyReferenceCodes.STATUS_DELETED_CODE);
         addresses.forEach(address -> {
-            address.setIsActive(false);
+            address.setGeneralStatus(deletedStatus);
             address.setDeletedDate(now);
         });
         addressRepository.saveAll(addresses);
@@ -255,7 +271,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
      */
     private String primaryGsmNumber(IndividualCustomer customer) {
         return customer.getContactInfos().stream()
-                .filter(contactInfo -> Boolean.TRUE.equals(contactInfo.getIsActive()))
+                .filter(contactInfo -> contactInfo.getDeletedDate() == null)
                 .map(CustomerContactInfo::getMobilPhone)
                 .filter(Objects::nonNull)
                 .findFirst()
@@ -269,7 +285,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
      */
     private List<CustomerEventPayload.AddressPayload> toAddressPayloads(IndividualCustomer customer) {
         return customer.getAddresses().stream()
-                .filter(address -> Boolean.TRUE.equals(address.getIsActive()))
+                .filter(address -> address.getDeletedDate() == null)
                 .map(address -> new CustomerEventPayload.AddressPayload(
                         address.getId(), address.getCity(), address.getStreet(),
                         address.getHouseNumber(), address.getAddressDescription(),

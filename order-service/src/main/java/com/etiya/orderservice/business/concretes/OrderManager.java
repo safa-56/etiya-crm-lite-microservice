@@ -2,8 +2,10 @@ package com.etiya.orderservice.business.concretes;
 
 import com.etiya.orderservice.business.abstracts.OrderService;
 import com.etiya.orderservice.business.abstracts.OutboxService;
+import com.etiya.orderservice.business.abstracts.ReferenceDataService;
 import com.etiya.orderservice.business.constants.Messages;
 import com.etiya.orderservice.business.constants.OrderCheckoutSagaEvents;
+import com.etiya.orderservice.business.constants.OrderReferenceCodes;
 import com.etiya.orderservice.business.dtos.events.OrderCheckoutRequestedPayload;
 import com.etiya.orderservice.business.dtos.requests.SubmitOrderRequest;
 import com.etiya.orderservice.business.dtos.responses.OrderItemResponse;
@@ -17,7 +19,6 @@ import com.etiya.orderservice.dataAccess.OrderItemRepository;
 import com.etiya.orderservice.dataAccess.OrderRepository;
 import com.etiya.orderservice.entities.Order;
 import com.etiya.orderservice.entities.OrderItem;
-import com.etiya.orderservice.entities.enums.OrderStatus;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -51,17 +52,20 @@ public class OrderManager implements OrderService {
     private final OrderMapper mapper;
     private final OrderBusinessRules rules;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
     public OrderManager(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         OrderMapper mapper,
                         OrderBusinessRules rules,
-                        OutboxService outboxService) {
+                        OutboxService outboxService,
+                        ReferenceDataService referenceDataService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.mapper = mapper;
         this.rules = rules;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -73,8 +77,8 @@ public class OrderManager implements OrderService {
         // Saga adım 1: siparişi PENDING aç (kalemler/toplam doğrulama sonucuyla gelecek).
         Order order = mapper.toEntity(request);
         order.setOrderNumber(generateOrderNumber());
-        order.setStatus(OrderStatus.PENDING);
-        order.setIsActive(true);
+        order.setGeneralStatus(referenceDataService.getStatus(
+                OrderReferenceCodes.ENTITY_CUSTOMER_ORDER, OrderReferenceCodes.STATUS_IN_PROGRESS_CODE));
         Order saved = orderRepository.save(order);
 
         requestValidation(saved);
@@ -93,13 +97,13 @@ public class OrderManager implements OrderService {
     @Cacheable(value = CacheNames.ORDER_LIST,
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
     public PagedResponse<OrderResponse> getAll(Pageable pageable) {
-        return PagedResponse.of(orderRepository.findAllByIsActiveTrue(pageable).map(this::buildResponse));
+        return PagedResponse.of(orderRepository.findAllByDeletedDateIsNull(pageable).map(this::buildResponse));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponse> getByCustomer(Long customerId) {
-        return orderRepository.findAllByCustomerIdAndIsActiveTrue(customerId).stream()
+        return orderRepository.findAllByCustomerIdAndDeletedDateIsNull(customerId).stream()
                 .map(this::buildResponse)
                 .toList();
     }
@@ -114,15 +118,18 @@ public class OrderManager implements OrderService {
         Order order = findActiveOrThrow(id);
         LocalDateTime now = LocalDateTime.now();
 
-        // Siparişi ve tüm aktif satırlarını pasifleştir (soft-delete).
-        List<OrderItem> items = orderItemRepository.findAllByOrderIdAndIsActiveTrue(id);
+        // Siparişi ve tüm silinmemiş satırlarını soft-delete et (durum DEL).
+        var itemDeletedStatus = referenceDataService.getStatus(
+                OrderReferenceCodes.ENTITY_ORDER_ITEM, OrderReferenceCodes.STATUS_DELETED_CODE);
+        List<OrderItem> items = orderItemRepository.findAllByOrderIdAndDeletedDateIsNull(id);
         for (OrderItem item : items) {
-            item.setIsActive(false);
+            item.setGeneralStatus(itemDeletedStatus);
             item.setDeletedDate(now);
         }
         orderItemRepository.saveAll(items);
 
-        order.setIsActive(false);
+        order.setGeneralStatus(referenceDataService.getStatus(
+                OrderReferenceCodes.ENTITY_CUSTOMER_ORDER, OrderReferenceCodes.STATUS_DELETED_CODE));
         order.setDeletedDate(now);
         orderRepository.save(order);
     }
@@ -148,7 +155,7 @@ public class OrderManager implements OrderService {
 
     /** Siparişi, satırları ve türetilmiş toplam tutarıyla birlikte yanıta dönüştürür. */
     private OrderResponse buildResponse(Order order) {
-        List<OrderItemResponse> items = orderItemRepository.findAllByOrderIdAndIsActiveTrue(order.getId())
+        List<OrderItemResponse> items = orderItemRepository.findAllByOrderIdAndDeletedDateIsNull(order.getId())
                 .stream()
                 .sorted(Comparator.comparing(OrderItem::getId))
                 .map(this::toItemResponse)
@@ -167,11 +174,10 @@ public class OrderManager implements OrderService {
                 order.getAccountId(),
                 order.getServiceAddressId(),
                 order.getServiceAddress(),
-                order.getStatus(),
+                order.getGeneralStatus().getShortCode(),
                 order.getStatusReason(),
                 items,
                 totalAmount,
-                order.getIsActive(),
                 order.getCreatedDate(),
                 order.getUpdatedDate());
     }
@@ -189,7 +195,7 @@ public class OrderManager implements OrderService {
     }
 
     private Order findActiveOrThrow(Long id) {
-        return orderRepository.findByIdAndIsActiveTrue(id)
+        return orderRepository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.ORDER_NOT_FOUND));
     }
 }

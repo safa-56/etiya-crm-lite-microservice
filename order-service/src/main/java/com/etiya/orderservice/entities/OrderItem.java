@@ -29,7 +29,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Entity
 @Table(name = "order_items")
-public class OrderItem extends BaseEntity {
+public class OrderItem extends StatusAwareEntity {
 
     /** Satırın ait olduğu sipariş. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

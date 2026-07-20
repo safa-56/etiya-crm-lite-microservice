@@ -1,7 +1,5 @@
 package com.etiya.orderservice.business.dtos.responses;
 
-import com.etiya.orderservice.entities.enums.OrderStatus;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,11 +37,10 @@ public record OrderResponse(
         Long accountId,
         Long serviceAddressId,
         String serviceAddress,
-        OrderStatus status,
+        String status,
         String statusReason,
         List<OrderItemResponse> items,
         BigDecimal totalAmount,
-        Boolean isActive,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

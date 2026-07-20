@@ -17,14 +17,14 @@ import java.util.Optional;
 public interface CustomerContactInfoRepository extends JpaRepository<CustomerContactInfo, Long> {
 
     /** Verilen e-postanın aktif bir kayıtta zaten kullanılıp kullanılmadığını kontrol eder. */
-    boolean existsByEmailIgnoreCaseAndIsActiveTrue(String email);
+    boolean existsByEmailIgnoreCaseAndDeletedDateIsNull(String email);
 
     /** Aktif (silinmemiş) iletişim bilgisini id ile getirir. */
-    Optional<CustomerContactInfo> findByIdAndIsActiveTrue(Long id);
+    Optional<CustomerContactInfo> findByIdAndDeletedDateIsNull(Long id);
 
     /** Tüm aktif iletişim bilgilerini getirir. */
-    List<CustomerContactInfo> findAllByIsActiveTrue();
+    List<CustomerContactInfo> findAllByDeletedDateIsNull();
 
     /** Aktif bir iletişim bilgisinin id ile var olup olmadığını kontrol eder. */
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 }

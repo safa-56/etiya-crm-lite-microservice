@@ -2,13 +2,13 @@ package com.etiya.accountservice.business.concretes;
 
 import com.etiya.accountservice.business.abstracts.OutboxService;
 import com.etiya.accountservice.business.abstracts.ProductSagaParticipantService;
+import com.etiya.accountservice.business.constants.AccountReferenceCodes;
 import com.etiya.accountservice.business.constants.Messages;
 import com.etiya.accountservice.business.constants.ProductSagaEvents;
 import com.etiya.accountservice.business.dtos.events.ProductSagaRequestedPayload;
 import com.etiya.accountservice.business.dtos.events.ProductSagaValidationPayload;
 import com.etiya.accountservice.dataAccess.BillingAccountRepository;
 import com.etiya.accountservice.entities.BillingAccount;
-import com.etiya.accountservice.entities.enums.AccountStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -47,14 +47,14 @@ public class ProductSagaParticipantManager implements ProductSagaParticipantServ
 
         // 1) Fatura hesabı otoriter olarak aktif (silinmemiş) mi?
         BillingAccount account = accountId == null ? null
-                : billingAccountRepository.findByIdAndIsActiveTrue(accountId).orElse(null);
+                : billingAccountRepository.findByIdAndDeletedDateIsNull(accountId).orElse(null);
         if (account == null) {
             publishFailed(productId, accountId, Messages.SAGA_BILLING_ACCOUNT_NOT_FOUND);
             return;
         }
 
-        // 2) Hesap durumu satışa uygun (ACTIVE) mı?
-        if (account.getAccountStatus() != AccountStatus.ACTIVE) {
+        // 2) Hesap durumu satışa uygun (ACTV) mı?
+        if (!AccountReferenceCodes.STATUS_ACTIVE_CODE.equals(account.getGeneralStatus().getShortCode())) {
             publishFailed(productId, accountId, Messages.SAGA_BILLING_ACCOUNT_NOT_ACTIVE);
             return;
         }

@@ -20,17 +20,17 @@ import java.util.Optional;
 public interface BillingAccountRepository extends JpaRepository<BillingAccount, Long> {
 
     /** Aktif (silinmemiş) fatura hesabını id ile getirir. */
-    Optional<BillingAccount> findByIdAndIsActiveTrue(Long id);
+    Optional<BillingAccount> findByIdAndDeletedDateIsNull(Long id);
 
     /** Tüm aktif fatura hesaplarını sayfalı getirir. */
-    Page<BillingAccount> findAllByIsActiveTrue(Pageable pageable);
+    Page<BillingAccount> findAllByDeletedDateIsNull(Pageable pageable);
 
     /** Bir müşteriye bağlı tüm aktif fatura hesaplarını getirir (Customer Account ekranı). */
-    List<BillingAccount> findAllByCustomerIdAndIsActiveTrue(Long customerId);
+    List<BillingAccount> findAllByCustomerIdAndDeletedDateIsNull(Long customerId);
 
     /** Aktif bir fatura hesabının id ile var olup olmadığını kontrol eder. */
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 
     /** Verilen hesap numarası aktif bir kayıtta zaten kullanılıyor mu? */
-    boolean existsByAccountNumberAndIsActiveTrue(String accountNumber);
+    boolean existsByAccountNumberAndDeletedDateIsNull(String accountNumber);
 }

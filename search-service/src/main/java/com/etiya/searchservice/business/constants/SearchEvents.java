@@ -17,10 +17,11 @@ public final class SearchEvents {
     public static final String CUSTOMER_DELETED = "CustomerDeleted";
 
     // --- account hesap durumları (crm.Account.events, BillingAccountEventPayload.accountStatus) ---
-    /** Hesap aktif → account/order numaralarını indekse EKLE. */
-    public static final String ACCOUNT_STATUS_ACTIVE = "ACTIVE";
-    /** Hesap iptal edildi (saga telafisi) → numaraları ÇIKAR. */
-    public static final String ACCOUNT_STATUS_CANCELLED = "CANCELLED";
-    /** Hesap silindi (soft-delete) → numaraları ÇIKAR. */
-    public static final String ACCOUNT_STATUS_PASSIVE = "PASSIVE";
+    // account-service artık durumu general_status kısa kodu (shortCode) olarak yayınlar.
+    /** Hesap aktif (ACTV) → account/order numaralarını indekse EKLE. */
+    public static final String ACCOUNT_STATUS_ACTIVE = "ACTV";
+    /** Hesap iptal edildi (CNCL, saga telafisi) → numaraları ÇIKAR. */
+    public static final String ACCOUNT_STATUS_CANCELLED = "CNCL";
+    /** Hesap silindi (DEL, soft-delete) → numaraları ÇIKAR. */
+    public static final String ACCOUNT_STATUS_PASSIVE = "DEL";
 }

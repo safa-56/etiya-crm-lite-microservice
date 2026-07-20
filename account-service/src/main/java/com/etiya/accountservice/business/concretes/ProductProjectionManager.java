@@ -35,7 +35,7 @@ public class ProductProjectionManager implements ProductProjectionService {
         }
 
         BillingAccount account = billingAccountRepository
-                .findByIdAndIsActiveTrue(payload.billingAccountId())
+                .findByIdAndDeletedDateIsNull(payload.billingAccountId())
                 .orElse(null);
         if (account == null) {
             log.warn("Ürün olayındaki hesap bulunamadı (id={}), atlanıyor.", payload.billingAccountId());

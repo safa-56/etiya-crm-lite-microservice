@@ -22,14 +22,23 @@ public final class OrderReferenceCodes {
     /** Müşteri siparişi dilimi. */
     public static final String ENTITY_CUSTOMER_ORDER = "CUST_ORD";
 
+    /** Sipariş satırı dilimi (durum FK'si için). */
+    public static final String ENTITY_ORDER_ITEM = "CUST_ORD_ITEM";
+
     // --- Durum kısa kodları (legacy GNL_ST.SHRT_CODE, CUST_ORD dilimi) -------
 
-    /** Sipariş alındı, işleniyor. */
+    /** Sipariş alındı, işleniyor (saga: PENDING karşılığı). */
     public static final String STATUS_IN_PROGRESS_CODE = "MIDLWARE";
 
-    /** Tamamlandı. */
+    /** Tamamlandı (saga: CONFIRMED karşılığı). */
     public static final String STATUS_FINISHED_CODE = "FINISHED";
 
-    /** Reddedildi. */
+    /** Reddedildi (saga telafisi: CANCELLED karşılığı). */
     public static final String STATUS_REJECTED_CODE = "REJECTED";
+
+    /** Aktif (sipariş satırları için). */
+    public static final String STATUS_ACTIVE_CODE = "ACTV";
+
+    /** Silinmiş (soft-delete). */
+    public static final String STATUS_DELETED_CODE = "DEL";
 }

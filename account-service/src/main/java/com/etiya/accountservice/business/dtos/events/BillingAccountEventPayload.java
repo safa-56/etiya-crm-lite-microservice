@@ -1,7 +1,5 @@
 package com.etiya.accountservice.business.dtos.events;
 
-import com.etiya.accountservice.entities.enums.AccountStatus;
-
 import java.time.LocalDateTime;
 
 /**
@@ -11,6 +9,10 @@ import java.time.LocalDateTime;
  * <p>{@code accountNumber} ve {@code orderNumber}, müşteri arama read-model'i
  * (search-service, FR-002) için taşınır: arama ekranındaki Account Number / Order
  * Number tam-eşleşme kriterleri bu alanlardan beslenir.
+ *
+ * <p>{@code accountStatus} servis sınırını <b>stabil kısa kod</b> (general_status
+ * shortCode, ör. {@code ACTV}/{@code CNCL}/{@code DEL}) olarak geçer; tüketiciler
+ * (search-service) bu koda göre ekleme/çıkarma kararı verir.
  */
 public record BillingAccountEventPayload(
         Long billingAccountId,
@@ -18,7 +20,7 @@ public record BillingAccountEventPayload(
         String accountName,
         String accountNumber,
         String orderNumber,
-        AccountStatus accountStatus,
+        String accountStatus,
         LocalDateTime occurredAt
 ) {
 }

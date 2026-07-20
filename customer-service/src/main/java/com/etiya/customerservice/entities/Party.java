@@ -1,6 +1,5 @@
 package com.etiya.customerservice.entities;
 
-import com.etiya.customerservice.entities.reference.GeneralStatus;
 import com.etiya.customerservice.entities.reference.GeneralType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -28,24 +27,18 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "parties")
-public class Party extends BaseEntity {
+public class Party extends StatusAwareEntity {
 
     /**
      * Party tipi (legacy {@code PARTY_TP_ID}): bireysel / kurumsal.
      * {@code entity_code_name = PARTY} dilimindeki {@link GeneralType} satırlarına bağlanır.
+     *
+     * <p>İş yaşam döngüsü durumu (Aktif/Pasif/Silinmiş) artık {@code partyType}'tan
+     * ayrı olarak {@link StatusAwareEntity#getGeneralStatus()} FK'si ile
+     * {@code entity_code_name = PARTY} dilimindeki {@code general_status} satırlarına
+     * bağlanır; ayrı bir {@code status_id}/{@code isActive} kolonu tutulmaz.
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "party_type_id", nullable = false)
     private GeneralType partyType;
-
-    /**
-     * İş yaşam döngüsü durumu (legacy {@code ST_ID}); {@code entity_code_name = PARTY}
-     * dilimindeki {@link GeneralStatus} satırlarına bağlanır.
-     *
-     * <p>{@code BaseEntity.isActive} ile karıştırılmamalıdır: {@code isActive} satır
-     * seviyesinde soft-delete bayrağı, bu alan ise iş durumudur (Aktif/Pasif/Silinmiş).
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "status_id")
-    private GeneralStatus status;
 }

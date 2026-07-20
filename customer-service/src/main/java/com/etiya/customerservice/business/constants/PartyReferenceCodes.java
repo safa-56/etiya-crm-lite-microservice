@@ -30,6 +30,12 @@ public final class PartyReferenceCodes {
     /** Birey dilimi (legacy {@code ENT_CODE_NAME = IND}, {@code ENT_NAME = INDIVIDUAL}). */
     public static final String ENTITY_INDIVIDUAL = "IND";
 
+    /** Adres dilimi (durum FK'si için). */
+    public static final String ENTITY_ADDRESS = "ADDRESS";
+
+    /** Müşteri iletişim bilgisi dilimi (durum FK'si için). */
+    public static final String ENTITY_CONTACT_INFO = "CUST_CONTACT";
+
     /**
      * Party tipi dilimi (legacy {@code GNL_TP.ENT_CODE_NAME = CAM_PARTY_TYPE}).
      *

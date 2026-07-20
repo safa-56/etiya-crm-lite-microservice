@@ -14,7 +14,7 @@ import java.util.List;
 @Entity
 @Table(name = "customers")
 @Inheritance(strategy = InheritanceType.JOINED)
-public class Customer extends BaseEntity {
+public class Customer extends StatusAwareEntity {
 
     /**
      * Müşterinin oynadığı party rolü (legacy {@code CUST.PARTY_ROLE_ID}).

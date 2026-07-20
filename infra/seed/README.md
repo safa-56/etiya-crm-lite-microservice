@@ -67,13 +67,13 @@ docker exec -i crm-postgres psql -U postgres -d productdb  < infra/seed/03_produ
 ### accountdb — 7 fatura hesabı (tüm durum senaryoları)
 | id | müşteri | durum | aktif ürün | not |
 |----|---------|-------|-----------|-----|
-| 1 | 1 | ACTIVE | 2 | Ev+TV kampanyası satılmış |
-| 2 | 1 | ACTIVE | 1 | aynı müşterinin ikinci hesabı |
-| 3 | 2 | ACTIVE | 1 | tekil Superbox |
-| 4 | 3 | ACTIVE | 0 | ürünsüz → **silinebilir** senaryosu |
-| 5 | 4 | PENDING | 0 | oluşturma saga'sı sürüyor |
-| 6 | 5 | PASSIVE | 0 | soft-delete edilmiş (is_active=false) |
-| 7 | 2 | CANCELLED | 0 | saga telafisi (doğrulama başarısız) |
+| 1 | 1 | ACTV | 2 | Ev+TV kampanyası satılmış |
+| 2 | 1 | ACTV | 1 | aynı müşterinin ikinci hesabı |
+| 3 | 2 | ACTV | 1 | tekil Superbox |
+| 4 | 3 | ACTV | 0 | ürünsüz → **silinebilir** senaryosu |
+| 5 | 4 | PNDG | 0 | oluşturma saga'sı sürüyor |
+| 6 | 5 | DEL | 0 | soft-delete edilmiş (general_status=DEL, deleted_date dolu) |
+| 7 | 2 | CNCL | 0 | saga telafisi (doğrulama başarısız) |
 
 ### productdb — katalog / teklif / kampanya / satılmış ürün
 - **5 katalog** (kategori): Ev İnterneti, Mobil, Superbox, TV, Sabit Hat.

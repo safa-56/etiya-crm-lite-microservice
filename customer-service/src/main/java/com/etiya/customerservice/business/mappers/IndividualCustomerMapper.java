@@ -37,6 +37,7 @@ public interface IndividualCustomerMapper {
 
     // --- entity -> response ---
 
+    @Mapping(target = "status", source = "generalStatus.shortCode")
     IndividualCustomerResponse toResponse(IndividualCustomer entity);
 
     @Mapping(target = "customerId", source = "customer.id")

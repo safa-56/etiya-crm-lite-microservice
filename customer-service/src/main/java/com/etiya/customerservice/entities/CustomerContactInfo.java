@@ -21,7 +21,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "customer_contact_info")
-public class CustomerContactInfo extends BaseEntity {
+public class CustomerContactInfo extends StatusAwareEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)

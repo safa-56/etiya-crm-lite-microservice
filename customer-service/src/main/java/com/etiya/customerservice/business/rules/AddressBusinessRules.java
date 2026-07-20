@@ -31,7 +31,7 @@ public class AddressBusinessRules {
 
     /** Aktif bir adres id ile var olmalı; yoksa iş hatası fırlatılır. */
     public Address checkAddressIfExists(Long id) {
-        Optional<Address> existsAddress = addressRepository.findByIdAndIsActiveTrue(id);
+        Optional<Address> existsAddress = addressRepository.findByIdAndDeletedDateIsNull(id);
         if (existsAddress.isEmpty()) {
             throw new BusinessException(Messages.ADDRESS_NOT_FOUND);
         }
@@ -40,7 +40,7 @@ public class AddressBusinessRules {
 
     /** Adresin bağlanacağı aktif müşteri id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfCustomerExists(Long customerId) {
-        if (customerId == null || !customerRepository.existsByIdAndIsActiveTrue(customerId)) {
+        if (customerId == null || !customerRepository.existsByIdAndDeletedDateIsNull(customerId)) {
             throw new BusinessException(Messages.CUSTOMER_NOT_FOUND);
         }
     }
@@ -62,7 +62,7 @@ public class AddressBusinessRules {
             return;
         }
         List<Address> toDemote = addressRepository
-                .findByCustomer_IdAndIsPrimaryTrueAndIsActiveTrue(customerId).stream()
+                .findByCustomer_IdAndIsPrimaryTrueAndDeletedDateIsNull(customerId).stream()
                 .filter(address -> excludedAddressId == null
                         || !excludedAddressId.equals(address.getId()))
                 .filter(address -> Boolean.TRUE.equals(address.getIsPrimary()))

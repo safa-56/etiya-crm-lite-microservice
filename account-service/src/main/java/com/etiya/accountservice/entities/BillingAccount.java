@@ -1,6 +1,5 @@
 package com.etiya.accountservice.entities;
 
-import com.etiya.accountservice.entities.enums.AccountStatus;
 import com.etiya.accountservice.entities.enums.AccountType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,8 +17,11 @@ import lombok.Setter;
  * <ul>
  *   <li>{@code accountNumber}: alfanümerik, en fazla 30 karakter.</li>
  *   <li>{@code orderNumber}: alfanümerik, en fazla 20 karakter.</li>
- *   <li>Yeni kayıtta {@code accountType = BILLING_ACCOUNT}, {@code accountStatus = ACTIVE}.</li>
- *   <li>Silme fizikseldir değildir: {@code isActive=false} + {@code accountStatus=PASSIVE}.</li>
+ *   <li>Yeni kayıtta {@code accountType = BILLING_ACCOUNT}; durum {@code CUST_ACCT/PNDG}
+ *       açılır, saga sonucuna göre {@code ACTV}/{@code CNCL} olur.</li>
+ *   <li>Silme fiziksel değildir: durum {@code CUST_ACCT/DEL} yapılır + {@code deletedDate}
+ *       yazılır (soft-delete). Durum {@link StatusAwareEntity#getGeneralStatus()} FK'siyle
+ *       {@code general_status} tablosunda tutulur.</li>
  * </ul>
  *
  * <p>{@code activeProductCount}, hesaba bağlı aktif ürün sayısını tutan yerel
@@ -31,7 +33,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "billing_accounts")
-public class BillingAccount extends BaseEntity {
+public class BillingAccount extends StatusAwareEntity {
 
     /** Hesabın bağlı olduğu müşteri (customer-service'teki müşteri id'si). */
     @Column(name = "customer_id", nullable = false)
@@ -80,10 +82,6 @@ public class BillingAccount extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "account_type", nullable = false, length = 30)
     private AccountType accountType;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "account_status", nullable = false, length = 20)
-    private AccountStatus accountStatus;
 
     /** Hesaba bağlı aktif ürün sayısı (ürün olaylarından türetilir). */
     @Column(name = "active_product_count", nullable = false)

@@ -47,14 +47,14 @@ public class BillingAccountSagaParticipantManager implements BillingAccountSagaP
         Long addressId = request.addressId();
 
         // 1) Müşteri otoriter olarak aktif mi?
-        if (customerId == null || !customerRepository.existsByIdAndIsActiveTrue(customerId)) {
+        if (customerId == null || !customerRepository.existsByIdAndDeletedDateIsNull(customerId)) {
             publishFailed(accountId, customerId, addressId, Messages.SAGA_CUSTOMER_NOT_FOUND);
             return;
         }
 
         // 2) Adres bu müşteriye ait ve aktif mi?
         Address address = addressRepository
-                .findByIdAndCustomer_IdAndIsActiveTrue(addressId, customerId)
+                .findByIdAndCustomer_IdAndDeletedDateIsNull(addressId, customerId)
                 .orElse(null);
         if (address == null) {
             publishFailed(accountId, customerId, addressId, Messages.SAGA_ADDRESS_NOT_FOUND);

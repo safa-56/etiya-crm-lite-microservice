@@ -3,7 +3,9 @@ package com.etiya.customerservice.business.concretes;
 import com.etiya.customerservice.business.abstracts.AddressService;
 import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.abstracts.OutboxService;
+import com.etiya.customerservice.business.abstracts.ReferenceDataService;
 import com.etiya.customerservice.business.constants.CustomerEvents;
+import com.etiya.customerservice.business.constants.PartyReferenceCodes;
 import com.etiya.customerservice.business.constants.Messages;
 import com.etiya.customerservice.business.dtos.events.CustomerEventPayload;
 import com.etiya.customerservice.business.dtos.requests.CreateAddressRequest;
@@ -42,17 +44,20 @@ public class AddressManager implements AddressService {
     private final AddressMapper mapper;
     private final AddressBusinessRules rules;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
     public AddressManager(AddressRepository repository,
                           IndividualCustomerService individualCustomerService,
                           AddressMapper mapper,
                           AddressBusinessRules rules,
-                          OutboxService outboxService) {
+                          OutboxService outboxService,
+                          ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.individualCustomerService = individualCustomerService;
         this.mapper = mapper;
         this.rules = rules;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -66,6 +71,8 @@ public class AddressManager implements AddressService {
 
         Address address = mapper.toEntity(request);
         address.setCustomer(customer);
+        address.setGeneralStatus(referenceDataService.getStatus(
+                PartyReferenceCodes.ENTITY_ADDRESS, PartyReferenceCodes.STATUS_ACTIVE_CODE));
 
         // Bu adres birincil olarak ekleniyorsa, müşterinin diğer birincil
         // adreslerini düşür (en fazla bir birincil adres — FR-006 ACC-07).
@@ -92,7 +99,7 @@ public class AddressManager implements AddressService {
     @Override
     @Transactional(readOnly = true)
     public List<AddressResponse> getAll() {
-        return repository.findAllByIsActiveTrue().stream()
+        return repository.findAllByDeletedDateIsNull().stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -128,8 +135,9 @@ public class AddressManager implements AddressService {
         Address address = rules.checkAddressIfExists(id);
         Long customerId = address.getCustomer().getId();
 
-        // Soft-delete: fiziksel silme yok; pasifleştir ve silinme zamanını işaretle.
-        address.setIsActive(false);
+        // Soft-delete: fiziksel silme yok; durumu DEL yap ve silinme zamanını işaretle.
+        address.setGeneralStatus(referenceDataService.getStatus(
+                PartyReferenceCodes.ENTITY_ADDRESS, PartyReferenceCodes.STATUS_DELETED_CODE));
         address.setDeletedDate(LocalDateTime.now());
         repository.save(address);
 
@@ -139,7 +147,7 @@ public class AddressManager implements AddressService {
     // ------------------------------------------------------------------ yardımcılar
 
 //    private Address findActiveAddress(Long id) {
-//        return repository.findByIdAndIsActiveTrue(id)
+//        return repository.findByIdAndDeletedDateIsNull(id)
 //                .orElseThrow(() -> new BusinessException(Messages.ADDRESS_NOT_FOUND));
 //    }
 
@@ -154,7 +162,7 @@ public class AddressManager implements AddressService {
      */
     private void publishCustomerAddressSnapshot(Long customerId) {
         List<CustomerEventPayload.AddressPayload> addresses =
-                repository.findByCustomer_IdAndIsActiveTrue(customerId).stream()
+                repository.findByCustomer_IdAndDeletedDateIsNull(customerId).stream()
                         .map(address -> new CustomerEventPayload.AddressPayload(
                                 address.getId(), address.getCity(), address.getStreet(),
                                 address.getHouseNumber(), address.getAddressDescription(),

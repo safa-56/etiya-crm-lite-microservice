@@ -33,13 +33,13 @@ public class IndividualCustomerBusinessRules {
 
     /** Aktif bir bireysel müşteri id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfIndividualCustomerExists(Long id) {
-        if (!individualCustomerRepository.existsByIdAndIsActiveTrue(id)) {
+        if (!individualCustomerRepository.existsByIdAndDeletedDateIsNull(id)) {
             throw new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND);
         }
     }
 
     public IndividualCustomer checkIndividualCustomerIsExists(Long id){
-        Optional<IndividualCustomer> existsIndividualCustomer = individualCustomerRepository.findByIdAndIsActiveTrue(id);
+        Optional<IndividualCustomer> existsIndividualCustomer = individualCustomerRepository.findByIdAndDeletedDateIsNull(id);
         if (existsIndividualCustomer.isEmpty()){
             throw new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND);
         }
@@ -52,7 +52,7 @@ public class IndividualCustomerBusinessRules {
      */
     public void checkIfNationalityIdAlreadyExists(String nationalityId) {
         if (nationalityId != null
-                && individualCustomerRepository.existsByNationalityIdAndIsActiveTrue(nationalityId)) {
+                && individualCustomerRepository.existsByNationalityIdAndDeletedDateIsNull(nationalityId)) {
             throw new BusinessException(Messages.NATIONALITY_ID_ALREADY_EXISTS);
         }
     }
@@ -65,7 +65,7 @@ public class IndividualCustomerBusinessRules {
     public void checkIfNationalityIdBelongsToAnotherCustomer(String nationalityId, Long customerId) {
         if (nationalityId != null && customerId != null
                 && individualCustomerRepository
-                        .existsByNationalityIdAndIdNotAndIsActiveTrue(nationalityId, customerId)) {
+                        .existsByNationalityIdAndIdNotAndDeletedDateIsNull(nationalityId, customerId)) {
             throw new BusinessException(Messages.NATIONALITY_ID_ALREADY_EXISTS);
         }
     }
@@ -77,7 +77,7 @@ public class IndividualCustomerBusinessRules {
         }
         for (String email : emails) {
             if (email != null && !email.isBlank()
-                    && contactInfoRepository.existsByEmailIgnoreCaseAndIsActiveTrue(email)) {
+                    && contactInfoRepository.existsByEmailIgnoreCaseAndDeletedDateIsNull(email)) {
                 throw new BusinessException(Messages.EMAIL_ALREADY_EXISTS);
             }
         }

@@ -12,6 +12,6 @@ import java.util.Optional;
 @Repository
 public interface PartyRoleTypeRepository extends JpaRepository<PartyRoleType, Long> {
 
-    /** Verilen kısa koda ({@code SHRT_CODE}) ait aktif rol tipini getirir. */
-    Optional<PartyRoleType> findByShortCodeAndIsActiveTrue(String shortCode);
+    /** Verilen kısa koda ({@code SHRT_CODE}) ait rol tipini getirir. */
+    Optional<PartyRoleType> findByShortCode(String shortCode);
 }

@@ -2,7 +2,9 @@ package com.etiya.orderservice.business.concretes;
 
 import com.etiya.orderservice.business.abstracts.OrderSagaService;
 import com.etiya.orderservice.business.abstracts.OutboxService;
+import com.etiya.orderservice.business.abstracts.ReferenceDataService;
 import com.etiya.orderservice.business.constants.OrderEvents;
+import com.etiya.orderservice.business.constants.OrderReferenceCodes;
 import com.etiya.orderservice.business.dtos.events.OrderCheckoutValidationPayload;
 import com.etiya.orderservice.business.dtos.events.OrderConfirmedPayload;
 import com.etiya.orderservice.business.dtos.events.OrderProvisionLine;
@@ -12,7 +14,6 @@ import com.etiya.orderservice.dataAccess.OrderRepository;
 import com.etiya.orderservice.entities.Order;
 import com.etiya.orderservice.entities.OrderItem;
 import com.etiya.orderservice.entities.enums.OrderItemType;
-import com.etiya.orderservice.entities.enums.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -38,10 +39,13 @@ public class OrderSagaManager implements OrderSagaService {
 
     private final OrderRepository orderRepository;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
-    public OrderSagaManager(OrderRepository orderRepository, OutboxService outboxService) {
+    public OrderSagaManager(OrderRepository orderRepository, OutboxService outboxService,
+                            ReferenceDataService referenceDataService) {
         this.orderRepository = orderRepository;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -61,10 +65,10 @@ public class OrderSagaManager implements OrderSagaService {
             return;
         }
 
-        // Idempotency: yalnızca PENDING siparişler ileri götürülür/telafi edilir.
-        if (order.getStatus() != OrderStatus.PENDING) {
+        // Idempotency: yalnızca MIDLWARE (işleniyor) siparişler ileri götürülür/telafi edilir.
+        if (!OrderReferenceCodes.STATUS_IN_PROGRESS_CODE.equals(order.getGeneralStatus().getShortCode())) {
             log.debug("Siparişin bekleyen saga'sı yok (durum={}), sonuç atlanıyor. id={}",
-                    order.getStatus(), order.getId());
+                    order.getGeneralStatus().getShortCode(), order.getId());
             return;
         }
 
@@ -77,7 +81,8 @@ public class OrderSagaManager implements OrderSagaService {
 
     /** Onay: siparişi CONFIRMED yapar; sahiplik + toplam + kalem snapshot'ını yazar. */
     private void confirm(Order order, OrderCheckoutValidationPayload payload) {
-        order.setStatus(OrderStatus.CONFIRMED);
+        order.setGeneralStatus(referenceDataService.getStatus(
+                OrderReferenceCodes.ENTITY_CUSTOMER_ORDER, OrderReferenceCodes.STATUS_FINISHED_CODE));
         order.setStatusReason(null);
         order.setCustomerId(payload.customerId());
         order.setAccountId(payload.accountId());
@@ -85,6 +90,8 @@ public class OrderSagaManager implements OrderSagaService {
 
         // Sepet kalemlerini sipariş satırlarına snapshot'la (yeniden kur).
         order.getItems().clear();
+        var itemActiveStatus = referenceDataService.getStatus(
+                OrderReferenceCodes.ENTITY_ORDER_ITEM, OrderReferenceCodes.STATUS_ACTIVE_CODE);
         List<OrderSagaItemLine> lines = payload.items() == null ? List.of() : payload.items();
         for (OrderSagaItemLine line : lines) {
             OrderItem item = new OrderItem();
@@ -94,7 +101,7 @@ public class OrderSagaManager implements OrderSagaService {
             item.setName(line.name());
             item.setUnitPrice(line.unitPrice());
             item.setQuantity(line.quantity() == null ? 1 : line.quantity());
-            item.setIsActive(true);
+            item.setGeneralStatus(itemActiveStatus);
             order.addItem(item);
         }
 
@@ -112,7 +119,7 @@ public class OrderSagaManager implements OrderSagaService {
      */
     private void requestProvisioning(Order order) {
         List<OrderProvisionLine> lines = order.getItems().stream()
-                .filter(OrderItem::getIsActive)
+                .filter(item -> item.getDeletedDate() == null)
                 .map(item -> new OrderProvisionLine(
                         item.getItemType() != null ? item.getItemType().name() : null,
                         item.getProductOfferId(),
@@ -139,11 +146,11 @@ public class OrderSagaManager implements OrderSagaService {
                         lines));
     }
 
-    /** Telafi (compensation): siparişi CANCELLED yapar ve pasifleştirir. */
+    /** Telafi (compensation): siparişi REJECTED yapar ve soft-delete eder. */
     private void cancel(Order order, String reason) {
-        order.setStatus(OrderStatus.CANCELLED);
+        order.setGeneralStatus(referenceDataService.getStatus(
+                OrderReferenceCodes.ENTITY_CUSTOMER_ORDER, OrderReferenceCodes.STATUS_REJECTED_CODE));
         order.setStatusReason(reason);
-        order.setIsActive(false);
         order.setDeletedDate(LocalDateTime.now());
         orderRepository.save(order);
         log.info("Sipariş saga telafi edildi: CANCELLED (neden={}). id={}", reason, order.getId());

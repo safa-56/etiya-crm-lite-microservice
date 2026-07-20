@@ -2,13 +2,14 @@ package com.etiya.accountservice.business.concretes;
 
 import com.etiya.accountservice.business.abstracts.BillingAccountSagaService;
 import com.etiya.accountservice.business.abstracts.OutboxService;
+import com.etiya.accountservice.business.abstracts.ReferenceDataService;
 import com.etiya.accountservice.business.constants.AccountEvents;
+import com.etiya.accountservice.business.constants.AccountReferenceCodes;
 import com.etiya.accountservice.business.dtos.events.BillingAccountEventPayload;
 import com.etiya.accountservice.business.dtos.events.BillingAccountSagaValidationPayload;
 import com.etiya.accountservice.core.constants.CacheNames;
 import com.etiya.accountservice.dataAccess.BillingAccountRepository;
 import com.etiya.accountservice.entities.BillingAccount;
-import com.etiya.accountservice.entities.enums.AccountStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,11 +30,14 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
 
     private final BillingAccountRepository repository;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
     public BillingAccountSagaManager(BillingAccountRepository repository,
-                                     OutboxService outboxService) {
+                                     OutboxService outboxService,
+                                     ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -56,7 +60,7 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
         // Sonucu hesabın durumuna göre yönlendir (idempotent):
         //  - PENDING           -> oluşturma saga'sı (onay/telafi)
         //  - pendingAddressId  -> adres değişikliği saga'sı (uygula/reddet)
-        if (account.getAccountStatus() == AccountStatus.PENDING) {
+        if (AccountReferenceCodes.STATUS_PENDING_CODE.equals(account.getGeneralStatus().getShortCode())) {
             if (payload.valid()) {
                 confirmCreate(account, payload);
             } else {
@@ -70,15 +74,16 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
             }
         } else {
             log.debug("Hesabın bekleyen saga'sı yok (durum={}), sonuç atlanıyor. id={}",
-                    account.getAccountStatus(), account.getId());
+                    account.getGeneralStatus().getShortCode(), account.getId());
         }
     }
 
     // ------------------------------------------------------------ oluşturma saga'sı
 
-    /** Onay: hesabı ACTIVE yapar, otoriter adres snapshot'ını yazar. */
+    /** Onay: hesabı ACTV yapar, otoriter adres snapshot'ını yazar. */
     private void confirmCreate(BillingAccount account, BillingAccountSagaValidationPayload payload) {
-        account.setAccountStatus(AccountStatus.ACTIVE);
+        account.setGeneralStatus(referenceDataService.getStatus(
+                AccountReferenceCodes.ENTITY_CUSTOMER_ACCOUNT, AccountReferenceCodes.STATUS_ACTIVE_CODE));
         account.setAddress(formatAddress(payload));
         account.setStatusReason(null);
         repository.save(account);
@@ -87,10 +92,10 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
         log.info("Saga onaylandı: hesap ACTIVE. id={}", account.getId());
     }
 
-    /** Telafi (compensation): hesabı CANCELLED yapar ve pasifleştirir. */
+    /** Telafi (compensation): hesabı CNCL (iptal) yapar ve soft-delete eder. */
     private void cancelCreate(BillingAccount account, BillingAccountSagaValidationPayload payload) {
-        account.setAccountStatus(AccountStatus.CANCELLED);
-        account.setIsActive(false);
+        account.setGeneralStatus(referenceDataService.getStatus(
+                AccountReferenceCodes.ENTITY_CUSTOMER_ACCOUNT, AccountReferenceCodes.STATUS_CANCELLED_CODE));
         account.setDeletedDate(LocalDateTime.now());
         account.setStatusReason(payload.reason());
         repository.save(account);
@@ -137,6 +142,6 @@ public class BillingAccountSagaManager implements BillingAccountSagaService {
                 new BillingAccountEventPayload(
                         account.getId(), account.getCustomerId(), account.getAccountName(),
                         account.getAccountNumber(), account.getOrderNumber(),
-                        account.getAccountStatus(), LocalDateTime.now()));
+                        account.getGeneralStatus().getShortCode(), LocalDateTime.now()));
     }
 }

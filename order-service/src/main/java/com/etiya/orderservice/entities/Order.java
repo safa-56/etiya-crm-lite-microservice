@@ -1,11 +1,8 @@
 package com.etiya.orderservice.entities;
 
-import com.etiya.orderservice.entities.enums.OrderStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -26,18 +23,20 @@ import java.util.List;
  * seçilen servis adresinin metin snapshot'ıdır. Sepet kalemleri sipariş anında
  * {@link OrderItem} satırlarına snapshot'lanır, {@code totalAmount} = Σ satır ara toplamı.
  *
- * <p>Sipariş bir <b>Saga</b> ile kesinleşir: oluşturma sırasında {@link OrderStatus#PENDING}
- * açılır (satırlar/toplam boş), cart-service doğrulaması geldiğinde satır/toplam snapshot'ı
- * yazılır ve durum CONFIRMED olur; sepet yoksa/boşsa telafi ile CANCELLED olur.
+ * <p>Sipariş bir <b>Saga</b> ile kesinleşir: oluşturma sırasında {@code CUST_ORD/MIDLWARE}
+ * (işleniyor) açılır (satırlar/toplam boş), cart-service doğrulaması geldiğinde satır/toplam
+ * snapshot'ı yazılır ve durum {@code FINISHED} olur; sepet yoksa/boşsa telafi ile
+ * {@code REJECTED} olur. Durum {@link StatusAwareEntity#getGeneralStatus()} FK'siyle
+ * {@code general_status} tablosunda tutulur.
  *
- * <p>Silme soft-delete'tir ({@link BaseEntity#getIsActive()}).
+ * <p>Silme soft-delete'tir: durum {@code CUST_ORD/DEL} yapılır + {@code deletedDate} yazılır.
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "orders")
-public class Order extends BaseEntity {
+public class Order extends StatusAwareEntity {
 
     /** Sistem tarafından üretilen benzersiz sipariş numarası (Order ID). Zorunlu. */
     @Column(name = "order_number", nullable = false, unique = true, length = 40)
@@ -62,11 +61,6 @@ public class Order extends BaseEntity {
     /** Servis adresi metin snapshot'ı (Submit Order ekranında gösterilir). Zorunlu. */
     @Column(name = "service_address", nullable = false, length = 500)
     private String serviceAddress;
-
-    /** Saga durumu: PENDING → CONFIRMED | CANCELLED. */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private OrderStatus status;
 
     /** Doğrulama başarısızsa telafi nedeni (aksi halde boş). */
     @Column(name = "status_reason", length = 300)

@@ -27,7 +27,7 @@ public class OrderBusinessRules {
      * (soft-delete) siparişler bu kontrolün dışındadır (yeniden denenebilir).
      */
     public void checkIfCartNotAlreadyOrdered(Long cartId) {
-        if (orderRepository.existsByCartIdAndIsActiveTrue(cartId)) {
+        if (orderRepository.existsByCartIdAndDeletedDateIsNull(cartId)) {
             throw new BusinessException(Messages.ORDER_ALREADY_EXISTS_FOR_CART);
         }
     }

@@ -19,17 +19,17 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     /** Aktif (silinmemiş) siparişi id ile getirir. */
-    Optional<Order> findByIdAndIsActiveTrue(Long id);
+    Optional<Order> findByIdAndDeletedDateIsNull(Long id);
 
     /** Tüm aktif siparişleri sayfalı getirir. */
-    Page<Order> findAllByIsActiveTrue(Pageable pageable);
+    Page<Order> findAllByDeletedDateIsNull(Pageable pageable);
 
     /** Bir müşteriye ait tüm aktif siparişleri getirir. */
-    List<Order> findAllByCustomerIdAndIsActiveTrue(Long customerId);
+    List<Order> findAllByCustomerIdAndDeletedDateIsNull(Long customerId);
 
     /**
      * Verilen sepet için hâlâ süren (aktif ve iptal edilmemiş) bir sipariş var mı?
      * Aynı sepetin ikinci kez submit edilmesini engelleyen iş kuralı buna dayanır.
      */
-    boolean existsByCartIdAndIsActiveTrue(Long cartId);
+    boolean existsByCartIdAndDeletedDateIsNull(Long cartId);
 }

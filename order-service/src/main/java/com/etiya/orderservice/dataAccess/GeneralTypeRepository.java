@@ -13,6 +13,6 @@ import java.util.Optional;
 public interface GeneralTypeRepository extends JpaRepository<GeneralType, Long> {
 
     /** Verilen entity dilimi ve kısa koda ait aktif tipi getirir. */
-    Optional<GeneralType> findByEntityCodeNameAndShortCodeAndIsActiveTrue(
+    Optional<GeneralType> findByEntityCodeNameAndShortCode(
             String entityCodeName, String shortCode);
 }

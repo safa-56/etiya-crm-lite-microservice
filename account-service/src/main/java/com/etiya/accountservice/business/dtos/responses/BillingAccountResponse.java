@@ -1,6 +1,5 @@
 package com.etiya.accountservice.business.dtos.responses;
 
-import com.etiya.accountservice.entities.enums.AccountStatus;
 import com.etiya.accountservice.entities.enums.AccountType;
 
 import java.time.LocalDateTime;
@@ -15,7 +14,7 @@ import java.time.LocalDateTime;
 public record BillingAccountResponse(
         Long id,
         Long customerId,
-        AccountStatus accountStatus,
+        String status,
         String accountNumber,
         String accountName,
         AccountType accountType,
@@ -24,7 +23,6 @@ public record BillingAccountResponse(
         Long pendingAddressId,
         String address,
         String orderNumber,
-        Boolean isActive,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

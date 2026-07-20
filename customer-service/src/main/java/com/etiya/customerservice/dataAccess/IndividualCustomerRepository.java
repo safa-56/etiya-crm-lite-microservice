@@ -17,24 +17,24 @@ import java.util.Optional;
 public interface IndividualCustomerRepository extends JpaRepository<IndividualCustomer, Long> {
 
     /** Aktif (silinmemiş) bireysel müşteriyi id ile getirir. */
-    Optional<IndividualCustomer> findByIdAndIsActiveTrue(Long id);
+    Optional<IndividualCustomer> findByIdAndDeletedDateIsNull(Long id);
 
     /** Tüm aktif bireysel müşterileri getirir. */
-    List<IndividualCustomer> findAllByIsActiveTrue();
+    List<IndividualCustomer> findAllByDeletedDateIsNull();
 
     /** Aktif bir bireysel müşterinin id ile var olup olmadığını kontrol eder. */
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 
     /**
      * Verilen TC kimlik numarasına (nationalityId) sahip aktif bir müşteri var mı?
      * (Yeni müşteri oluşturmada tekillik kontrolü — FR-003 ACC-07/08.)
      */
-    boolean existsByNationalityIdAndIsActiveTrue(String nationalityId);
+    boolean existsByNationalityIdAndDeletedDateIsNull(String nationalityId);
 
     /**
      * Verilen TC kimlik numarası, {@code id}'si hariç (başka) aktif bir müşteriye
      * ait mi? (Güncellemede tekillik kontrolü — FR-004 ACC-07/08; müşterinin kendi
      * kimlik numarası tetiklememelidir.)
      */
-    boolean existsByNationalityIdAndIdNotAndIsActiveTrue(String nationalityId, Long id);
+    boolean existsByNationalityIdAndIdNotAndDeletedDateIsNull(String nationalityId, Long id);
 }
