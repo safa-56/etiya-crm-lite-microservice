@@ -25,7 +25,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Entity
 @Table(name = "campaigns")
-public class Campaign extends BaseEntity {
+public class Campaign extends StatusAwareEntity {
 
     @Column(name = "name", nullable = false, length = 150)
     private String name;

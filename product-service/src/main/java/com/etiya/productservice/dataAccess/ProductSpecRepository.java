@@ -11,15 +11,15 @@ import java.util.Optional;
 /**
  * Ürün teknik özelliği (ProductSpec) veri erişimi.
  *
- * <p>Soft-delete gereği yalnızca aktif ({@code is_active = true}) kayıtlar dönen
- * türetilmiş sorgular sağlanır.
+ * <p>Soft-delete gereği yalnızca silinmemiş ({@code deleted_date IS NULL}) kayıtlar
+ * dönen türetilmiş sorgular sağlanır.
  */
 @Repository
 public interface ProductSpecRepository extends JpaRepository<ProductSpec, Long> {
 
-    Optional<ProductSpec> findByIdAndIsActiveTrue(Long id);
+    Optional<ProductSpec> findByIdAndDeletedDateIsNull(Long id);
 
-    Page<ProductSpec> findAllByIsActiveTrue(Pageable pageable);
+    Page<ProductSpec> findAllByDeletedDateIsNull(Pageable pageable);
 
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 }

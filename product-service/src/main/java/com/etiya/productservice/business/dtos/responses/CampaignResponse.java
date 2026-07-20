@@ -20,7 +20,7 @@ public record CampaignResponse(
         BigDecimal listPriceTotal,
         BigDecimal savings,
         List<CampaignOfferLine> offers,
-        Boolean isActive,
+        String status,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

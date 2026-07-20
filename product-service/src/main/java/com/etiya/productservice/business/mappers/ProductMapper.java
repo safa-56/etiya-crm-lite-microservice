@@ -19,5 +19,6 @@ public interface ProductMapper {
 
     @Mapping(target = "productOfferId", source = "productOffer.id")
     @Mapping(target = "campaignId", source = "campaign.id")
+    @Mapping(target = "status", source = "generalStatus.shortCode")
     ProductResponse toResponse(Product entity);
 }

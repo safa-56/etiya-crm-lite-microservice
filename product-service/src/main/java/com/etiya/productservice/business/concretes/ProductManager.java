@@ -4,8 +4,10 @@ import com.etiya.productservice.business.abstracts.CampaignService;
 import com.etiya.productservice.business.abstracts.OutboxService;
 import com.etiya.productservice.business.abstracts.ProductOfferService;
 import com.etiya.productservice.business.abstracts.ProductService;
+import com.etiya.productservice.business.abstracts.ReferenceDataService;
 import com.etiya.productservice.business.constants.Messages;
 import com.etiya.productservice.business.constants.ProductEvents;
+import com.etiya.productservice.business.constants.ProductReferenceCodes;
 import com.etiya.productservice.business.constants.ProductSagaEvents;
 import com.etiya.productservice.business.dtos.events.ProductEventPayload;
 import com.etiya.productservice.business.dtos.events.ProductSagaRequestedPayload;
@@ -22,7 +24,6 @@ import com.etiya.productservice.dataAccess.ProductRepository;
 import com.etiya.productservice.entities.Campaign;
 import com.etiya.productservice.entities.Product;
 import com.etiya.productservice.entities.ProductOffer;
-import com.etiya.productservice.entities.enums.ProductStatus;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +56,7 @@ public class ProductManager implements ProductService {
     private final ProductOfferBusinessRules productOfferRules;
     private final CampaignBusinessRules campaignRules;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
     public ProductManager(ProductRepository repository,
                           ProductOfferService productOfferService,
@@ -62,7 +64,8 @@ public class ProductManager implements ProductService {
                           ProductMapper mapper,
                           ProductOfferBusinessRules productOfferRules,
                           CampaignBusinessRules campaignRules,
-                          OutboxService outboxService) {
+                          OutboxService outboxService,
+                          ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.productOfferService = productOfferService;
         this.campaignService = campaignService;
@@ -70,6 +73,7 @@ public class ProductManager implements ProductService {
         this.productOfferRules = productOfferRules;
         this.campaignRules = campaignRules;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -86,7 +90,6 @@ public class ProductManager implements ProductService {
         product.setAddressId(request.addressId());
         product.setPriceToBePaid(request.priceToBePaid());
         product.setName(request.name() != null ? request.name() : offer.getName());
-        product.setIsActive(true);
 
         if (request.campaignId() != null) {
             campaignRules.checkIfCampaignExists(request.campaignId());
@@ -94,10 +97,11 @@ public class ProductManager implements ProductService {
             product.setCampaign(campaign);
         }
 
-        // --- Saga (choreography) adım 1: ürünü PENDING olarak aç ---
+        // --- Saga (choreography) adım 1: ürünü PNDG (Beklemede) olarak aç ---
         // Fatura hesabı doğrulaması (var mı / ACTIVE mi) otoriter olarak
-        // account-service'e bırakılır; ürün, doğrulama sonucu gelene kadar PENDING kalır.
-        product.setStatus(ProductStatus.PENDING);
+        // account-service'e bırakılır; ürün, doğrulama sonucu gelene kadar PNDG kalır.
+        product.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT, ProductReferenceCodes.STATUS_PENDING_CODE));
 
         Product saved = repository.save(product);
 
@@ -122,13 +126,13 @@ public class ProductManager implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<ProductResponse> getAll(Pageable pageable) {
-        return PagedResponse.of(repository.findAllByIsActiveTrue(pageable).map(mapper::toResponse));
+        return PagedResponse.of(repository.findAllByDeletedDateIsNull(pageable).map(mapper::toResponse));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ProductDetailResponse> getDetailsByAccount(Long accountId) {
-        return repository.findAllByAccountIdAndIsActiveTrue(accountId).stream()
+        return repository.findAllByAccountIdAndDeletedDateIsNull(accountId).stream()
                 .map(this::toDetail)
                 .toList();
     }
@@ -138,9 +142,11 @@ public class ProductManager implements ProductService {
     @CacheEvict(value = CacheNames.PRODUCTS, key = "#id")
     public void delete(Long id) {
         Product product = findActiveOrThrow(id);
-        boolean wasActive = product.getStatus() == ProductStatus.ACTIVE;
+        boolean wasActive = ProductReferenceCodes.STATUS_ACTIVE_CODE
+                .equals(product.getGeneralStatus().getShortCode());
 
-        product.setIsActive(false);
+        product.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT, ProductReferenceCodes.STATUS_DELETED_CODE));
         product.setDeletedDate(LocalDateTime.now());
         repository.save(product);
 
@@ -176,7 +182,7 @@ public class ProductManager implements ProductService {
     }
 
     private Product findActiveOrThrow(Long id) {
-        return repository.findByIdAndIsActiveTrue(id)
+        return repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.PRODUCT_NOT_FOUND));
     }
 }

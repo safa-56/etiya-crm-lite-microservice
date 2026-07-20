@@ -1,16 +1,14 @@
 package com.etiya.productservice.business.dtos.responses;
 
-import com.etiya.productservice.entities.enums.ProductStatus;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
  * Ürün yanıtı (satılmış ürün).
  *
- * <p>{@code status}, satış saga'sının durumunu taşır: oluşturma yanıtı {@code PENDING}
- * döner; saga tamamlanınca ürün {@code ACTIVE} (onay) ya da {@code CANCELLED} (telafi)
- * olur.
+ * <p>{@code status}, ürünün {@code general_status} tablosundaki durumunun stabil iş
+ * kodudur (shortCode): oluşturma yanıtı {@code PNDG} (Beklemede) döner; saga
+ * tamamlanınca ürün {@code ACTV} (onay) ya da {@code QUOTE_DEL} (telafi/iptal) olur.
  */
 public record ProductResponse(
         Long id,
@@ -20,9 +18,8 @@ public record ProductResponse(
         Long campaignId,
         Long addressId,
         BigDecimal priceToBePaid,
-        ProductStatus status,
+        String status,
         String statusReason,
-        Boolean isActive,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

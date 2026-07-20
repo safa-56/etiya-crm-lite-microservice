@@ -3,7 +3,9 @@ package com.etiya.productservice.business.concretes;
 import com.etiya.productservice.business.abstracts.CatalogService;
 import com.etiya.productservice.business.abstracts.ProductOfferService;
 import com.etiya.productservice.business.abstracts.ProductSpecService;
+import com.etiya.productservice.business.abstracts.ReferenceDataService;
 import com.etiya.productservice.business.constants.Messages;
+import com.etiya.productservice.business.constants.ProductReferenceCodes;
 import com.etiya.productservice.business.dtos.requests.CreateProductOfferRequest;
 import com.etiya.productservice.business.dtos.requests.UpdateProductOfferRequest;
 import com.etiya.productservice.business.dtos.responses.PagedResponse;
@@ -47,6 +49,7 @@ public class ProductOfferManager implements ProductOfferService {
     private final ProductOfferBusinessRules rules;
     private final ProductSpecBusinessRules productSpecRules;
     private final CatalogBusinessRules catalogRules;
+    private final ReferenceDataService referenceDataService;
 
     public ProductOfferManager(ProductOfferRepository repository,
                                ProductSpecService productSpecService,
@@ -54,7 +57,8 @@ public class ProductOfferManager implements ProductOfferService {
                                ProductOfferMapper mapper,
                                ProductOfferBusinessRules rules,
                                ProductSpecBusinessRules productSpecRules,
-                               CatalogBusinessRules catalogRules) {
+                               CatalogBusinessRules catalogRules,
+                               ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.productSpecService = productSpecService;
         this.catalogService = catalogService;
@@ -62,6 +66,7 @@ public class ProductOfferManager implements ProductOfferService {
         this.rules = rules;
         this.productSpecRules = productSpecRules;
         this.catalogRules = catalogRules;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -78,7 +83,8 @@ public class ProductOfferManager implements ProductOfferService {
         ProductOffer offer = mapper.toEntity(request);
         offer.setCatalog(catalog);
         offer.setProductSpec(spec);
-        offer.setIsActive(true);
+        offer.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT_OFFER, ProductReferenceCodes.STATUS_ACTIVE_CODE));
 
         return mapper.toResponse(repository.save(offer));
     }
@@ -95,7 +101,7 @@ public class ProductOfferManager implements ProductOfferService {
     @Cacheable(value = CacheNames.PRODUCT_OFFER_LIST,
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
     public PagedResponse<ProductOfferResponse> getAll(Pageable pageable) {
-        return PagedResponse.of(repository.findAllByIsActiveTrue(pageable).map(mapper::toResponse));
+        return PagedResponse.of(repository.findAllByDeletedDateIsNull(pageable).map(mapper::toResponse));
     }
 
     @Override
@@ -103,7 +109,7 @@ public class ProductOfferManager implements ProductOfferService {
     public PagedResponse<ProductOfferResponse> getByCatalog(Long catalogId, Pageable pageable) {
         catalogRules.checkIfCatalogExists(catalogId);
         return PagedResponse.of(
-                repository.findAllByCatalogIdAndIsActiveTrue(catalogId, pageable).map(mapper::toResponse));
+                repository.findAllByCatalogIdAndDeletedDateIsNull(catalogId, pageable).map(mapper::toResponse));
     }
 
     @Override
@@ -130,7 +136,8 @@ public class ProductOfferManager implements ProductOfferService {
     })
     public void delete(Long id) {
         ProductOffer offer = findActiveOrThrow(id);
-        offer.setIsActive(false);
+        offer.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT_OFFER, ProductReferenceCodes.STATUS_DELETED_CODE));
         offer.setDeletedDate(LocalDateTime.now());
         repository.save(offer);
     }
@@ -142,7 +149,7 @@ public class ProductOfferManager implements ProductOfferService {
     }
 
     private ProductOffer findActiveOrThrow(Long id) {
-        return repository.findByIdAndIsActiveTrue(id)
+        return repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.PRODUCT_OFFER_NOT_FOUND));
     }
 }

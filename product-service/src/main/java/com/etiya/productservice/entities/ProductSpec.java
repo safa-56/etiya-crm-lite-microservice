@@ -20,7 +20,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "product_specs")
-public class ProductSpec extends BaseEntity {
+public class ProductSpec extends StatusAwareEntity {
 
     @Column(name = "name", nullable = false, length = 150)
     private String name;

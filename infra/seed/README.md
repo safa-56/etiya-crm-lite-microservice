@@ -85,8 +85,9 @@ docker exec -i crm-postgres psql -U postgres -d productdb  < infra/seed/03_produ
   | Ev + TV Paketi | 1, 7 | 449.80 | 399.90 | 49.90 |
   | Full Ev Eğlence | 2, 8, 9 | 949.70 | 749.90 | 199.80 |
   | Mobil + Superbox | 3, 5 | 599.80 | 499.90 | 99.90 |
-- **6 satılmış ürün**: ACTIVE (kampanyalı ve tekil), PENDING (saga sürüyor),
-  CANCELLED (telafi). `account_id`/`address_id` account & customer seed'leriyle hizalı.
+- **6 satılmış ürün**: durum `general_status` FK'si ile tutulur — `ACTV` (kampanyalı
+  ve tekil), `PNDG` (saga sürüyor), `QUOTE_DEL` (telafi/iptal, soft-delete).
+  `account_id`/`address_id` account & customer seed'leriyle hizalı.
 
 ## Hızlı doğrulama
 

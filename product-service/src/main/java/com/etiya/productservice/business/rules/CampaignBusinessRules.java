@@ -25,7 +25,7 @@ public class CampaignBusinessRules {
 
     /** Aktif bir kampanya id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfCampaignExists(Long id) {
-        if (!campaignRepository.existsByIdAndIsActiveTrue(id)) {
+        if (!campaignRepository.existsByIdAndDeletedDateIsNull(id)) {
             throw new BusinessException(Messages.CAMPAIGN_NOT_FOUND);
         }
     }
@@ -39,7 +39,7 @@ public class CampaignBusinessRules {
         if (distinct.size() != offerIds.size()) {
             throw new BusinessException(Messages.CAMPAIGN_DUPLICATE_OFFER);
         }
-        long foundActive = productOfferRepository.findAllByIdInAndIsActiveTrue(distinct).size();
+        long foundActive = productOfferRepository.findAllByIdInAndDeletedDateIsNull(distinct).size();
         if (foundActive != distinct.size()) {
             throw new BusinessException(Messages.PRODUCT_OFFER_NOT_FOUND);
         }

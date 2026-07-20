@@ -15,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface GeneralStatusRepository extends JpaRepository<GeneralStatus, Long> {
 
-    /** Verilen entity dilimi ve kısa koda ait aktif durumu getirir. */
-    Optional<GeneralStatus> findByEntityCodeNameAndShortCodeAndIsActiveTrue(
+    /** Verilen entity dilimi ve kısa koda ait durumu getirir. */
+    Optional<GeneralStatus> findByEntityCodeNameAndShortCode(
             String entityCodeName, String shortCode);
 }

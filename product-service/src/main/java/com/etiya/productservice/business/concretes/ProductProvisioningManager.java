@@ -2,7 +2,9 @@ package com.etiya.productservice.business.concretes;
 
 import com.etiya.productservice.business.abstracts.OutboxService;
 import com.etiya.productservice.business.abstracts.ProductProvisioningService;
+import com.etiya.productservice.business.abstracts.ReferenceDataService;
 import com.etiya.productservice.business.constants.OrderProvisioningEvents;
+import com.etiya.productservice.business.constants.ProductReferenceCodes;
 import com.etiya.productservice.business.constants.ProductSagaEvents;
 import com.etiya.productservice.business.dtos.events.OrderConfirmedPayload;
 import com.etiya.productservice.business.dtos.events.OrderProvisionLine;
@@ -14,7 +16,6 @@ import com.etiya.productservice.dataAccess.ProductRepository;
 import com.etiya.productservice.entities.Campaign;
 import com.etiya.productservice.entities.Product;
 import com.etiya.productservice.entities.ProductOffer;
-import com.etiya.productservice.entities.enums.ProductStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -57,17 +58,20 @@ public class ProductProvisioningManager implements ProductProvisioningService {
     private final CampaignRepository campaignRepository;
     private final CampaignOfferRepository campaignOfferRepository;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
     public ProductProvisioningManager(ProductRepository productRepository,
                                       ProductOfferRepository productOfferRepository,
                                       CampaignRepository campaignRepository,
                                       CampaignOfferRepository campaignOfferRepository,
-                                      OutboxService outboxService) {
+                                      OutboxService outboxService,
+                                      ReferenceDataService referenceDataService) {
         this.productRepository = productRepository;
         this.productOfferRepository = productOfferRepository;
         this.campaignRepository = campaignRepository;
         this.campaignOfferRepository = campaignOfferRepository;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -107,7 +111,7 @@ public class ProductProvisioningManager implements ProductProvisioningService {
     /** OFFER kalemi: teklif kimliğinden tek ürün üretir (ödenen fiyat = sipariş snapshot'ı). */
     private int provisionOffer(OrderConfirmedPayload payload, OrderProvisionLine line) {
         ProductOffer offer = line.productOfferId() == null ? null
-                : productOfferRepository.findByIdAndIsActiveTrue(line.productOfferId()).orElse(null);
+                : productOfferRepository.findByIdAndDeletedDateIsNull(line.productOfferId()).orElse(null);
         if (offer == null) {
             log.warn("Provizyon için teklif bulunamadı/aktif değil (productOfferId={}), kalem atlanıyor. orderId={}",
                     line.productOfferId(), payload.orderId());
@@ -127,7 +131,7 @@ public class ProductProvisioningManager implements ProductProvisioningService {
      */
     private int provisionCampaign(OrderConfirmedPayload payload, OrderProvisionLine line) {
         Campaign campaign = line.campaignId() == null ? null
-                : campaignRepository.findByIdAndIsActiveTrue(line.campaignId()).orElse(null);
+                : campaignRepository.findByIdAndDeletedDateIsNull(line.campaignId()).orElse(null);
         if (campaign == null) {
             log.warn("Provizyon için kampanya bulunamadı/aktif değil (campaignId={}), kalem atlanıyor. orderId={}",
                     line.campaignId(), payload.orderId());
@@ -149,13 +153,13 @@ public class ProductProvisioningManager implements ProductProvisioningService {
 
     /** Kampanyanın aktif paket içeriğini (teklif kayıtları) id'ye göre sıralı çözer. */
     private List<ProductOffer> resolveCampaignOffers(Long campaignId) {
-        List<Long> offerIds = campaignOfferRepository.findAllByCampaignIdAndIsActiveTrue(campaignId).stream()
+        List<Long> offerIds = campaignOfferRepository.findAllByCampaignIdAndDeletedDateIsNull(campaignId).stream()
                 .map(link -> link.getProductOffer().getId())
                 .toList();
         if (offerIds.isEmpty()) {
             return List.of();
         }
-        return productOfferRepository.findAllByIdInAndIsActiveTrue(offerIds).stream()
+        return productOfferRepository.findAllByIdInAndDeletedDateIsNull(offerIds).stream()
                 .sorted(Comparator.comparing(ProductOffer::getId))
                 .toList();
     }
@@ -173,8 +177,8 @@ public class ProductProvisioningManager implements ProductProvisioningService {
         product.setAddressId(payload.addressId());
         product.setPriceToBePaid(price != null ? price : BigDecimal.ZERO);
         product.setName(name != null ? name : offer.getName());
-        product.setStatus(ProductStatus.PENDING);
-        product.setIsActive(true);
+        product.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT, ProductReferenceCodes.STATUS_PENDING_CODE));
 
         Product saved = productRepository.save(product);
 

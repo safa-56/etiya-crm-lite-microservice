@@ -22,10 +22,14 @@ import lombok.Setter;
  * <p>Servis sınırını geçen durum bilgisi {@code id} ile değil {@code shortCode}
  * ile taşınır; surrogate id bu context'in iç detayıdır.
  *
- * <p><b>Mevcut kullanım notu:</b> Bu servisin çalışan durum alanları
- * ({@code Product.status}) bir saga durum makinesidir ve {@code ProductStatus}
- * enum'u ile modellenir; bu tabloya FK vermez. Tablo şu an legacy/ETL hizası ve
- * referans veri altyapısının her serviste tekdüze olması için tutulur.
+ * <p><b>Kullanım:</b> Bu servisin iş entity'leri (Product, ProductOffer,
+ * ProductSpec, Catalog, Campaign, CampaignOffer) durumlarını artık bu tabloya
+ * <b>FK</b> ile ({@code general_status_id}) bağlar; entity'lerde ayrı bir durum
+ * kolonu (isActive / status enum'u) tutulmaz. Ürün satış saga'sı da durumu
+ * ({@code PNDG} → {@code ACTV}/{@code QUOTE_DEL}) bu tablodaki satırlarla yürütür.
+ *
+ * <p>Kendisi bir durum tablosu olduğundan {@link BaseEntity}'den türer ve durum
+ * FK'si taşımaz (kendine referans vermez).
  */
 @Getter
 @Setter

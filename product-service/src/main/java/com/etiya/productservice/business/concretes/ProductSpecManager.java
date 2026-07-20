@@ -1,7 +1,9 @@
 package com.etiya.productservice.business.concretes;
 
 import com.etiya.productservice.business.abstracts.ProductSpecService;
+import com.etiya.productservice.business.abstracts.ReferenceDataService;
 import com.etiya.productservice.business.constants.Messages;
+import com.etiya.productservice.business.constants.ProductReferenceCodes;
 import com.etiya.productservice.business.dtos.requests.CreateProductSpecRequest;
 import com.etiya.productservice.business.dtos.requests.UpdateProductSpecRequest;
 import com.etiya.productservice.business.dtos.responses.PagedResponse;
@@ -24,18 +26,22 @@ import java.time.LocalDateTime;
 /**
  * Ürün teknik özelliği iş mantığı (business/concretes).
  *
- * <p>Silme fizikseldir değildir: {@code isActive=false} + {@code deletedDate}
- * (soft-delete). Listeleme sayfalıdır; okuma sonuçları Redis'te cache'lenir.
+ * <p>Silme fiziksel değildir: durum {@code general_status}'ta DEL'e çekilir +
+ * {@code deletedDate} yazılır (soft-delete). Listeleme sayfalıdır; okuma sonuçları
+ * Redis'te cache'lenir.
  */
 @Service
 public class ProductSpecManager implements ProductSpecService {
 
     private final ProductSpecRepository repository;
     private final ProductSpecMapper mapper;
+    private final ReferenceDataService referenceDataService;
 
-    public ProductSpecManager(ProductSpecRepository repository, ProductSpecMapper mapper) {
+    public ProductSpecManager(ProductSpecRepository repository, ProductSpecMapper mapper,
+                              ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.mapper = mapper;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -43,7 +49,8 @@ public class ProductSpecManager implements ProductSpecService {
     @CacheEvict(value = CacheNames.PRODUCT_SPEC_LIST, allEntries = true)
     public ProductSpecResponse add(CreateProductSpecRequest request) {
         ProductSpec entity = mapper.toEntity(request);
-        entity.setIsActive(true);
+        entity.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT_SPEC, ProductReferenceCodes.STATUS_ACTIVE_CODE));
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -59,7 +66,7 @@ public class ProductSpecManager implements ProductSpecService {
     @Cacheable(value = CacheNames.PRODUCT_SPEC_LIST,
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
     public PagedResponse<ProductSpecResponse> getAll(Pageable pageable) {
-        return PagedResponse.of(repository.findAllByIsActiveTrue(pageable).map(mapper::toResponse));
+        return PagedResponse.of(repository.findAllByDeletedDateIsNull(pageable).map(mapper::toResponse));
     }
 
     @Override
@@ -83,7 +90,8 @@ public class ProductSpecManager implements ProductSpecService {
     })
     public void delete(Long id) {
         ProductSpec entity = findActiveOrThrow(id);
-        entity.setIsActive(false);
+        entity.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT_SPEC, ProductReferenceCodes.STATUS_DELETED_CODE));
         entity.setDeletedDate(LocalDateTime.now());
         repository.save(entity);
     }
@@ -95,7 +103,7 @@ public class ProductSpecManager implements ProductSpecService {
     }
 
     private ProductSpec findActiveOrThrow(Long id) {
-        return repository.findByIdAndIsActiveTrue(id)
+        return repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.PRODUCT_SPEC_NOT_FOUND));
     }
 }

@@ -1,7 +1,9 @@
 package com.etiya.productservice.business.concretes;
 
 import com.etiya.productservice.business.abstracts.CatalogService;
+import com.etiya.productservice.business.abstracts.ReferenceDataService;
 import com.etiya.productservice.business.constants.Messages;
+import com.etiya.productservice.business.constants.ProductReferenceCodes;
 import com.etiya.productservice.business.dtos.requests.CreateCatalogRequest;
 import com.etiya.productservice.business.dtos.requests.UpdateCatalogRequest;
 import com.etiya.productservice.business.dtos.responses.CatalogResponse;
@@ -29,10 +31,13 @@ public class CatalogManager implements CatalogService {
 
     private final CatalogRepository repository;
     private final CatalogMapper mapper;
+    private final ReferenceDataService referenceDataService;
 
-    public CatalogManager(CatalogRepository repository, CatalogMapper mapper) {
+    public CatalogManager(CatalogRepository repository, CatalogMapper mapper,
+                          ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.mapper = mapper;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -40,7 +45,8 @@ public class CatalogManager implements CatalogService {
     @CacheEvict(value = CacheNames.CATALOG_LIST, allEntries = true)
     public CatalogResponse add(CreateCatalogRequest request) {
         Catalog entity = mapper.toEntity(request);
-        entity.setIsActive(true);
+        entity.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_CATALOG, ProductReferenceCodes.STATUS_ACTIVE_CODE));
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -56,7 +62,7 @@ public class CatalogManager implements CatalogService {
     @Cacheable(value = CacheNames.CATALOG_LIST,
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
     public PagedResponse<CatalogResponse> getAll(Pageable pageable) {
-        return PagedResponse.of(repository.findAllByIsActiveTrue(pageable).map(mapper::toResponse));
+        return PagedResponse.of(repository.findAllByDeletedDateIsNull(pageable).map(mapper::toResponse));
     }
 
     @Override
@@ -80,7 +86,8 @@ public class CatalogManager implements CatalogService {
     })
     public void delete(Long id) {
         Catalog entity = findActiveOrThrow(id);
-        entity.setIsActive(false);
+        entity.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_CATALOG, ProductReferenceCodes.STATUS_DELETED_CODE));
         entity.setDeletedDate(LocalDateTime.now());
         repository.save(entity);
     }
@@ -92,7 +99,7 @@ public class CatalogManager implements CatalogService {
     }
 
     private Catalog findActiveOrThrow(Long id) {
-        return repository.findByIdAndIsActiveTrue(id)
+        return repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.CATALOG_NOT_FOUND));
     }
 }

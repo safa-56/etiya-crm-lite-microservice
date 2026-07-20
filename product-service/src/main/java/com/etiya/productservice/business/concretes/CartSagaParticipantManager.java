@@ -77,7 +77,7 @@ public class CartSagaParticipantManager implements CartSagaParticipantService {
     /** OFFER doğrulaması: teklif aktifse ad + liste fiyatıyla onaylar. */
     private void validateOffer(CartSagaRequestedPayload request) {
         ProductOffer offer = request.productOfferId() == null ? null
-                : productOfferRepository.findByIdAndIsActiveTrue(request.productOfferId()).orElse(null);
+                : productOfferRepository.findByIdAndDeletedDateIsNull(request.productOfferId()).orElse(null);
         if (offer == null) {
             publishFailed(request.cartItemId(), Messages.SAGA_CART_PRODUCT_OFFER_NOT_FOUND);
             return;
@@ -88,7 +88,7 @@ public class CartSagaParticipantManager implements CartSagaParticipantService {
     /** CAMPAIGN doğrulaması: kampanya aktifse ad + paket fiyatı + içerik ile onaylar. */
     private void validateCampaign(CartSagaRequestedPayload request) {
         Campaign campaign = request.campaignId() == null ? null
-                : campaignRepository.findByIdAndIsActiveTrue(request.campaignId()).orElse(null);
+                : campaignRepository.findByIdAndDeletedDateIsNull(request.campaignId()).orElse(null);
         if (campaign == null) {
             publishFailed(request.cartItemId(), Messages.SAGA_CART_CAMPAIGN_NOT_FOUND);
             return;
@@ -99,13 +99,13 @@ public class CartSagaParticipantManager implements CartSagaParticipantService {
 
     /** Kampanyanın aktif paket içeriğini (teklif satırları) çözer. */
     private List<CartSagaLine> resolveCampaignLines(Long campaignId) {
-        List<Long> offerIds = campaignOfferRepository.findAllByCampaignIdAndIsActiveTrue(campaignId).stream()
+        List<Long> offerIds = campaignOfferRepository.findAllByCampaignIdAndDeletedDateIsNull(campaignId).stream()
                 .map(link -> link.getProductOffer().getId())
                 .toList();
         if (offerIds.isEmpty()) {
             return List.of();
         }
-        return productOfferRepository.findAllByIdInAndIsActiveTrue(offerIds).stream()
+        return productOfferRepository.findAllByIdInAndDeletedDateIsNull(offerIds).stream()
                 .sorted(Comparator.comparing(ProductOffer::getId))
                 .map(o -> new CartSagaLine(o.getId(), o.getName(), o.getPrice()))
                 .toList();

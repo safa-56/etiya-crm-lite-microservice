@@ -18,10 +18,10 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    Optional<Product> findByIdAndIsActiveTrue(Long id);
+    Optional<Product> findByIdAndDeletedDateIsNull(Long id);
 
-    Page<Product> findAllByIsActiveTrue(Pageable pageable);
+    Page<Product> findAllByDeletedDateIsNull(Pageable pageable);
 
-    /** Bir fatura hesabına bağlı aktif ürünler (FR-013 ürün detay tablosu). */
-    List<Product> findAllByAccountIdAndIsActiveTrue(Long accountId);
+    /** Bir fatura hesabına bağlı silinmemiş ürünler (FR-013 ürün detay tablosu). */
+    List<Product> findAllByAccountIdAndDeletedDateIsNull(Long accountId);
 }

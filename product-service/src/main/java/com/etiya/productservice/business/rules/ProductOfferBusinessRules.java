@@ -21,7 +21,7 @@ public class ProductOfferBusinessRules {
 
     /** Aktif bir teklif id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfProductOfferExists(Long id) {
-        if (!productOfferRepository.existsByIdAndIsActiveTrue(id)) {
+        if (!productOfferRepository.existsByIdAndDeletedDateIsNull(id)) {
             throw new BusinessException(Messages.PRODUCT_OFFER_NOT_FOUND);
         }
     }

@@ -26,6 +26,18 @@ public final class ProductReferenceCodes {
     /** Ürün spesifikasyonu dilimi. */
     public static final String ENTITY_PRODUCT_SPEC = "PROD_SPEC";
 
+    /** Katalog (kategori) dilimi. */
+    public static final String ENTITY_CATALOG = "CATALOG";
+
+    /** Ürün teklifi dilimi. */
+    public static final String ENTITY_PRODUCT_OFFER = "PROD_OFFER";
+
+    /** Kampanya dilimi. */
+    public static final String ENTITY_CAMPAIGN = "CAMPAIGN";
+
+    /** Kampanya–teklif bağı dilimi. */
+    public static final String ENTITY_CAMPAIGN_OFFER = "CAMPAIGN_OFFER";
+
     /** Ürün karakteristik değeri dilimi. */
     public static final String ENTITY_PRODUCT_CHAR_VALUE = "PROD_CHAR_VAL";
 

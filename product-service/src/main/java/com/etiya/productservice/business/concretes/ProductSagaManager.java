@@ -2,13 +2,14 @@ package com.etiya.productservice.business.concretes;
 
 import com.etiya.productservice.business.abstracts.OutboxService;
 import com.etiya.productservice.business.abstracts.ProductSagaService;
+import com.etiya.productservice.business.abstracts.ReferenceDataService;
 import com.etiya.productservice.business.constants.ProductEvents;
+import com.etiya.productservice.business.constants.ProductReferenceCodes;
 import com.etiya.productservice.business.dtos.events.ProductEventPayload;
 import com.etiya.productservice.business.dtos.events.ProductSagaValidationPayload;
 import com.etiya.productservice.core.constants.CacheNames;
 import com.etiya.productservice.dataAccess.ProductRepository;
 import com.etiya.productservice.entities.Product;
-import com.etiya.productservice.entities.enums.ProductStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -32,10 +33,13 @@ public class ProductSagaManager implements ProductSagaService {
 
     private final ProductRepository repository;
     private final OutboxService outboxService;
+    private final ReferenceDataService referenceDataService;
 
-    public ProductSagaManager(ProductRepository repository, OutboxService outboxService) {
+    public ProductSagaManager(ProductRepository repository, OutboxService outboxService,
+                              ReferenceDataService referenceDataService) {
         this.repository = repository;
         this.outboxService = outboxService;
+        this.referenceDataService = referenceDataService;
     }
 
     @Override
@@ -52,10 +56,10 @@ public class ProductSagaManager implements ProductSagaService {
             return;
         }
 
-        // Idempotency: yalnızca PENDING ürünler ileri götürülür/telafi edilir.
-        if (product.getStatus() != ProductStatus.PENDING) {
+        // Idempotency: yalnızca PNDG (Beklemede) ürünler ileri götürülür/telafi edilir.
+        if (!ProductReferenceCodes.STATUS_PENDING_CODE.equals(product.getGeneralStatus().getShortCode())) {
             log.debug("Ürünün bekleyen saga'sı yok (durum={}), sonuç atlanıyor. id={}",
-                    product.getStatus(), product.getId());
+                    product.getGeneralStatus().getShortCode(), product.getId());
             return;
         }
 
@@ -66,9 +70,10 @@ public class ProductSagaManager implements ProductSagaService {
         }
     }
 
-    /** Onay: ürünü ACTIVE yapar ve ProductCreated olayını yayınlar (sayaç için). */
+    /** Onay: ürünü ACTV (Aktif) yapar ve ProductCreated olayını yayınlar (sayaç için). */
     private void confirmSale(Product product) {
-        product.setStatus(ProductStatus.ACTIVE);
+        product.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT, ProductReferenceCodes.STATUS_ACTIVE_CODE));
         product.setStatusReason(null);
         repository.save(product);
 
@@ -81,14 +86,14 @@ public class ProductSagaManager implements ProductSagaService {
         log.info("Saga onaylandı: ürün ACTIVE. id={}", product.getId());
     }
 
-    /** Telafi (compensation): ürünü CANCELLED yapar ve pasifleştirir. */
+    /** Telafi (compensation): ürünü QUOTE_DEL (iptal) yapar ve soft-delete eder. */
     private void cancelSale(Product product, String reason) {
-        product.setStatus(ProductStatus.CANCELLED);
-        product.setIsActive(false);
+        product.setGeneralStatus(referenceDataService.getStatus(
+                ProductReferenceCodes.ENTITY_PRODUCT, ProductReferenceCodes.STATUS_QUOTE_DELETED_CODE));
         product.setDeletedDate(LocalDateTime.now());
         product.setStatusReason(reason);
         repository.save(product);
 
-        log.info("Saga telafi edildi: ürün CANCELLED (neden={}). id={}", reason, product.getId());
+        log.info("Saga telafi edildi: ürün iptal (QUOTE_DEL) (neden={}). id={}", reason, product.getId());
     }
 }

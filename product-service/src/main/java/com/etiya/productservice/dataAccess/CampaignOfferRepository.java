@@ -12,8 +12,8 @@ import java.util.List;
 @Repository
 public interface CampaignOfferRepository extends JpaRepository<CampaignOffer, Long> {
 
-    boolean existsByCampaignIdAndProductOfferIdAndIsActiveTrue(Long campaignId, Long productOfferId);
+    boolean existsByCampaignIdAndProductOfferIdAndDeletedDateIsNull(Long campaignId, Long productOfferId);
 
-    /** Bir kampanyanın aktif teklif bağları (paket içeriği). */
-    List<CampaignOffer> findAllByCampaignIdAndIsActiveTrue(Long campaignId);
+    /** Bir kampanyanın silinmemiş teklif bağları (paket içeriği). */
+    List<CampaignOffer> findAllByCampaignIdAndDeletedDateIsNull(Long campaignId);
 }

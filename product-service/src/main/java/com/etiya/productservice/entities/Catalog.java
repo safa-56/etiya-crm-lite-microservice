@@ -21,7 +21,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name = "catalogs")
-public class Catalog extends BaseEntity {
+public class Catalog extends StatusAwareEntity {
 
     @Column(name = "name", nullable = false, length = 150)
     private String name;

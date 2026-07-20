@@ -24,5 +24,6 @@ public interface ProductOfferMapper {
     @Mapping(target = "catalogName", source = "catalog.name")
     @Mapping(target = "productSpecId", source = "productSpec.id")
     @Mapping(target = "productSpecName", source = "productSpec.name")
+    @Mapping(target = "status", source = "generalStatus.shortCode")
     ProductOfferResponse toResponse(ProductOffer entity);
 }

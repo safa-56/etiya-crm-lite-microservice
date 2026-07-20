@@ -14,9 +14,9 @@ import java.util.Optional;
 @Repository
 public interface CampaignRepository extends JpaRepository<Campaign, Long> {
 
-    Optional<Campaign> findByIdAndIsActiveTrue(Long id);
+    Optional<Campaign> findByIdAndDeletedDateIsNull(Long id);
 
-    Page<Campaign> findAllByIsActiveTrue(Pageable pageable);
+    Page<Campaign> findAllByDeletedDateIsNull(Pageable pageable);
 
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 }

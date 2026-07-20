@@ -14,9 +14,9 @@ import java.util.Optional;
 @Repository
 public interface CatalogRepository extends JpaRepository<Catalog, Long> {
 
-    Optional<Catalog> findByIdAndIsActiveTrue(Long id);
+    Optional<Catalog> findByIdAndDeletedDateIsNull(Long id);
 
-    Page<Catalog> findAllByIsActiveTrue(Pageable pageable);
+    Page<Catalog> findAllByDeletedDateIsNull(Pageable pageable);
 
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 }

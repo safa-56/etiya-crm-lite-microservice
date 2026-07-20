@@ -23,7 +23,7 @@ public class ProductSpecBusinessRules {
 
     /** Aktif bir teknik özellik id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfProductSpecExists(Long id) {
-        if (!productSpecRepository.existsByIdAndIsActiveTrue(id)) {
+        if (!productSpecRepository.existsByIdAndDeletedDateIsNull(id)) {
             throw new BusinessException(Messages.PRODUCT_SPEC_NOT_FOUND);
         }
     }

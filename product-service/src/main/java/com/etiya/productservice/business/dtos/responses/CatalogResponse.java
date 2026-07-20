@@ -9,7 +9,7 @@ public record CatalogResponse(
         Long id,
         String name,
         String description,
-        Boolean isActive,
+        String status,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

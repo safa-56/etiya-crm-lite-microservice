@@ -18,7 +18,7 @@ public record ProductOfferResponse(
         BigDecimal price,
         LocalDate startDate,
         LocalDate endDate,
-        Boolean isActive,
+        String status,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

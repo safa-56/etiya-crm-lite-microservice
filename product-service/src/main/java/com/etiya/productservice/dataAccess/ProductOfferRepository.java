@@ -18,15 +18,15 @@ import java.util.Optional;
 @Repository
 public interface ProductOfferRepository extends JpaRepository<ProductOffer, Long> {
 
-    Optional<ProductOffer> findByIdAndIsActiveTrue(Long id);
+    Optional<ProductOffer> findByIdAndDeletedDateIsNull(Long id);
 
-    Page<ProductOffer> findAllByIsActiveTrue(Pageable pageable);
+    Page<ProductOffer> findAllByDeletedDateIsNull(Pageable pageable);
 
-    boolean existsByIdAndIsActiveTrue(Long id);
+    boolean existsByIdAndDeletedDateIsNull(Long id);
 
-    /** Bir kataloga (kategoriye) bağlı aktif teklifler (Catalog sekmesi araması). */
-    Page<ProductOffer> findAllByCatalogIdAndIsActiveTrue(Long catalogId, Pageable pageable);
+    /** Bir kataloga (kategoriye) bağlı silinmemiş teklifler (Catalog sekmesi araması). */
+    Page<ProductOffer> findAllByCatalogIdAndDeletedDateIsNull(Long catalogId, Pageable pageable);
 
-    /** Verilen id'lerden aktif olan teklifler (kampanya paketini kurarken doğrulama/okuma). */
-    List<ProductOffer> findAllByIdInAndIsActiveTrue(List<Long> ids);
+    /** Verilen id'lerden silinmemiş teklifler (kampanya paketini kurarken doğrulama/okuma). */
+    List<ProductOffer> findAllByIdInAndDeletedDateIsNull(List<Long> ids);
 }

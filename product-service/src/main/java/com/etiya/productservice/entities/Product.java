@@ -1,10 +1,7 @@
 package com.etiya.productservice.entities;
 
-import com.etiya.productservice.entities.enums.ProductStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -28,16 +25,18 @@ import java.math.BigDecimal;
  * customer-service'teki adrese <b>yerel FK olmayan</b> servisler arası
  * referanslardır (Customer ↔ Account iletişim modeliyle aynı).
  *
- * <p>Satış bir <b>choreography Saga</b> ile kesinleşir: ürün {@code PENDING}
- * açılır, account-service fatura hesabını doğrulayınca {@code ACTIVE} (onay) ya da
- * {@code CANCELLED} (telafi) olur. {@code statusReason} telafi nedenini tutar.
+ * <p>Satış bir <b>choreography Saga</b> ile kesinleşir: ürün {@code PNDG} (Beklemede)
+ * açılır, account-service fatura hesabını doğrulayınca {@code ACTV} (onay) ya da
+ * {@code QUOTE_DEL} (telafi/iptal) olur. Bu durum, {@link StatusAwareEntity}
+ * üzerinden {@code general_status} tablosuna FK ile taşınır; {@code statusReason}
+ * yalnızca telafi nedenini (gözlemlenebilirlik) tutan serbest metindir.
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "products")
-public class Product extends BaseEntity {
+public class Product extends StatusAwareEntity {
 
     /** Ürün Detayı ekranında gösterilen ürün adı (FR-013 "Product Name"). */
     @Column(name = "name", length = 150)
@@ -64,11 +63,6 @@ public class Product extends BaseEntity {
     /** Ürünün müşteriye satıldığı, ödenecek nihai fiyat. */
     @Column(name = "price_to_be_paid", nullable = false, precision = 19, scale = 2)
     private BigDecimal priceToBePaid;
-
-    /** Satış saga'sının durumu (PENDING/ACTIVE/CANCELLED). */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private ProductStatus status;
 
     /**
      * Saga sonucu açıklaması (gözlemlenebilirlik). Doğrulama başarısız olup ürün

@@ -19,7 +19,7 @@ public class CatalogBusinessRules {
 
     /** Aktif bir katalog id ile var olmalı; yoksa iş hatası fırlatılır. */
     public void checkIfCatalogExists(Long id) {
-        if (!catalogRepository.existsByIdAndIsActiveTrue(id)) {
+        if (!catalogRepository.existsByIdAndDeletedDateIsNull(id)) {
             throw new BusinessException(Messages.CATALOG_NOT_FOUND);
         }
     }

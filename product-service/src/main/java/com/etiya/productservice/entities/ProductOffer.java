@@ -23,15 +23,16 @@ import java.time.LocalDate;
  * ({@link CampaignOffer}) bağlanabilir. Müşteriye satıldığında
  * {@link Product} kaydına dönüşür.
  *
- * <p>ERD'deki {@code is_active} ve {@code update_date} alanları {@link BaseEntity}
- * üzerindeki {@code isActive} ve {@code updatedDate} alanlarıyla karşılanır.
+ * <p>ERD'deki {@code update_date} alanı {@link BaseEntity#getUpdatedDate()} ile,
+ * durum bilgisi (aktif/pasif) ise {@link StatusAwareEntity#getGeneralStatus()}
+ * FK'si üzerinden {@code general_status} tablosuyla karşılanır.
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "product_offers")
-public class ProductOffer extends BaseEntity {
+public class ProductOffer extends StatusAwareEntity {
 
     @Column(name = "name", nullable = false, length = 150)
     private String name;
