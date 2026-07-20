@@ -36,4 +36,9 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/realms/etiya-crm}
+          # iss doğrulaması: token'ı host'tan (Postman/tarayıcı) alanlar için
+          # issuer localhost:8180'dir. jwk-set-uri ise imza anahtarını Docker
+          # ağından (keycloak:8080) çeker. Böylece host'ta üretilen token,
+          # Docker'daki servislerce doğrulanabilir.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/etiya-crm}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/etiya-crm/protocol/openid-connect/certs}
