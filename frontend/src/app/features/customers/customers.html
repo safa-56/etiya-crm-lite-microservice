@@ -1,0 +1,305 @@
+<div class="flex flex-col gap-6 lg:flex-row">
+  <!-- Arama filtreleri -->
+  <section class="w-full shrink-0 lg:w-80">
+    <form
+      [formGroup]="form"
+      (ngSubmit)="search()"
+      class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
+      <h2 class="flex items-center gap-2 text-base font-bold text-etiya-navy">
+        <svg class="h-4 w-4 text-etiya-orange" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8" />
+          <path
+            d="m16 16 4.5 4.5"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+        </svg>
+        {{ t().customers.filters.title }}
+      </h2>
+
+      <!-- B2C / B2B seçimi -->
+      <div
+        role="group"
+        [attr.aria-label]="t().customers.filters.customerType"
+        class="mt-5 grid grid-cols-2 gap-1 rounded-lg bg-etiya-gray p-1"
+      >
+        <button
+          type="button"
+          (click)="setCustomerType('B2C')"
+          [attr.aria-pressed]="!isCorporate()"
+          class="rounded-md py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange"
+          [class]="
+            isCorporate()
+              ? 'text-slate-500 hover:text-etiya-navy'
+              : 'bg-etiya-orange text-white shadow-sm'
+          "
+        >
+          {{ t().customers.filters.b2c }}
+        </button>
+        <button
+          type="button"
+          (click)="setCustomerType('B2B')"
+          [attr.aria-pressed]="isCorporate()"
+          class="rounded-md py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange"
+          [class]="
+            isCorporate()
+              ? 'bg-etiya-orange text-white shadow-sm'
+              : 'text-slate-500 hover:text-etiya-navy'
+          "
+        >
+          {{ t().customers.filters.b2b }}
+        </button>
+      </div>
+
+      <div class="mt-5 flex flex-col gap-4">
+        <div>
+          <label for="identityNumber" class="block text-sm font-medium text-etiya-navy">
+            {{
+              isCorporate() ? t().customers.filters.taxNumber : t().customers.filters.identityNumber
+            }}
+          </label>
+          <input
+            id="identityNumber"
+            type="text"
+            inputmode="numeric"
+            formControlName="identityNumber"
+            [placeholder]="
+              isCorporate()
+                ? t().customers.filters.taxNumberPlaceholder
+                : t().customers.filters.identityNumberPlaceholder
+            "
+            class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label for="customerId" class="block text-sm font-medium text-etiya-navy">
+            {{ t().customers.filters.customerId }}
+          </label>
+          <input
+            id="customerId"
+            type="text"
+            inputmode="numeric"
+            formControlName="customerId"
+            [placeholder]="t().customers.filters.customerIdPlaceholder"
+            class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label for="accountNumber" class="block text-sm font-medium text-etiya-navy">
+            {{ t().customers.filters.accountNumber }}
+          </label>
+          <input
+            id="accountNumber"
+            type="text"
+            inputmode="numeric"
+            maxlength="30"
+            formControlName="accountNumber"
+            [placeholder]="t().customers.filters.accountNumberPlaceholder"
+            class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label for="gsm" class="block text-sm font-medium text-etiya-navy">
+            {{ t().customers.filters.gsm }}
+          </label>
+          <input
+            id="gsm"
+            type="tel"
+            inputmode="numeric"
+            formControlName="gsm"
+            [placeholder]="t().customers.filters.gsmPlaceholder"
+            class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+          />
+        </div>
+
+        @if (isCorporate()) {
+          <div>
+            <label for="companyName" class="block text-sm font-medium text-etiya-navy">
+              {{ t().customers.filters.companyName }}
+            </label>
+            <input
+              id="companyName"
+              type="text"
+              formControlName="companyName"
+              [placeholder]="t().customers.filters.startsWith"
+              class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+            />
+          </div>
+        } @else {
+          <div>
+            <label for="firstName" class="block text-sm font-medium text-etiya-navy">
+              {{ t().customers.filters.firstName }}
+            </label>
+            <input
+              id="firstName"
+              type="text"
+              formControlName="firstName"
+              [placeholder]="t().customers.filters.startsWith"
+              class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label for="lastName" class="block text-sm font-medium text-etiya-navy">
+              {{ t().customers.filters.lastName }}
+            </label>
+            <input
+              id="lastName"
+              type="text"
+              formControlName="lastName"
+              [placeholder]="t().customers.filters.startsWith"
+              class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+            />
+          </div>
+        }
+
+        <div>
+          <label for="orderNumber" class="block text-sm font-medium text-etiya-navy">
+            {{ t().customers.filters.orderNumber }}
+          </label>
+          <input
+            id="orderNumber"
+            type="text"
+            inputmode="numeric"
+            maxlength="20"
+            formControlName="orderNumber"
+            [placeholder]="t().customers.filters.orderNumberPlaceholder"
+            class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:ring-2 focus:ring-etiya-orange/30 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5">
+        <button
+          type="button"
+          (click)="clear()"
+          class="flex items-center justify-center gap-2 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-etiya-navy transition hover:bg-etiya-gray focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="m6 6 12 12M18 6 6 18"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+          {{ t().customers.filters.clear }}
+        </button>
+        <button
+          type="submit"
+          class="flex items-center justify-center gap-2 rounded-lg bg-etiya-orange py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-etiya-orange-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8" />
+            <path
+              d="m16 16 4.5 4.5"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+          {{ t().customers.filters.search }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Sonuçlar -->
+  <section class="min-w-0 flex-1">
+    @if (results().length > 0) {
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <h2 class="text-base font-bold text-etiya-navy">{{ t().customers.results.title }}</h2>
+          <span class="text-xs font-medium text-slate-400">
+            {{ results().length }} {{ t().customers.results.count }}
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-180 text-left text-sm">
+            <thead
+              class="bg-etiya-gray text-xs font-semibold tracking-wide text-slate-500 uppercase"
+            >
+              <tr>
+                <th scope="col" class="px-6 py-3">{{ t().customers.results.customerId }}</th>
+                <th scope="col" class="px-6 py-3">{{ t().customers.results.customer }}</th>
+                <th scope="col" class="px-6 py-3">{{ t().customers.results.identity }}</th>
+                <th scope="col" class="px-6 py-3">{{ t().customers.results.gsm }}</th>
+                <th scope="col" class="px-6 py-3">{{ t().customers.results.city }}</th>
+                <th scope="col" class="px-6 py-3">{{ t().customers.results.status }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (customer of results(); track customer.id) {
+                <tr class="transition hover:bg-etiya-gray/70">
+                  <td class="px-6 py-3 font-medium text-slate-500">{{ customer.code }}</td>
+                  <td class="px-6 py-3">
+                    <a
+                      [routerLink]="['/customers', customer.id]"
+                      [attr.aria-label]="
+                        t().customers.results.openDetail + ': ' + displayName(customer)
+                      "
+                      class="flex items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
+                    >
+                      <span
+                        aria-hidden="true"
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-etiya-navy/10 text-[11px] font-semibold text-etiya-navy"
+                      >
+                        {{ initials(customer) }}
+                      </span>
+                      <span class="font-semibold text-etiya-navy hover:text-etiya-orange">
+                        {{ displayName(customer) }}
+                      </span>
+                    </a>
+                  </td>
+                  <td class="px-6 py-3 text-slate-600">{{ customer.identityNumber }}</td>
+                  <td class="px-6 py-3 text-slate-600">{{ customer.gsm }}</td>
+                  <td class="px-6 py-3 text-slate-600">{{ customer.city }}</td>
+                  <td class="px-6 py-3">
+                    <span
+                      class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                      [class]="
+                        customer.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-slate-100 text-slate-500'
+                      "
+                    >
+                      {{ t().customers.status[customer.status] }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    } @else {
+      <div
+        class="flex min-h-55 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center"
+      >
+        <span
+          aria-hidden="true"
+          class="flex h-12 w-12 items-center justify-center rounded-full bg-etiya-gray text-slate-400"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8" />
+            <path
+              d="m16 16 4.5 4.5"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+        </span>
+        <p class="mt-4 text-sm text-slate-500">
+          {{ searched() ? t().customers.results.noMatch : t().customers.results.empty }}
+        </p>
+      </div>
+    }
+  </section>
+</div>

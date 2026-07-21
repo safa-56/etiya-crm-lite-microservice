@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { LanguageSwitcher } from '../../../shared/ui/language-switcher/language-switcher';
@@ -12,6 +13,7 @@ import { LanguageSwitcher } from '../../../shared/ui/language-switcher/language-
 })
 export class Login {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly router = inject(Router);
 
   protected readonly t = inject(I18nService).t;
 
@@ -43,6 +45,7 @@ export class Login {
       return;
     }
 
-    // TODO: kimlik doğrulama servisi bağlanacak.
+    // TODO: kimlik doğrulama servisi bağlanacak; şimdilik doğrudan müşteri sayfasına geçilir.
+    this.router.navigate(['/customers']);
   }
 }

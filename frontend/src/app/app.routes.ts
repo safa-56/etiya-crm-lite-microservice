@@ -7,6 +7,37 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
     title: 'Etiya CRM'
   },
+  {
+    path: '',
+    loadComponent: () => import('./layout/main-layout/main-layout').then((m) => m.MainLayout),
+    children: [
+      {
+        path: 'customers',
+        loadComponent: () => import('./features/customers/customers').then((m) => m.Customers),
+        data: { pageKey: 'customers' },
+        title: 'Müşteri Arama · Etiya CRM'
+      },
+      {
+        // 'customers/:id' kuralından önce gelmeli; aksi hâlde 'new' bir id sanılır.
+        path: 'customers/new',
+        loadComponent: () =>
+          import('./features/customers/customer-create/customer-create').then(
+            (m) => m.CustomerCreate
+          ),
+        data: { pageKey: 'customerCreate' },
+        title: 'Müşteri Oluştur · Etiya CRM'
+      },
+      {
+        path: 'customers/:id',
+        loadComponent: () =>
+          import('./features/customers/customer-detail/customer-detail').then(
+            (m) => m.CustomerDetail
+          ),
+        data: { pageKey: 'customerDetail' },
+        title: 'Müşteri Bilgisi · Etiya CRM'
+      }
+    ]
+  },
   { path: '**', redirectTo: 'login' }
 ];
 
@@ -25,7 +56,12 @@ export const routes: Routes = [
  title: 'Etiya CRM' → bu sayfaya girildiğinde tarayıcı sekmesinin başlığı bu olur. Angular bunu
  otomatik ayarlar.
 
- Kural 3: path: '**' — "yukarıdakilerin hiçbiri tutmadıysa". Bilinmeyen bir adrese giden
+ Kural 3: path: '' + children — "layout route". Burada path boş olduğu için adres çubuğuna bir
+ şey eklemez; tek işi çocuk sayfaların etrafını MainLayout (sol menü + üst bar) ile sarmaktır.
+ Böylece /customers adresi hem menüyü hem sayfayı gösterir, login sayfası ise menüsüz kalır.
+ data: { pageKey: 'customers' } → üst bardaki başlık bu anahtardan çözülür (bkz. MainLayout).
+
+ Kural 4: path: '**' — "yukarıdakilerin hiçbiri tutmadıysa". Bilinmeyen bir adrese giden
  kullanıcı hata görmek yerine login'e yönlendirilir. Sıralama kritiktir: ** kuralı en sonda
  olmak zorundadır, çünkü Angular kuralları yukarıdan aşağıya dener ve ilk eşleşende durur.
  Yukarı koyarsanız hiçbir sayfa açılmaz.
