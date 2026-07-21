@@ -1,56 +1,23 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormField, form, maxLength, required, schema } from '@angular/forms/signals';
-import { RouterLink } from '@angular/router';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
-import { Gender } from '../customer.model';
+import { Breadcrumb, BreadcrumbItem } from '../../../shared/ui/breadcrumb/breadcrumb';
+import { Stepper, StepperItem } from '../../../shared/ui/stepper/stepper';
+import { CustomerDemographicForm } from './customer-demographic-form';
 
-/** Sihirbazın ilk adımında toplanan demografik alanlar. */
-interface CustomerDraft {
-  firstName: string;
-  secondName: string;
-  lastName: string;
-  birthDate: string;
-  gender: Gender;
-  fatherName: string;
-  motherName: string;
-  identityNumber: string;
-}
-
-const customerDraftSchema = schema<CustomerDraft>((draft) => {
-  required(draft.firstName);
-  required(draft.lastName);
-  required(draft.birthDate);
-  required(draft.gender);
-  required(draft.identityNumber);
-  maxLength(draft.identityNumber, 11);
-});
-
+/** Müşteri oluşturma sihirbazı; adım durumunu tutar, adım formlarını çizer. */
 @Component({
   selector: 'app-customer-create',
-  imports: [FormField, RouterLink],
+  imports: [Breadcrumb, Stepper, CustomerDemographicForm],
   templateUrl: './customer-create.html'
 })
 export class CustomerCreate {
   protected readonly t = inject(I18nService).t;
 
-  private readonly draft = signal<CustomerDraft>({
-    firstName: '',
-    secondName: '',
-    lastName: '',
-    birthDate: '',
-    gender: 'male',
-    fatherName: '',
-    motherName: '',
-    identityNumber: ''
-  });
-
-  protected readonly customerForm = form(this.draft, customerDraftSchema);
-
   /** Adres ve iletişim adımları tasarlandığında bu değer ilerletilecek. */
   protected readonly activeStep = signal(1);
 
-  protected readonly steps = computed(() => {
+  protected readonly steps = computed<readonly StepperItem[]>(() => {
     const steps = this.t().customers.create.steps;
 
     return [
@@ -59,4 +26,13 @@ export class CustomerCreate {
       { index: 3, label: steps.contact }
     ];
   });
+
+  protected readonly breadcrumb = computed<readonly BreadcrumbItem[]>(() => [
+    { label: this.t().nav.customerSearch, link: '/customers' },
+    { label: this.t().nav.customerCreate }
+  ]);
+
+  protected goToStep(step: number): void {
+    this.activeStep.set(step);
+  }
 }

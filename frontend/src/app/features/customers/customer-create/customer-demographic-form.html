@@ -1,0 +1,110 @@
+<app-panel-header [heading]="t().customers.create.demographic.title" />
+
+<div class="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+  <app-form-field
+    for="firstName"
+    [label]="t().customers.create.demographic.firstName"
+    [required]="true"
+  >
+    <input
+      id="firstName"
+      type="text"
+      class="field-control"
+      [formField]="customerForm.firstName"
+      aria-required="true"
+    />
+  </app-form-field>
+
+  <app-form-field for="secondName" [label]="t().customers.create.demographic.secondName">
+    <input
+      id="secondName"
+      type="text"
+      class="field-control"
+      [formField]="customerForm.secondName"
+    />
+  </app-form-field>
+
+  <app-form-field
+    for="lastName"
+    [label]="t().customers.create.demographic.lastName"
+    [required]="true"
+  >
+    <input
+      id="lastName"
+      type="text"
+      class="field-control"
+      [formField]="customerForm.lastName"
+      aria-required="true"
+    />
+  </app-form-field>
+
+  <app-form-field
+    for="birthDate"
+    [label]="t().customers.create.demographic.birthDate"
+    [required]="true"
+  >
+    <input
+      id="birthDate"
+      type="date"
+      class="field-control"
+      [formField]="customerForm.birthDate"
+      aria-required="true"
+    />
+  </app-form-field>
+
+  <app-form-field for="gender" [label]="t().customers.create.demographic.gender" [required]="true">
+    <select
+      id="gender"
+      class="field-control"
+      [formField]="customerForm.gender"
+      aria-required="true"
+    >
+      <option value="male">{{ t().customers.gender.male }}</option>
+      <option value="female">{{ t().customers.gender.female }}</option>
+    </select>
+  </app-form-field>
+
+  <app-form-field for="fatherName" [label]="t().customers.create.demographic.fatherName">
+    <input
+      id="fatherName"
+      type="text"
+      class="field-control"
+      [formField]="customerForm.fatherName"
+    />
+  </app-form-field>
+
+  <app-form-field for="motherName" [label]="t().customers.create.demographic.motherName">
+    <input
+      id="motherName"
+      type="text"
+      class="field-control"
+      [formField]="customerForm.motherName"
+    />
+  </app-form-field>
+
+  <app-form-field
+    for="identityNumber"
+    [label]="t().customers.create.demographic.identityNumber"
+    [required]="true"
+  >
+    <input
+      id="identityNumber"
+      type="text"
+      inputmode="numeric"
+      class="field-control"
+      [formField]="customerForm.identityNumber"
+      aria-required="true"
+    />
+  </app-form-field>
+</div>
+
+<div class="mt-8 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
+  <app-button-link link="/customers" variant="outline" size="lg">
+    {{ t().customers.create.cancel }}
+  </app-button-link>
+
+  <app-button size="lg" [disabled]="customerForm().invalid()" (click)="next.emit()">
+    {{ t().customers.create.next }}
+    <app-icon name="arrow-right" [stroke]="1.8" />
+  </app-button>
+</div>

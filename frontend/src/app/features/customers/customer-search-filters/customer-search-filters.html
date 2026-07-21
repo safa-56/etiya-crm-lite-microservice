@@ -1,0 +1,128 @@
+<form
+  [formGroup]="form"
+  (ngSubmit)="submit()"
+  class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+>
+  <h2 class="flex items-center gap-2 text-base font-bold text-etiya-navy">
+    <span class="text-etiya-orange"><app-icon name="search" [stroke]="1.8" /></span>
+    {{ t().customers.filters.title }}
+  </h2>
+
+  <app-customer-type-toggle
+    class="mt-5"
+    [value]="customerType()"
+    (valueChange)="setCustomerType($event)"
+  />
+
+  <div class="mt-5 flex flex-col gap-4">
+    <app-form-field
+      for="identityNumber"
+      [label]="
+        isCorporate() ? t().customers.filters.taxNumber : t().customers.filters.identityNumber
+      "
+    >
+      <input
+        id="identityNumber"
+        type="text"
+        inputmode="numeric"
+        formControlName="identityNumber"
+        class="field-control"
+        [placeholder]="
+          isCorporate()
+            ? t().customers.filters.taxNumberPlaceholder
+            : t().customers.filters.identityNumberPlaceholder
+        "
+      />
+    </app-form-field>
+
+    <app-form-field for="customerId" [label]="t().customers.filters.customerId">
+      <input
+        id="customerId"
+        type="text"
+        inputmode="numeric"
+        formControlName="customerId"
+        class="field-control"
+        [placeholder]="t().customers.filters.customerIdPlaceholder"
+      />
+    </app-form-field>
+
+    <app-form-field for="accountNumber" [label]="t().customers.filters.accountNumber">
+      <input
+        id="accountNumber"
+        type="text"
+        inputmode="numeric"
+        maxlength="30"
+        formControlName="accountNumber"
+        class="field-control"
+        [placeholder]="t().customers.filters.accountNumberPlaceholder"
+      />
+    </app-form-field>
+
+    <app-form-field for="gsm" [label]="t().customers.filters.gsm">
+      <input
+        id="gsm"
+        type="tel"
+        inputmode="numeric"
+        formControlName="gsm"
+        class="field-control"
+        [placeholder]="t().customers.filters.gsmPlaceholder"
+      />
+    </app-form-field>
+
+    @if (isCorporate()) {
+      <app-form-field for="companyName" [label]="t().customers.filters.companyName">
+        <input
+          id="companyName"
+          type="text"
+          formControlName="companyName"
+          class="field-control"
+          [placeholder]="t().customers.filters.startsWith"
+        />
+      </app-form-field>
+    } @else {
+      <app-form-field for="firstName" [label]="t().customers.filters.firstName">
+        <input
+          id="firstName"
+          type="text"
+          formControlName="firstName"
+          class="field-control"
+          [placeholder]="t().customers.filters.startsWith"
+        />
+      </app-form-field>
+
+      <app-form-field for="lastName" [label]="t().customers.filters.lastName">
+        <input
+          id="lastName"
+          type="text"
+          formControlName="lastName"
+          class="field-control"
+          [placeholder]="t().customers.filters.startsWith"
+        />
+      </app-form-field>
+    }
+
+    <app-form-field for="orderNumber" [label]="t().customers.filters.orderNumber">
+      <input
+        id="orderNumber"
+        type="text"
+        inputmode="numeric"
+        maxlength="20"
+        formControlName="orderNumber"
+        class="field-control"
+        [placeholder]="t().customers.filters.orderNumberPlaceholder"
+      />
+    </app-form-field>
+  </div>
+
+  <div class="mt-6 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5">
+    <app-button variant="secondary" (click)="clear()">
+      <app-icon name="close" [stroke]="1.8" />
+      {{ t().customers.filters.clear }}
+    </app-button>
+
+    <app-button type="submit">
+      <app-icon name="search" [stroke]="1.8" />
+      {{ t().customers.filters.search }}
+    </app-button>
+  </div>
+</form>

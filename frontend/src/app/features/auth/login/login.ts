@@ -4,11 +4,25 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { Button } from '../../../shared/ui/button/button';
+import { FormFieldShell } from '../../../shared/ui/form-field/form-field';
+import { Icon } from '../../../shared/ui/icon/icon';
+import { InputGroup } from '../../../shared/ui/input-group/input-group';
 import { LanguageSwitcher } from '../../../shared/ui/language-switcher/language-switcher';
+import { LoginBrandPanel } from './login-brand-panel';
 
 @Component({
   selector: 'app-login',
-  imports: [NgOptimizedImage, ReactiveFormsModule, LanguageSwitcher],
+  imports: [
+    NgOptimizedImage,
+    ReactiveFormsModule,
+    Button,
+    FormFieldShell,
+    Icon,
+    InputGroup,
+    LanguageSwitcher,
+    LoginBrandPanel
+  ],
   templateUrl: './login.html'
 })
 export class Login {

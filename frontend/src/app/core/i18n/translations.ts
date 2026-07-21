@@ -77,7 +77,6 @@ const tr = {
     },
     results: {
       title: 'Arama Sonuçları',
-      empty: 'Arama kriterlerini girip Ara düğmesine basın.',
       noMatch: 'Arama kriterlerine uygun müşteri bulunamadı.',
       count: 'kayıt bulundu',
       customerId: 'Müşteri ID',
@@ -264,7 +263,6 @@ const en: typeof tr = {
     },
     results: {
       title: 'Search Results',
-      empty: 'Enter your criteria and press Search.',
       noMatch: 'No customer matches the search criteria.',
       count: 'records found',
       customerId: 'Customer ID',

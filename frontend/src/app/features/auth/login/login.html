@@ -1,31 +1,5 @@
 <div class="flex min-h-dvh flex-col lg:flex-row">
-  <!-- Sol panel: marka alanı -->
-  <section
-    class="relative isolate hidden overflow-hidden bg-etiya-navy lg:flex lg:w-[55%] lg:items-center lg:justify-center"
-  >
-    <div
-      aria-hidden="true"
-      class="pointer-events-none absolute -top-32 left-1/3 h-[420px] w-[420px] rounded-full bg-etiya-orange/25 blur-[120px]"
-    ></div>
-    <div
-      aria-hidden="true"
-      class="pointer-events-none absolute -bottom-40 -left-24 h-[520px] w-[520px] rounded-full bg-indigo-500/30 blur-[130px]"
-    ></div>
-
-    <div class="relative z-10 flex flex-col items-center px-12">
-      <img
-        ngSrc="etiya-logo.png"
-        alt="Etiya"
-        width="640"
-        height="200"
-        priority
-        class="h-auto w-[280px] max-w-full"
-      />
-      <p class="mt-6 text-center text-xs font-medium tracking-[0.45em] text-white/60 uppercase">
-        {{ t().login.brandTagline }}
-      </p>
-    </div>
-  </section>
+  <app-login-brand-panel />
 
   <!-- Sağ panel: giriş formu -->
   <section class="relative flex flex-1 flex-col bg-white px-6 py-8">
@@ -35,7 +9,6 @@
 
     <div class="flex flex-1 items-center justify-center">
       <div class="w-full max-w-md">
-        <!-- Başlık -->
         <div class="flex flex-col items-center">
           <img
             ngSrc="etiya-logo-2.png"
@@ -48,116 +21,58 @@
           <h1 class="mt-6 text-xl font-bold text-etiya-navy">{{ t().login.title }}</h1>
         </div>
 
-        <!-- Form kartı -->
         <form
           [formGroup]="form"
           (ngSubmit)="submit()"
           class="mt-8 rounded-2xl border border-slate-100 bg-etiya-gray p-8 shadow-sm"
         >
-          <div>
-            <label for="username" class="block text-sm font-semibold text-etiya-navy">
-              {{ t().login.username }}
-            </label>
-            <div class="relative mt-2">
-              <span
-                class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
-                aria-hidden="true"
-              >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20a7.5 7.5 0 0 1 15 0"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </span>
+          <app-form-field for="username" [label]="t().login.username">
+            <app-input-group icon="user">
               <input
                 id="username"
                 type="text"
                 formControlName="username"
                 autocomplete="username"
+                class="field-control pl-10"
                 [placeholder]="t().login.usernamePlaceholder"
-                class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pr-3 pl-10 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:outline-none focus:ring-2 focus:ring-etiya-orange/30"
               />
-            </div>
-          </div>
+            </app-input-group>
+          </app-form-field>
 
-          <div class="mt-5">
-            <label for="password" class="block text-sm font-semibold text-etiya-navy">
-              {{ t().login.password }}
-            </label>
-            <div class="relative mt-2">
-              <span
-                class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
-                aria-hidden="true"
-              >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="4"
-                    y="10"
-                    width="16"
-                    height="10"
-                    rx="2"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                  />
-                  <path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.6" />
-                </svg>
-              </span>
+          <app-form-field class="mt-5" for="password" [label]="t().login.password">
+            <app-input-group icon="lock">
               <input
                 id="password"
                 [type]="passwordFieldType()"
                 formControlName="password"
                 autocomplete="current-password"
-                [placeholder]="t().login.passwordPlaceholder"
                 (blur)="hidePassword()"
-                class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pr-11 pl-10 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:outline-none focus:ring-2 focus:ring-etiya-orange/30"
+                class="field-control pr-11 pl-10"
+                [placeholder]="t().login.passwordPlaceholder"
               />
+
               <button
+                trailing
                 type="button"
                 (mousedown)="$event.preventDefault()"
                 (click)="togglePasswordVisibility()"
-                [attr.aria-label]="passwordVisible() ? t().login.hidePassword : t().login.showPassword"
+                [attr.aria-label]="
+                  passwordVisible() ? t().login.hidePassword : t().login.showPassword
+                "
                 [attr.aria-pressed]="passwordVisible()"
                 class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 transition hover:text-etiya-navy focus:outline-none focus-visible:text-etiya-navy"
               >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                  />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6" />
-                  @if (!passwordVisible()) {
-                    <path
-                      d="m4 4 16 16"
-                      stroke="currentColor"
-                      stroke-width="1.6"
-                      stroke-linecap="round"
-                    />
-                  }
-                </svg>
+                <app-icon [name]="passwordVisible() ? 'eye' : 'eye-off'" />
               </button>
-            </div>
-          </div>
+            </app-input-group>
+          </app-form-field>
 
-          <button
-            type="submit"
-            [disabled]="form.invalid"
-            class="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-etiya-orange py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-etiya-orange-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white disabled:shadow-none"
-          >
-            {{ t().login.submit }}
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M5 12h14m-6-6 6 6-6 6"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
+          <div class="mt-8">
+            <app-button type="submit" size="xl" [full]="true" [disabled]="form.invalid">
+              {{ t().login.submit }}
+              <app-icon name="arrow-right" [stroke]="1.8" />
+            </app-button>
+          </div>
         </form>
 
         <p class="mt-6 text-center text-xs text-slate-400">{{ t().login.support }}</p>

@@ -3,6 +3,7 @@ import { UpperCasePipe } from '@angular/common';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { Language } from '../../../core/i18n/translations';
+import { Icon } from '../icon/icon';
 
 @Component({
   selector: 'app-language-switcher',
@@ -16,24 +17,9 @@ import { Language } from '../../../core/i18n/translations';
         aria-haspopup="listbox"
         class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-etiya-navy shadow-sm transition hover:border-slate-300 hover:bg-etiya-gray focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
       >
-        <svg class="h-4 w-4 text-etiya-orange" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
-          <path
-            d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"
-            stroke="currentColor"
-            stroke-width="1.6"
-          />
-        </svg>
+        <span class="text-etiya-orange"><app-icon name="globe" /></span>
         {{ i18n.language() | uppercase }}
-        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="m6 9 6 6 6-6"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <span class="text-slate-400"><app-icon name="chevron-down" [stroke]="1.8" /></span>
       </button>
 
       @if (open()) {
@@ -59,7 +45,7 @@ import { Language } from '../../../core/i18n/translations';
       }
     </div>
   `,
-  imports: [UpperCasePipe],
+  imports: [UpperCasePipe, Icon],
   host: {
     '(document:click)': 'onDocumentClick($event)'
   }
@@ -70,18 +56,18 @@ export class LanguageSwitcher {
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-// Butona tıklanınca menüyü aç/kapa
+  // Butona tıklanınca menüyü aç/kapa
   protected toggle(): void {
     this.open.update((open) => !open);
   }
 
-// bir dil seçilince servise bildir ve menüyü kapat
+  // bir dil seçilince servise bildir ve menüyü kapat
   protected select(language: Language): void {
     this.i18n.setLanguage(language);
     this.open.set(false);
   }
 
-// dil menüsü dışına tıklanınca kapan mantığı
+  // dil menüsü dışına tıklanınca kapan mantığı
   protected onDocumentClick(event: MouseEvent): void {
     if (this.open() && !this.host.nativeElement.contains(event.target as Node)) {
       this.open.set(false);

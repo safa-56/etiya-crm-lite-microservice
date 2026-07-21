@@ -1,90 +1,68 @@
 import { Component, computed, inject, input, linkedSignal } from '@angular/core';
-import { DatePipe, formatDate } from '@angular/common';
-import { RouterLink } from '@angular/router';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
-import {
-  Customer,
-  CustomerAccount,
-  customerDisplayName,
-  customerInitials
-} from '../customer.model';
-import { MOCK_CUSTOMERS } from '../customers.mock';
-
-/** Hesap tablosunda bir sayfada gösterilecek hesap sayısı. */
-const ACCOUNTS_PAGE_SIZE = 4;
+import { Breadcrumb, BreadcrumbItem } from '../../../shared/ui/breadcrumb/breadcrumb';
+import { ButtonLink } from '../../../shared/ui/button/button-link';
+import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
+import { TabItem, Tabs } from '../../../shared/ui/tabs/tabs';
+import { Customer } from '../customer.model';
+import { CustomerService } from '../customer.service';
+import { CustomerAccountsPanel } from './customer-accounts-panel';
+import { CustomerAddressesPanel } from './customer-addresses-panel';
+import { CustomerContactPanel } from './customer-contact-panel';
+import { CustomerDetailHeader } from './customer-detail-header';
+import { CustomerInfoPanel } from './customer-info-panel';
 
 type DetailTab = 'info' | 'account' | 'address' | 'contact';
 
+const TAB_ORDER: readonly DetailTab[] = ['info', 'account', 'address', 'contact'];
+
+/** Detay sayfası kabuğu: müşteriyi çözer, aktif sekmeyi tutar, panelleri seçer. */
 @Component({
   selector: 'app-customer-detail',
-  imports: [DatePipe, RouterLink],
+  imports: [
+    Breadcrumb,
+    ButtonLink,
+    EmptyState,
+    Tabs,
+    CustomerDetailHeader,
+    CustomerInfoPanel,
+    CustomerAccountsPanel,
+    CustomerAddressesPanel,
+    CustomerContactPanel
+  ],
   templateUrl: './customer-detail.html'
 })
 export class CustomerDetail {
-  private readonly i18n = inject(I18nService);
+  private readonly customers = inject(CustomerService);
+
+  protected readonly t = inject(I18nService).t;
 
   /** `customers/:id` route parametresi; component input binding ile bağlanır. */
   readonly id = input.required<string>();
 
-  protected readonly t = this.i18n.t;
+  protected readonly customer = computed<Customer | null>(() => this.customers.getById(this.id()));
 
-  protected readonly customer = computed<Customer | null>(
-    () => MOCK_CUSTOMERS.find((candidate) => String(candidate.id) === this.id()) ?? null
-  );
-
-  /** Başka bir müşteriye geçildiğinde sekme ve sayfa durumu başa döner. */
+  /** Başka bir müşteriye geçildiğinde sekme başa döner. */
   protected readonly activeTab = linkedSignal<Customer | null, DetailTab>({
     source: this.customer,
     computation: () => 'info'
   });
 
-  protected readonly accountsPage = linkedSignal<Customer | null, number>({
-    source: this.customer,
-    computation: () => 1
+  protected readonly tabs = computed<readonly TabItem[]>(() => {
+    const labels = this.t().customers.detail.tabs;
+    return TAB_ORDER.map((id) => ({ id, label: labels[id] }));
   });
 
-  private readonly accounts = computed<readonly CustomerAccount[]>(
-    () => this.customer()?.accounts ?? []
-  );
+  protected readonly breadcrumb = computed<readonly BreadcrumbItem[]>(() => [
+    { label: this.t().nav.customerSearch, link: '/customers' },
+    { label: this.t().customers.detail.tabs[this.activeTab()] }
+  ]);
 
-  protected readonly accountPages = computed(() => {
-    const pageCount = Math.ceil(this.accounts().length / ACCOUNTS_PAGE_SIZE);
-    return Array.from({ length: pageCount }, (_, index) => index + 1);
-  });
-
-  protected readonly visibleAccounts = computed(() => {
-    const start = (this.accountsPage() - 1) * ACCOUNTS_PAGE_SIZE;
-    return this.accounts().slice(start, start + ACCOUNTS_PAGE_SIZE);
-  });
-
-  /** Tasarımda olduğu gibi her sayfanın ilk hesabı açık gelir. */
-  protected readonly expandedAccount = linkedSignal<readonly CustomerAccount[], string | null>({
-    source: this.visibleAccounts,
-    computation: (accounts) => accounts[0]?.number ?? null
-  });
-
-  protected readonly primaryAddressId = linkedSignal<Customer | null, string | null>({
-    source: this.customer,
-    computation: (customer) => customer?.addresses.find((address) => address.isPrimary)?.id ?? null
-  });
-
-  /** "Temmuz 2021'den beri" gibi üyelik metni; ay adı aktif dile göre biçimlenir. */
-  protected readonly memberSince = computed(() => {
-    const customer = this.customer();
-
-    if (customer === null) {
-      return '';
+  /** `app-tabs` genel amaçlı olduğu için string döner; burada daraltılır. */
+  protected selectTab(id: string): void {
+    if ((TAB_ORDER as readonly string[]).includes(id)) {
+      this.activeTab.set(id as DetailTab);
     }
-
-    const monthYear = formatDate(customer.registeredAt, 'LLLL yyyy', this.i18n.language());
-    return this.t().customers.detail.memberSince.replace('{date}', monthYear);
-  });
-
-  protected readonly displayName = customerDisplayName;
-  protected readonly initials = customerInitials;
-
-  protected toggleAccount(accountNumber: string): void {
-    this.expandedAccount.update((current) => (current === accountNumber ? null : accountNumber));
   }
 }

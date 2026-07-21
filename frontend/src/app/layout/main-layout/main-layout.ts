@@ -1,34 +1,33 @@
 import { Component, computed, inject } from '@angular/core';
-import { NgOptimizedImage } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  ActivatedRouteSnapshot,
-  NavigationEnd,
-  Router,
-  RouterLink,
-  RouterLinkActive,
-  RouterOutlet
-} from '@angular/router';
+import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 
 import { I18nService } from '../../core/i18n/i18n.service';
 import { PageKey } from '../../core/i18n/translations';
-import { LanguageSwitcher } from '../../shared/ui/language-switcher/language-switcher';
+import { Sidebar } from '../sidebar/sidebar';
+import { Topbar } from '../topbar/topbar';
+import { CurrentUser } from '../topbar/user-menu';
 
 const DEFAULT_PAGE: PageKey = 'customers';
 
+/** Kabuk yalnızca yerleşimi kurar; menü ve üst bar kendi bileşenlerinde yaşar. */
 @Component({
   selector: 'app-main-layout',
-  imports: [NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet, LanguageSwitcher],
+  imports: [RouterOutlet, Sidebar, Topbar],
   templateUrl: './main-layout.html'
 })
 export class MainLayout {
   private readonly router = inject(Router);
 
-  protected readonly t = inject(I18nService).t;
+  private readonly t = inject(I18nService).t;
 
   /** Tasarım aşamasında sabit kullanıcı; oturum servisi bağlanınca değişecek. */
-  protected readonly user = { name: 'Ahmet Kaya', role: 'CRM Uzmanı', initials: 'AK' };
+  protected readonly user: CurrentUser = {
+    name: 'Ahmet Kaya',
+    role: 'CRM Uzmanı',
+    initials: 'AK'
+  };
 
   /** Aktif route'un `data.pageKey` değeri; üst başlığı belirler. */
   protected readonly pageKey = toSignal(
