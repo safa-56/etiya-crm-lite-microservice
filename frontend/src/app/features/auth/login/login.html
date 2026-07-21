@@ -111,10 +111,12 @@
                 formControlName="password"
                 autocomplete="current-password"
                 [placeholder]="t().login.passwordPlaceholder"
+                (blur)="hidePassword()"
                 class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pr-11 pl-10 text-sm text-etiya-navy placeholder:text-slate-400 focus:border-etiya-orange focus:outline-none focus:ring-2 focus:ring-etiya-orange/30"
               />
               <button
                 type="button"
+                (mousedown)="$event.preventDefault()"
                 (click)="togglePasswordVisibility()"
                 [attr.aria-label]="passwordVisible() ? t().login.hidePassword : t().login.showPassword"
                 [attr.aria-pressed]="passwordVisible()"

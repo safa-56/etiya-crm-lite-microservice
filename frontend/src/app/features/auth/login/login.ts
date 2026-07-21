@@ -22,17 +22,22 @@ export class Login {
 
   protected readonly passwordVisible = signal(false);
 
-//Klasik "şifreyi göster/gizle" göz ikonunun arkasındaki mantık.
   protected readonly passwordFieldType = computed(() =>
     this.passwordVisible() ? 'text' : 'password'
   );
 
-//Göz ikonuna tıklanınca çalışır
   protected togglePasswordVisibility(): void {
     this.passwordVisible.update((visible) => !visible);
   }
 
+  protected hidePassword(): void {
+    this.passwordVisible.set(false);
+  }
+
   protected submit(): void {
+    // Form gönderildiğinde şifreyi tekrar maskele.
+    this.passwordVisible.set(false);
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
