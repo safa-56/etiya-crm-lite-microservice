@@ -10,6 +10,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    # Hibernate şema kurulumu bitmeden data.sql çalışmasın (seed FK/tabloları bulsun).
+    defer-datasource-initialization: true
+
+  # Otomatik test seed'i: Hibernate şemayı kurduktan SONRA classpath'teki data.sql
+  # çalışır ve DB'yi idempotent (ON CONFLICT DO NOTHING) tohumlar. Böylece
+  # docker-compose.yml ile konteyner olarak çalıştıran ekipte de veri otomatik gelir.
+  sql:
+    init:
+      mode: always
 
   data:
     redis:
