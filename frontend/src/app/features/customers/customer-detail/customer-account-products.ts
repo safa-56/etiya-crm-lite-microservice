@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
@@ -6,11 +6,12 @@ import { Button } from '../../../shared/ui/button/button';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { IconButton } from '../../../shared/ui/icon-button/icon-button';
 import { CustomerAccountProduct } from '../customer.model';
+import { CustomerProductPreview } from './customer-product-preview';
 
 /** Hesap satırı açıldığında görünen ürün tablosu ve hesap aksiyonları. */
 @Component({
   selector: 'app-customer-account-products',
-  imports: [Button, EmptyState, IconButton],
+  imports: [Button, EmptyState, IconButton, CustomerProductPreview],
   host: { class: 'block' },
   template: `
     @if (products().length > 0) {
@@ -54,9 +55,10 @@ import { CustomerAccountProduct } from '../customer.model';
                       [label]="t().customers.detail.accounts.productDelete + ': ' + product.name"
                     />
                     <app-icon-button
-                      icon="info"
+                      icon="eye"
                       tone="neutral"
-                      [label]="t().customers.detail.accounts.productDetail + ': ' + product.name"
+                      [label]="t().customers.detail.accounts.productPreview + ': ' + product.name"
+                      (click)="openPreview(product)"
                     />
                   </div>
                 </td>
@@ -67,6 +69,10 @@ import { CustomerAccountProduct } from '../customer.model';
       </div>
     } @else {
       <app-empty-state size="sm" [message]="t().customers.detail.accounts.noProducts" />
+    }
+
+    @if (previewProduct(); as product) {
+      <app-customer-product-preview [product]="product" (closed)="closePreview()" />
     }
 
     <div class="mt-4 flex flex-wrap gap-3">
@@ -89,6 +95,17 @@ export class CustomerAccountProducts {
 
   readonly customerId = input.required<number>();
   readonly products = input.required<readonly CustomerAccountProduct[]>();
+
+  /** Önizlemesi açık olan ürün; `null` ise pencere kapalıdır. */
+  protected readonly previewProduct = signal<CustomerAccountProduct | null>(null);
+
+  protected openPreview(product: CustomerAccountProduct): void {
+    this.previewProduct.set(product);
+  }
+
+  protected closePreview(): void {
+    this.previewProduct.set(null);
+  }
 
   /** "Yeni Satış Başlat": teklif seçimiyle başlayan satış akışına götürür. */
   protected startNewSale(): void {

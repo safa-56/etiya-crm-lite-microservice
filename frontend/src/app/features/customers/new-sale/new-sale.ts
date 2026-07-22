@@ -16,23 +16,42 @@ import { ShellTitle } from '../../../layout/shell-title';
 import { Breadcrumb, BreadcrumbItem } from '../../../shared/ui/breadcrumb/breadcrumb';
 import { Button } from '../../../shared/ui/button/button';
 import { Icon } from '../../../shared/ui/icon/icon';
+import { IconButton } from '../../../shared/ui/icon-button/icon-button';
 import { CustomerAddress, CustomerOrder } from '../customer.model';
 import { CustomerService } from '../customer.service';
 import { CustomerAddressCard } from '../customer-detail/customer-address-card';
-import {
-  AddressFormResult,
-  CustomerAddressForm
-} from '../customer-detail/customer-address-form';
+import { AddressFormResult, CustomerAddressForm } from '../customer-detail/customer-address-form';
 import { CartItem, ConfigField } from './sales.model';
 import { CAMPAIGNS, PRODUCT_OFFERS, offerConfig } from './sales.mock';
 
 type SaleStep = 'offer' | 'config' | 'submit' | 'done';
 type OfferTab = 'catalog' | 'campaign';
 
+/**
+ * Sepette birlikte gösterilen satır kümesi: bir kampanyanın tüm kalemleri ya da
+ * katalogdan tek başına eklenen bir ürün.
+ */
+interface CartGroup {
+  readonly key: string;
+  /** Katalogdan tekil eklenen ürünlerde null. */
+  readonly campaignId: string | null;
+  readonly campaignName: string | null;
+  readonly items: readonly CartItem[];
+  readonly total: number;
+}
+
 /** "Yeni Satış Başlat" akışı: teklif seçimi → konfigürasyon → sipariş gönder → onay. */
 @Component({
   selector: 'app-new-sale',
-  imports: [DecimalPipe, Breadcrumb, Button, Icon, CustomerAddressCard, CustomerAddressForm],
+  imports: [
+    DecimalPipe,
+    Breadcrumb,
+    Button,
+    Icon,
+    IconButton,
+    CustomerAddressCard,
+    CustomerAddressForm
+  ],
   templateUrl: './new-sale.html'
 })
 export class NewSale {
@@ -117,12 +136,43 @@ export class NewSale {
     this.cart().reduce((sum, item) => sum + item.price, 0)
   );
 
+  /** Sepeti kampanya bazında gruplar; kampanyasız ürünler tek kalemlik grup olur. */
+  protected readonly cartGroups = computed<readonly CartGroup[]>(() => {
+    const groups: CartGroup[] = [];
+
+    for (const item of this.cart()) {
+      const key = item.campaignId === null ? `offer:${item.key}` : `campaign:${item.campaignId}`;
+      const existing = groups.find((group) => group.key === key);
+
+      if (existing === undefined) {
+        groups.push({
+          key,
+          campaignId: item.campaignId,
+          campaignName:
+            item.campaignId === null
+              ? null
+              : (this.campaigns.find((campaign) => campaign.id === item.campaignId)?.name ?? null),
+          items: [item],
+          total: item.price
+        });
+        continue;
+      }
+
+      groups[groups.indexOf(existing)] = {
+        ...existing,
+        items: [...existing.items, item],
+        total: existing.total + item.price
+      };
+    }
+
+    return groups;
+  });
+
   protected readonly filteredOffers = computed(() => {
     const byId = this.appliedOfferId().trim();
     const byName = this.appliedOfferName().trim().toLocaleLowerCase('tr-TR');
     return this.offers.filter(
-      (offer) =>
-        offer.id.includes(byId) && offer.name.toLocaleLowerCase('tr-TR').includes(byName)
+      (offer) => offer.id.includes(byId) && offer.name.toLocaleLowerCase('tr-TR').includes(byName)
     );
   });
 
@@ -131,8 +181,7 @@ export class NewSale {
     const byName = this.appliedCampaignName().trim().toLocaleLowerCase('tr-TR');
     return this.campaigns.filter(
       (campaign) =>
-        campaign.id.includes(byId) &&
-        campaign.name.toLocaleLowerCase('tr-TR').includes(byName)
+        campaign.id.includes(byId) && campaign.name.toLocaleLowerCase('tr-TR').includes(byName)
     );
   });
 
@@ -276,8 +325,32 @@ export class NewSale {
     );
   }
 
+  /** Sepetten tek bir ürün satırını çıkarır; toplamlar computed üzerinden anlık güncellenir. */
+  protected removeItem(key: string): void {
+    this.cart.update((cart) => cart.filter((item) => item.key !== key));
+    this.pruneConfigValues();
+  }
+
+  /** Bir kampanyanın tüm satırlarını sepetten çıkarır. */
+  protected removeCampaign(campaignId: string): void {
+    this.cart.update((cart) => cart.filter((item) => item.campaignId !== campaignId));
+    this.pruneConfigValues();
+  }
+
   protected clearCart(): void {
     this.cart.set([]);
+    this.configValues.set({});
+  }
+
+  /** Sepette kalmayan satırların konfigürasyon değerlerini temizler. */
+  private pruneConfigValues(): void {
+    const cartKeys = new Set(this.cart().map((item) => item.key));
+
+    this.configValues.update((values) =>
+      Object.fromEntries(
+        Object.entries(values).filter(([field]) => cartKeys.has(field.split('::')[0]))
+      )
+    );
   }
 
   protected goToOffer(): void {

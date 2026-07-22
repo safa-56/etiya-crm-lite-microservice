@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, linkedSignal, output } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { FormField, form, required, schema } from '@angular/forms/signals';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
@@ -8,22 +8,23 @@ import { Icon } from '../../../shared/ui/icon/icon';
 import { PanelHeader } from '../../../shared/ui/panel-header/panel-header';
 import { CustomerAccount, CustomerAddress } from '../customer.model';
 import { CustomerAddressCard } from './customer-address-card';
+import { AddressFormResult, CustomerAddressForm } from './customer-address-form';
 
 /** Formun ürettiği sonuç; hesap panelinde listeye işlenir. */
 export interface AccountFormResult {
   name: string;
-  addressDescription: string;
+  accountDescription: string;
   addressId: string | null;
 }
 
 interface AccountDraft {
   name: string;
-  addressDescription: string;
+  accountDescription: string;
 }
 
 const accountDraftSchema = schema<AccountDraft>((draft) => {
   required(draft.name);
-  required(draft.addressDescription);
+  required(draft.accountDescription);
 });
 
 /**
@@ -32,83 +33,99 @@ const accountDraftSchema = schema<AccountDraft>((draft) => {
  */
 @Component({
   selector: 'app-customer-account-form',
-  imports: [FormField, Button, FormFieldShell, Icon, PanelHeader, CustomerAddressCard],
+  imports: [
+    FormField,
+    Button,
+    FormFieldShell,
+    Icon,
+    PanelHeader,
+    CustomerAddressCard,
+    CustomerAddressForm
+  ],
   host: { class: 'block' },
   template: `
-    <app-panel-header [heading]="heading()" />
+    @if (addingAddress()) {
+      <app-customer-address-form
+        (saved)="saveNewAddress($event)"
+        (cancelled)="cancelAddAddress()"
+      />
+    } @else {
+      <app-panel-header [heading]="heading()" />
 
-    <form (submit)="submit($event)">
-      <div class="mt-6 flex flex-col gap-5">
-        <app-form-field
-          for="account-name"
-          [label]="t().customers.detail.accounts.accountName"
-          [required]="true"
-        >
-          <input
-            id="account-name"
-            type="text"
-            class="field-control"
-            [formField]="accountForm.name"
-            aria-required="true"
-          />
-        </app-form-field>
-
-        <app-form-field
-          for="account-address-description"
-          [label]="t().customers.detail.accounts.addressDescription"
-          [required]="true"
-        >
-          <textarea
-            id="account-address-description"
-            rows="3"
-            class="field-control resize-y"
-            [formField]="accountForm.addressDescription"
-            aria-required="true"
-          ></textarea>
-        </app-form-field>
-      </div>
-
-      <div class="mt-6 border-t border-slate-100 pt-5">
-        <p class="text-sm font-semibold text-etiya-navy">
-          {{ t().customers.detail.accounts.addressInfo }}
-        </p>
-
-        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          @for (address of addresses(); track address.id) {
-            <app-customer-address-card
-              [address]="address"
-              [showRadio]="true"
-              [showMenu]="false"
-              [isPrimary]="selectedAddressId() === address.id"
-              (primarySelected)="selectedAddressId.set($event)"
-            />
-          }
-
-          <button
-            type="button"
-            class="flex min-h-35 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 text-sm font-semibold text-etiya-navy transition hover:border-etiya-orange hover:bg-etiya-orange/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
+      <form (submit)="submit($event)">
+        <div class="mt-6 flex flex-col gap-5">
+          <app-form-field
+            for="account-name"
+            [label]="t().customers.detail.accounts.accountName"
+            [required]="true"
           >
-            <span
-              aria-hidden="true"
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-etiya-orange/10 text-etiya-orange"
-            >
-              <app-icon name="plus" size="h-5 w-5" [stroke]="1.8" />
-            </span>
-            {{ t().customers.detail.accounts.addAddress }}
-          </button>
+            <input
+              id="account-name"
+              type="text"
+              class="field-control"
+              [formField]="accountForm.name"
+              aria-required="true"
+            />
+          </app-form-field>
+
+          <app-form-field
+            for="account-description"
+            [label]="t().customers.detail.accounts.accountDescription"
+            [required]="true"
+          >
+            <textarea
+              id="account-description"
+              rows="3"
+              class="field-control resize-y"
+              [formField]="accountForm.accountDescription"
+              aria-required="true"
+            ></textarea>
+          </app-form-field>
         </div>
-      </div>
 
-      <div class="mt-8 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
-        <app-button type="button" variant="outline" size="lg" (click)="cancelled.emit()">
-          {{ t().customers.detail.accounts.formCancel }}
-        </app-button>
+        <div class="mt-6 border-t border-slate-100 pt-5">
+          <p class="text-sm font-semibold text-etiya-navy">
+            {{ t().customers.detail.accounts.addressInfo }}
+          </p>
 
-        <app-button type="submit" size="lg" [disabled]="accountForm().invalid()">
-          {{ submitLabel() }}
-        </app-button>
-      </div>
-    </form>
+          <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @for (address of addressList(); track address.id) {
+              <app-customer-address-card
+                [address]="address"
+                [showRadio]="true"
+                [showMenu]="false"
+                [isPrimary]="selectedAddressId() === address.id"
+                (primarySelected)="selectedAddressId.set($event)"
+              />
+            }
+
+            <button
+              type="button"
+              (click)="openAddAddress()"
+              class="flex min-h-35 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 text-sm font-semibold text-etiya-navy transition hover:border-etiya-orange hover:bg-etiya-orange/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
+            >
+              <span
+                aria-hidden="true"
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-etiya-orange/10 text-etiya-orange"
+              >
+                <app-icon name="plus" size="h-5 w-5" [stroke]="1.8" />
+              </span>
+              {{ t().customers.detail.accounts.addAddress }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-8 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
+          <app-button type="button" variant="outline" size="lg" (click)="cancelled.emit()">
+            {{ t().customers.detail.accounts.formCancel }}
+          </app-button>
+
+          <app-button type="submit" size="lg" [disabled]="accountForm().invalid()">
+            {{ submitLabel() }}
+          </app-button>
+        </div>
+      </form>
+    }
   `
 })
 export class CustomerAccountForm {
@@ -136,19 +153,55 @@ export class CustomerAccountForm {
   /** Düzenlenen hesap geldiğinde ad alanı onun değerine dolar. */
   private readonly draft = linkedSignal<CustomerAccount | null, AccountDraft>({
     source: this.account,
-    computation: (account) => ({ name: account?.name ?? '', addressDescription: '' })
+    computation: (account) => ({ name: account?.name ?? '', accountDescription: '' })
   });
 
   protected readonly accountForm = form(this.draft, accountDraftSchema);
 
-  /** Müşterinin birincil adresi varsayılan seçili gelir. */
-  protected readonly selectedAddressId = linkedSignal<
-    readonly CustomerAddress[],
-    string | null
-  >({
+  /** Form açıkken eklenen yeni adresler de bu listeye yazılır. */
+  protected readonly addressList = linkedSignal<readonly CustomerAddress[], CustomerAddress[]>({
     source: this.addresses,
-    computation: (addresses) => addresses.find((address) => address.isPrimary)?.id ?? null
+    computation: (addresses) => [...addresses]
   });
+
+  /**
+   * Birincil adres seçimi; varsayılan olarak hiçbir adres seçili gelmez, kullanıcı
+   * radyo düğmesiyle kendisi seçer.
+   */
+  protected readonly selectedAddressId = linkedSignal<readonly CustomerAddress[], string | null>({
+    source: this.addressList,
+    computation: (addresses, previous) => {
+      const previousId = previous?.value ?? null;
+      return previousId !== null && addresses.some((address) => address.id === previousId)
+        ? previousId
+        : null;
+    }
+  });
+
+  /** Yeni adres ekleme alt-modu açık mı? */
+  protected readonly addingAddress = signal(false);
+
+  protected openAddAddress(): void {
+    this.addingAddress.set(true);
+  }
+
+  protected cancelAddAddress(): void {
+    this.addingAddress.set(false);
+  }
+
+  /** Yeni adresi listeye ekler, seçili yapar ve hesap formuna geri döner. */
+  protected saveNewAddress(result: AddressFormResult): void {
+    const address: CustomerAddress = {
+      id: String(Date.now()),
+      title: `${result.city}, ${result.street}, ${result.buildingNo}`,
+      detail: result.description,
+      isPrimary: false
+    };
+
+    this.addressList.update((addresses) => [...addresses, address]);
+    this.selectedAddressId.set(address.id);
+    this.addingAddress.set(false);
+  }
 
   protected submit(event: Event): void {
     event.preventDefault();
@@ -159,7 +212,7 @@ export class CustomerAccountForm {
     const draft = this.draft();
     this.saved.emit({
       name: draft.name.trim(),
-      addressDescription: draft.addressDescription.trim(),
+      accountDescription: draft.accountDescription.trim(),
       addressId: this.selectedAddressId()
     });
   }

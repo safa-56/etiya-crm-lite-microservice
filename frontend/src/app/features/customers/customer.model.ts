@@ -16,12 +16,34 @@ export interface CustomerOrder {
   readonly status: OrderStatus;
 }
 
+/** Ürün önizlemesinde gösterilen hizmet adresi; adresi olmayan ürünlerde null'dır. */
+export interface CustomerProductAddress {
+  /** Adresin kısa adı: "Home". */
+  readonly name: string;
+  /** Adresin başlığı: "İstanbul, Bağdat Cd.". */
+  readonly title: string;
+  readonly buildingNo: string;
+  readonly description: string;
+}
+
+/** Ürün önizleme penceresinde gösterilen teklif/spesifikasyon detayları. */
+export interface CustomerProductPreview {
+  readonly offerId: string;
+  readonly offerName: string;
+  readonly specId: string;
+  /** Ürün özelliklerinin serbest metin özeti. */
+  readonly characteristics: string;
+  readonly address: CustomerProductAddress | null;
+}
+
 /** Hesap altındaki ürün/aksiyon satırı; kampanya alanları boş olabilir. */
 export interface CustomerAccountProduct {
   readonly id: string;
   readonly name: string;
   readonly campaignName: string | null;
   readonly campaignId: string | null;
+  /** Göz ikonuyla açılan önizleme verisi; yoksa null. */
+  readonly preview: CustomerProductPreview | null;
 }
 
 export interface CustomerAccount {

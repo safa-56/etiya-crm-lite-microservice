@@ -33,6 +33,9 @@ import { AddressFormResult, CustomerAddressForm } from './customer-address-form'
           <app-customer-address-card
             [address]="address"
             [canDelete]="addressList().length > 1"
+            [showRadio]="true"
+            [isPrimary]="primaryAddressId() === address.id"
+            (primarySelected)="primaryAddressId.set($event)"
             (edit)="openEdit(address)"
             (delete)="deleteAddress(address)"
           />
@@ -64,6 +67,20 @@ export class CustomerAddressesPanel {
   protected readonly addressList = linkedSignal<readonly CustomerAddress[], CustomerAddress[]>({
     source: this.addresses,
     computation: (addresses) => [...addresses]
+  });
+
+  /**
+   * Birincil adres seçimi; varsayılan olarak hiçbir adres seçili gelmez, kullanıcı radyo
+   * düğmesiyle kendisi seçer. Seçili adres silinirse seçim boşa döner.
+   */
+  protected readonly primaryAddressId = linkedSignal<CustomerAddress[], string | null>({
+    source: this.addressList,
+    computation: (addresses, previous) => {
+      const previousId = previous?.value ?? null;
+      return previousId !== null && addresses.some((address) => address.id === previousId)
+        ? previousId
+        : null;
+    }
   });
 
   /** 'list' kart görünümü, 'form' ekle/düzenle formu. */
@@ -102,9 +119,7 @@ export class CustomerAddressesPanel {
     } else {
       this.addressList.update((addresses) =>
         addresses.map((address) =>
-          address.id === editing.id
-            ? { ...address, title, detail: result.description }
-            : address
+          address.id === editing.id ? { ...address, title, detail: result.description } : address
         )
       );
     }
