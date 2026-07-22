@@ -7,7 +7,21 @@
 
   @switch (activeStep()) {
     @case (1) {
-      <app-customer-demographic-form (next)="goToStep(2)" />
+      <app-customer-demographic-form [initial]="demographic()" (next)="onDemographicNext($event)" />
+    }
+    @case (2) {
+      <app-customer-address-step
+        [(addresses)]="addresses"
+        (back)="goToStep(1)"
+        (next)="goToStep(3)"
+      />
+    }
+    @case (3) {
+      <app-customer-contact-step
+        [(draft)]="contact"
+        (back)="goToStep(2)"
+        (create)="create()"
+      />
     }
   }
 </div>

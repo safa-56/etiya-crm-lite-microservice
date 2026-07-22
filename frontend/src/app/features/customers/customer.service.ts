@@ -1,6 +1,6 @@
 import { Service } from '@angular/core';
 
-import { Customer, CustomerType } from './customer.model';
+import { Customer, CustomerOrder, CustomerType } from './customer.model';
 import { MOCK_CUSTOMERS } from './customers.mock';
 
 /** Arama panelinden gelen filtre alanları; boş string "bu alanı dikkate alma" demektir. */
@@ -52,8 +52,50 @@ export class CustomerService {
     );
   }
 
+  /**
+   * Yeni müşteriyi bellek içi listeye ekler ve oluşturulan kaydı döndürür. Gerçek uçlara
+   * geçilirken burası POST çağrısına dönüşür.
+   */
+  create(customer: Customer): Customer {
+    (MOCK_CUSTOMERS as Customer[]).unshift(customer);
+    return customer;
+  }
+
   /** Route parametresi string geldiği için karşılaştırma string üzerinden yapılır. */
   getById(id: string): Customer | null {
     return MOCK_CUSTOMERS.find((candidate) => String(candidate.id) === id) ?? null;
+  }
+
+  /**
+   * Müşterinin verilen alanlarını günceller. Şu an bellek içi mock kaydı yerinde değiştirir;
+   * gerçek uçlara geçilirken burası PUT/PATCH çağrısına dönüşür.
+   */
+  update(id: number, changes: Partial<Customer>): Customer | null {
+    const target = MOCK_CUSTOMERS.find((candidate) => candidate.id === id);
+    if (target === undefined) {
+      return null;
+    }
+
+    Object.assign(target, changes);
+    return target;
+  }
+
+  /**
+   * Müşteriyi bellek içi listeden çıkarır. Gerçek uçlara geçilirken burası DELETE çağrısına
+   * dönüşür.
+   */
+  remove(id: number): void {
+    const index = MOCK_CUSTOMERS.findIndex((candidate) => candidate.id === id);
+    if (index !== -1) {
+      (MOCK_CUSTOMERS as Customer[]).splice(index, 1);
+    }
+  }
+
+  /** Yeni satış akışı tamamlandığında müşterinin sipariş listesine ekler. */
+  addOrder(customerId: number, order: CustomerOrder): void {
+    const target = MOCK_CUSTOMERS.find((candidate) => candidate.id === customerId);
+    if (target !== undefined) {
+      (target.orders as CustomerOrder[]).unshift(order);
+    }
   }
 }

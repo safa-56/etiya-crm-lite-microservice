@@ -24,13 +24,17 @@
         <app-customer-info-panel [customer]="detail" />
       }
       @case ('account') {
-        <app-customer-accounts-panel [accounts]="detail.accounts" />
+        <app-customer-accounts-panel
+          [customerId]="detail.id"
+          [accounts]="detail.accounts"
+          [addresses]="detail.addresses"
+        />
       }
       @case ('address') {
         <app-customer-addresses-panel [addresses]="detail.addresses" />
       }
       @case ('contact') {
-        <app-customer-contact-panel [contact]="detail.contact" />
+        <app-customer-contact-panel [contact]="detail.contact" [customerId]="detail.id" />
       }
     }
   </div>

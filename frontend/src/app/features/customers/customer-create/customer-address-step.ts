@@ -1,24 +1,27 @@
-import { Component, inject, input, linkedSignal, signal } from '@angular/core';
+import { Component, inject, model, output, signal } from '@angular/core';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { Button } from '../../../shared/ui/button/button';
 import { Icon } from '../../../shared/ui/icon/icon';
 import { PanelHeader } from '../../../shared/ui/panel-header/panel-header';
 import { CustomerAddress } from '../customer.model';
-import { CustomerAddressCard } from './customer-address-card';
-import { AddressFormResult, CustomerAddressForm } from './customer-address-form';
+import { CustomerAddressCard } from '../customer-detail/customer-address-card';
+import {
+  AddressFormResult,
+  CustomerAddressForm
+} from '../customer-detail/customer-address-form';
 
-/** "Adres" sekmesi: adres kartları, üç nokta menüsü ve ekle/düzenle formu. */
+/**
+ * Sihirbazın 2. adımı: müşteriye eklenecek adresleri toplar. Kart listesi ile "Yeni Adres Ekle"
+ * arasında geçiş yapar; en az bir adres eklenmeden İleri etkinleşmez.
+ */
 @Component({
-  selector: 'app-customer-addresses-panel',
-  imports: [Icon, PanelHeader, CustomerAddressCard, CustomerAddressForm],
-  host: {
-    role: 'tabpanel',
-    id: 'panel-address',
-    'aria-labelledby': 'tab-address',
-    tabindex: '0',
-    class: 'block rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm'
-  },
+  selector: 'app-customer-address-step',
+  imports: [Button, Icon, PanelHeader, CustomerAddressCard, CustomerAddressForm],
+  host: { class: 'block rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm' },
   template: `
+    <app-panel-header [heading]="t().customers.create.steps.address" />
+
     @if (mode() === 'form') {
       <app-customer-address-form
         [address]="editingAddress()"
@@ -26,13 +29,11 @@ import { AddressFormResult, CustomerAddressForm } from './customer-address-form'
         (cancelled)="closeForm()"
       />
     } @else {
-      <app-panel-header [heading]="t().customers.detail.addresses.title" />
-
       <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @for (address of addressList(); track address.id) {
+        @for (address of addresses(); track address.id) {
           <app-customer-address-card
             [address]="address"
-            [canDelete]="addressList().length > 1"
+            [canDelete]="true"
             (edit)="openEdit(address)"
             (delete)="deleteAddress(address)"
           />
@@ -52,24 +53,31 @@ import { AddressFormResult, CustomerAddressForm } from './customer-address-form'
           {{ t().customers.detail.addresses.add }}
         </button>
       </div>
+
+      <div class="mt-8 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
+        <app-button variant="outline" size="lg" (click)="back.emit()">
+          <app-icon name="arrow-left" [stroke]="1.8" />
+          {{ t().customers.create.back }}
+        </app-button>
+
+        <app-button size="lg" [disabled]="addresses().length === 0" (click)="next.emit()">
+          {{ t().customers.create.next }}
+          <app-icon name="arrow-right" [stroke]="1.8" />
+        </app-button>
+      </div>
     }
   `
 })
-export class CustomerAddressesPanel {
+export class CustomerAddressStep {
   protected readonly t = inject(I18nService).t;
 
-  readonly addresses = input.required<readonly CustomerAddress[]>();
+  /** İki yönlü bağlanır; sihirbaz adımlar arası geçişte listeyi korur. */
+  readonly addresses = model.required<CustomerAddress[]>();
 
-  /** Ekle/düzenle/sil işlemleri bu yerel liste üzerinde uygulanır. */
-  protected readonly addressList = linkedSignal<readonly CustomerAddress[], CustomerAddress[]>({
-    source: this.addresses,
-    computation: (addresses) => [...addresses]
-  });
+  readonly back = output<void>();
+  readonly next = output<void>();
 
-  /** 'list' kart görünümü, 'form' ekle/düzenle formu. */
   protected readonly mode = signal<'list' | 'form'>('list');
-
-  /** Formdaki adres; `null` ise yeni adres ekleniyor demektir. */
   protected readonly editingAddress = signal<CustomerAddress | null>(null);
 
   protected openCreate(): void {
@@ -96,11 +104,11 @@ export class CustomerAddressesPanel {
         id: String(Date.now()),
         title,
         detail: result.description,
-        isPrimary: this.addressList().length === 0
+        isPrimary: this.addresses().length === 0
       };
-      this.addressList.update((addresses) => [...addresses, address]);
+      this.addresses.update((addresses) => [...addresses, address]);
     } else {
-      this.addressList.update((addresses) =>
+      this.addresses.update((addresses) =>
         addresses.map((address) =>
           address.id === editing.id
             ? { ...address, title, detail: result.description }
@@ -113,10 +121,6 @@ export class CustomerAddressesPanel {
   }
 
   protected deleteAddress(address: CustomerAddress): void {
-    if (this.addressList().length <= 1) {
-      return;
-    }
-
-    this.addressList.update((addresses) => addresses.filter((item) => item.id !== address.id));
+    this.addresses.update((addresses) => addresses.filter((item) => item.id !== address.id));
   }
 }

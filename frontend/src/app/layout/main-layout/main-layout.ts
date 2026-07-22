@@ -5,6 +5,7 @@ import { filter, map } from 'rxjs';
 
 import { I18nService } from '../../core/i18n/i18n.service';
 import { PageKey } from '../../core/i18n/translations';
+import { ShellTitle } from '../shell-title';
 import { Sidebar } from '../sidebar/sidebar';
 import { Topbar } from '../topbar/topbar';
 import { CurrentUser } from '../topbar/user-menu';
@@ -19,6 +20,7 @@ const DEFAULT_PAGE: PageKey = 'customers';
 })
 export class MainLayout {
   private readonly router = inject(Router);
+  private readonly shellTitle = inject(ShellTitle);
 
   private readonly t = inject(I18nService).t;
 
@@ -38,7 +40,9 @@ export class MainLayout {
     { initialValue: this.readPageKey() }
   );
 
-  protected readonly page = computed(() => this.t().pages[this.pageKey()]);
+  protected readonly page = computed(
+    () => this.shellTitle.override() ?? this.t().pages[this.pageKey()]
+  );
 
   /**
    * Bileşen, çocuk route aktive edilmeden önce oluşturulduğu için `ActivatedRoute.firstChild`

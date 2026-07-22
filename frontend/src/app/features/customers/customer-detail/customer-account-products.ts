@@ -1,4 +1,5 @@
 import { Component, inject, input } from '@angular/core';
+import { Router } from '@angular/router';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { Button } from '../../../shared/ui/button/button';
@@ -69,7 +70,7 @@ import { CustomerAccountProduct } from '../customer.model';
     }
 
     <div class="mt-4 flex flex-wrap gap-3">
-      <app-button variant="secondary" size="sm">
+      <app-button variant="secondary" size="sm" (click)="startNewSale()">
         {{ t().customers.detail.accounts.newSale }}
       </app-button>
       <app-button variant="secondary" size="sm">
@@ -82,7 +83,15 @@ import { CustomerAccountProduct } from '../customer.model';
   `
 })
 export class CustomerAccountProducts {
+  private readonly router = inject(Router);
+
   protected readonly t = inject(I18nService).t;
 
+  readonly customerId = input.required<number>();
   readonly products = input.required<readonly CustomerAccountProduct[]>();
+
+  /** "Yeni Satış Başlat": teklif seçimiyle başlayan satış akışına götürür. */
+  protected startNewSale(): void {
+    void this.router.navigate(['/customers', this.customerId(), 'new-sale']);
+  }
 }

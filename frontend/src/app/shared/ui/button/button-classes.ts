@@ -1,4 +1,4 @@
-export type ButtonVariant = 'primary' | 'secondary' | 'outline';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
 export const FOCUS_RING =
@@ -21,13 +21,16 @@ const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary:
     'text-white enabled:bg-etiya-orange enabled:shadow-sm enabled:hover:bg-etiya-orange-dark disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white/80',
   secondary: 'border border-slate-200 bg-white text-etiya-navy hover:bg-etiya-gray',
-  outline: 'border border-etiya-navy bg-white text-etiya-navy hover:bg-etiya-gray'
+  outline: 'border border-etiya-navy bg-white text-etiya-navy hover:bg-etiya-gray',
+  danger:
+    'text-white enabled:bg-rose-600 enabled:shadow-sm enabled:hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white/80'
 };
 
 const LINK_VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-etiya-orange text-white shadow-sm hover:bg-etiya-orange-dark',
   secondary: BUTTON_VARIANTS.secondary,
-  outline: BUTTON_VARIANTS.outline
+  outline: BUTTON_VARIANTS.outline,
+  danger: 'bg-rose-600 text-white shadow-sm hover:bg-rose-700'
 };
 
 export function buttonClass(
