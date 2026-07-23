@@ -10,6 +10,11 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server
   },
   {
+    // Satış akışı da route parametresine bağlı; istek anında sunucuda render edilir.
+    path: 'customers/:id/new-sale',
+    renderMode: RenderMode.Server
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender
   }

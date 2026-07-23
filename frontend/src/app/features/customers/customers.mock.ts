@@ -58,8 +58,37 @@ export const MOCK_CUSTOMERS: readonly Customer[] = [
         accountType: 'Billing Account',
         status: 'active',
         products: [
-          { id: '001', name: 'ADSL 8MB', campaignName: 'Summer Fiber', campaignId: '1001' },
-          { id: '002', name: 'ADSL Data Medium', campaignName: null, campaignId: null }
+          {
+            id: '001',
+            name: 'ADSL 8MB',
+            campaignName: 'Summer Fiber',
+            campaignId: '1001',
+            preview: {
+              offerId: 'OF-5567',
+              offerName: 'ADSL 8MB Home',
+              specId: 'SPEC-8801',
+              characteristics: 'Download 8 Mbps / Upload 1 Mbps, unlimited quota',
+              address: {
+                name: 'Home',
+                title: 'İstanbul, Bağdat Cd.',
+                buildingNo: '220 / 4',
+                description: 'Kadıköy residential connection'
+              }
+            }
+          },
+          {
+            id: '002',
+            name: 'ADSL Data Medium',
+            campaignName: null,
+            campaignId: null,
+            preview: {
+              offerId: 'OF-5570',
+              offerName: 'ADSL Data Medium',
+              specId: 'SPEC-8804',
+              characteristics: 'Download 16 Mbps / Upload 2 Mbps, 250 GB quota',
+              address: null
+            }
+          }
         ]
       },
       {
@@ -68,7 +97,24 @@ export const MOCK_CUSTOMERS: readonly Customer[] = [
         accountType: 'Billing Account',
         status: 'active',
         products: [
-          { id: '003', name: 'Fiber 100 Mbps', campaignName: 'Fiber Fırsatı', campaignId: '1042' }
+          {
+            id: '003',
+            name: 'Fiber 100 Mbps',
+            campaignName: 'Fiber Fırsatı',
+            campaignId: '1042',
+            preview: {
+              offerId: 'OF-6120',
+              offerName: 'Fiber 100 Mbps Home',
+              specId: 'SPEC-9110',
+              characteristics: 'Download 100 Mbps / Upload 10 Mbps, unlimited quota',
+              address: {
+                name: 'Home',
+                title: 'İzmir, Cemal Gürsel Cd.',
+                buildingNo: '220 / 3',
+                description: 'Karşıyaka residential connection'
+              }
+            }
+          }
         ]
       },
       billingAccount('0101112441'),
@@ -79,7 +125,19 @@ export const MOCK_CUSTOMERS: readonly Customer[] = [
         accountType: 'Billing Account',
         status: 'active',
         products: [
-          { id: '004', name: 'Mobil Hat 20 GB', campaignName: 'Yaz Paketi', campaignId: '1105' }
+          {
+            id: '004',
+            name: 'Mobil Hat 20 GB',
+            campaignName: 'Yaz Paketi',
+            campaignId: '1105',
+            preview: {
+              offerId: 'OF-7301',
+              offerName: 'Mobil 20 GB Paylaşımlı',
+              specId: 'SPEC-7702',
+              characteristics: '20 GB data, 1000 minutes, 1000 SMS',
+              address: null
+            }
+          }
         ]
       },
       billingAccount('0103452441'),
@@ -150,7 +208,24 @@ export const MOCK_CUSTOMERS: readonly Customer[] = [
         accountType: 'Billing Account',
         status: 'active',
         products: [
-          { id: '011', name: 'Fiber 100 Mbps', campaignName: 'Summer Fiber', campaignId: '1001' }
+          {
+            id: '011',
+            name: 'Fiber 100 Mbps',
+            campaignName: 'Summer Fiber',
+            campaignId: '1001',
+            preview: {
+              offerId: 'OF-6120',
+              offerName: 'Fiber 100 Mbps Home',
+              specId: 'SPEC-9110',
+              characteristics: 'Download 100 Mbps / Upload 10 Mbps, unlimited quota',
+              address: {
+                name: 'Home',
+                title: 'İstanbul, Moda Cd.',
+                buildingNo: '14 / 5',
+                description: 'Kadıköy residential connection'
+              }
+            }
+          }
         ]
       },
       billingAccount('3300124590')

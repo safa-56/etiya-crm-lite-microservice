@@ -28,6 +28,13 @@ export const routes: Routes = [
         title: 'Müşteri Oluştur · Etiya CRM'
       },
       {
+        // 'customers/:id' kuralından önce gelmeli; aksi hâlde ':id' üç segmenti yakalamaya çalışır.
+        path: 'customers/:id/new-sale',
+        loadComponent: () =>
+          import('./features/customers/new-sale/new-sale').then((m) => m.NewSale),
+        title: 'Yeni Satış · Etiya CRM'
+      },
+      {
         path: 'customers/:id',
         loadComponent: () =>
           import('./features/customers/customer-detail/customer-detail').then(

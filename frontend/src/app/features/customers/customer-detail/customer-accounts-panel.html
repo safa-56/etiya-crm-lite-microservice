@@ -1,91 +1,113 @@
-<app-panel-header [heading]="t().customers.detail.accounts.title" [divider]="false">
-  <app-button end>
-    <app-icon name="plus" [stroke]="1.8" />
-    {{ t().customers.detail.accounts.create }}
-  </app-button>
-</app-panel-header>
-
-@if (visibleAccounts().length > 0) {
-  <div class="overflow-x-auto rounded-xl border border-slate-200">
-    <table class="w-full min-w-210 text-left text-sm">
-      <thead class="bg-etiya-gray text-xs font-semibold tracking-wide text-slate-500 uppercase">
-        <tr>
-          <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.status }}</th>
-          <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.number }}</th>
-          <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.name }}</th>
-          <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.type }}</th>
-          <th scope="col" class="px-6 py-3 text-right">
-            {{ t().customers.detail.accounts.actions }}
-          </th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-        @for (account of visibleAccounts(); track account.number) {
-          @let expanded = expandedAccount() === account.number;
-
-          <tr class="transition hover:bg-etiya-gray/60">
-            <td class="px-6 py-3">
-              <button
-                type="button"
-                (click)="toggleAccount(account.number)"
-                [attr.aria-expanded]="expanded"
-                [attr.aria-controls]="'account-products-' + account.number"
-                [attr.aria-label]="
-                  (expanded
-                    ? t().customers.detail.accounts.collapse
-                    : t().customers.detail.accounts.expand) +
-                  ': ' +
-                  account.number
-                "
-                class="flex items-center gap-3 rounded-md text-sm font-medium text-etiya-navy focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
-              >
-                <span class="text-slate-400 transition-transform" [class.rotate-90]="expanded">
-                  <app-icon name="chevron-right" [stroke]="1.8" />
-                </span>
-                <app-status-badge [status]="account.status" variant="dot" />
-              </button>
-            </td>
-            <td class="px-6 py-3 text-slate-600">{{ account.number }}</td>
-            <td class="px-6 py-3 text-slate-600">{{ account.name }}</td>
-            <td class="px-6 py-3 text-slate-600">{{ account.accountType }}</td>
-            <td class="px-6 py-3">
-              <div class="flex items-center justify-end gap-2">
-                <app-icon-button
-                  icon="trash"
-                  tone="danger"
-                  [label]="t().customers.detail.accounts.delete + ': ' + account.number"
-                />
-                <app-icon-button
-                  icon="pencil"
-                  tone="edit"
-                  [label]="t().customers.detail.accounts.edit + ': ' + account.number"
-                />
-              </div>
-            </td>
-          </tr>
-
-          @if (expanded) {
-            <tr>
-              <td colspan="5" class="px-6 pt-1 pb-5">
-                <app-customer-account-products
-                  [id]="'account-products-' + account.number"
-                  [products]="account.products"
-                />
-              </td>
-            </tr>
-          }
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <app-pagination
-    [pages]="accountPages()"
-    [current]="page()"
-    [label]="t().customers.detail.accounts.pagination"
-    [pageLabel]="t().customers.detail.accounts.page"
-    (pageChange)="page.set($event)"
+@if (mode() === 'form') {
+  <app-customer-account-form
+    [account]="editingAccount()"
+    [addresses]="addresses()"
+    (saved)="saveAccount($event)"
+    (cancelled)="closeForm()"
   />
 } @else {
-  <app-empty-state [message]="t().customers.detail.accounts.empty" />
+  <app-panel-header [heading]="t().customers.detail.accounts.title" [divider]="false">
+    <app-button end (click)="openCreate()">
+      <app-icon name="plus" [stroke]="1.8" />
+      {{ t().customers.detail.accounts.create }}
+    </app-button>
+  </app-panel-header>
+
+  @if (visibleAccounts().length > 0) {
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <table class="w-full min-w-210 text-left text-sm">
+        <thead class="bg-etiya-gray text-xs font-semibold tracking-wide text-slate-500 uppercase">
+          <tr>
+            <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.status }}</th>
+            <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.number }}</th>
+            <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.name }}</th>
+            <th scope="col" class="px-6 py-3">{{ t().customers.detail.accounts.type }}</th>
+            <th scope="col" class="px-6 py-3 text-right">
+              {{ t().customers.detail.accounts.actions }}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (account of visibleAccounts(); track account.number) {
+            @let expanded = expandedAccount() === account.number;
+
+            <tr class="transition hover:bg-etiya-gray/60">
+              <td class="px-6 py-3">
+                <button
+                  type="button"
+                  (click)="toggleAccount(account.number)"
+                  [attr.aria-expanded]="expanded"
+                  [attr.aria-controls]="'account-products-' + account.number"
+                  [attr.aria-label]="
+                    (expanded
+                      ? t().customers.detail.accounts.collapse
+                      : t().customers.detail.accounts.expand) +
+                    ': ' +
+                    account.number
+                  "
+                  class="flex items-center gap-3 rounded-md text-sm font-medium text-etiya-navy focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
+                >
+                  <span class="text-slate-400 transition-transform" [class.rotate-90]="expanded">
+                    <app-icon name="chevron-right" [stroke]="1.8" />
+                  </span>
+                  <app-status-badge [status]="account.status" variant="dot" />
+                </button>
+              </td>
+              <td class="px-6 py-3 text-slate-600">{{ account.number }}</td>
+              <td class="px-6 py-3 text-slate-600">{{ account.name }}</td>
+              <td class="px-6 py-3 text-slate-600">{{ account.accountType }}</td>
+              <td class="px-6 py-3">
+                <div class="flex items-center justify-end gap-2">
+                  <app-icon-button
+                    icon="trash"
+                    tone="danger"
+                    [label]="t().customers.detail.accounts.delete + ': ' + account.number"
+                    (click)="requestDelete(account)"
+                  />
+                  <app-icon-button
+                    icon="pencil"
+                    tone="edit"
+                    [label]="t().customers.detail.accounts.edit + ': ' + account.number"
+                    (click)="openEdit(account)"
+                  />
+                </div>
+              </td>
+            </tr>
+
+            @if (expanded) {
+              <tr>
+                <td colspan="5" class="px-6 pt-1 pb-5">
+                  <app-customer-account-products
+                    [id]="'account-products-' + account.number"
+                    [customerId]="customerId()"
+                    [products]="account.products"
+                  />
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [pages]="accountPages()"
+      [current]="page()"
+      [label]="t().customers.detail.accounts.pagination"
+      [pageLabel]="t().customers.detail.accounts.page"
+      (pageChange)="page.set($event)"
+    />
+  } @else {
+    <app-empty-state [message]="t().customers.detail.accounts.empty" />
+  }
+}
+
+@if (deletingAccount() !== null) {
+  <app-confirm-dialog
+    [message]="t().customers.detail.accounts.deleteConfirm"
+    [confirmLabel]="t().customers.detail.accounts.confirmYes"
+    [cancelLabel]="t().customers.detail.accounts.confirmNo"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
+  />
 }

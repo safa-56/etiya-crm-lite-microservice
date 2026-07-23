@@ -103,7 +103,7 @@
     {{ t().customers.create.cancel }}
   </app-button-link>
 
-  <app-button size="lg" [disabled]="customerForm().invalid()" (click)="next.emit()">
+  <app-button size="lg" [disabled]="customerForm().invalid()" (click)="emitNext()">
     {{ t().customers.create.next }}
     <app-icon name="arrow-right" [stroke]="1.8" />
   </app-button>

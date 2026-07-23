@@ -1,4 +1,4 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, inject, input, linkedSignal, output } from '@angular/core';
 import { FormField, form, maxLength, required, schema } from '@angular/forms/signals';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
@@ -40,19 +40,30 @@ const customerDraftSchema = schema<CustomerDraft>((draft) => {
 export class CustomerDemographicForm {
   protected readonly t = inject(I18nService).t;
 
-  /** Adres adımı tasarlandığında taslak buradan yukarı taşınacak. */
-  readonly next = output<void>();
+  /** Doğrulanan demografik taslağı bir üst sihirbaza taşır. */
+  readonly next = output<CustomerDraft>();
 
-  private readonly draft = signal<CustomerDraft>({
-    firstName: '',
-    secondName: '',
-    lastName: '',
-    birthDate: '',
-    gender: 'male',
-    fatherName: '',
-    motherName: '',
-    identityNumber: ''
+  /** Sihirbaz geri geldiğinde alanların dolu kalması için dışarıdan verilir. */
+  readonly initial = input<CustomerDraft | null>(null);
+
+  private readonly draft = linkedSignal<CustomerDraft | null, CustomerDraft>({
+    source: this.initial,
+    computation: (initial) =>
+      initial ?? {
+        firstName: '',
+        secondName: '',
+        lastName: '',
+        birthDate: '',
+        gender: 'male',
+        fatherName: '',
+        motherName: '',
+        identityNumber: ''
+      }
   });
 
   protected readonly customerForm = form(this.draft, customerDraftSchema);
+
+  protected emitNext(): void {
+    this.next.emit(this.draft());
+  }
 }

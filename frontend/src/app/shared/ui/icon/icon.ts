@@ -6,10 +6,14 @@ export type IconName =
   | 'chevron-right'
   | 'chevron-down'
   | 'arrow-right'
+  | 'arrow-left'
   | 'plus'
   | 'close'
+  | 'check'
   | 'pencil'
   | 'trash'
+  | 'alert'
+  | 'save'
   | 'info'
   | 'pin'
   | 'dots'
@@ -70,6 +74,15 @@ export type IconName =
             stroke-linejoin="round"
           />
         }
+        @case ('arrow-left') {
+          <path
+            d="M19 12H5m6 6-6-6 6-6"
+            stroke="currentColor"
+            [attr.stroke-width]="stroke()"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        }
         @case ('plus') {
           <path
             d="M12 6v12M6 12h12"
@@ -86,6 +99,15 @@ export type IconName =
             stroke-linecap="round"
           />
         }
+        @case ('check') {
+          <path
+            d="m5 13 4 4 10-10"
+            stroke="currentColor"
+            [attr.stroke-width]="stroke()"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        }
         @case ('pencil') {
           <path
             d="M4 20h4L19 9a2 2 0 0 0-3-3L5 17v3Z"
@@ -100,6 +122,41 @@ export type IconName =
             stroke="currentColor"
             [attr.stroke-width]="stroke()"
             stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        }
+        @case ('alert') {
+          <path
+            d="M12 4 2.5 20h19L12 4Z"
+            stroke="currentColor"
+            [attr.stroke-width]="stroke()"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M12 10v4m0 3v.5"
+            stroke="currentColor"
+            [attr.stroke-width]="stroke()"
+            stroke-linecap="round"
+          />
+        }
+        @case ('save') {
+          <path
+            d="M5 5a1 1 0 0 1 1-1h9l4 4v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5Z"
+            stroke="currentColor"
+            [attr.stroke-width]="stroke()"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M8 4v4h6V4"
+            stroke="currentColor"
+            [attr.stroke-width]="stroke()"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M8 12h8v7H8z"
+            stroke="currentColor"
+            [attr.stroke-width]="stroke()"
             stroke-linejoin="round"
           />
         }

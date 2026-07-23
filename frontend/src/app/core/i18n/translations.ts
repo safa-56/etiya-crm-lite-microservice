@@ -101,6 +101,8 @@ const tr = {
       startsWith: 'İle başlayan...',
       cancel: 'İptal',
       next: 'İleri',
+      back: 'Geri',
+      create: 'Oluştur',
       steps: {
         demographic: 'Demografik Bilgi',
         address: 'Adres',
@@ -136,6 +138,11 @@ const tr = {
         title: 'Müşteri Bilgisi',
         edit: 'Müşteri bilgisini düzenle',
         delete: 'Müşteriyi sil',
+        save: 'Kaydet',
+        cancel: 'İptal',
+        deleteConfirm: 'Bu müşteriyi silmek istediğinize emin misiniz?',
+        confirmYes: 'Evet',
+        confirmNo: 'Hayır',
         firstName: 'Ad',
         secondName: 'İkinci Ad',
         lastName: 'Soyad',
@@ -163,19 +170,50 @@ const tr = {
         campaignName: 'Kampanya Adı',
         campaignId: 'Kampanya ID',
         productDelete: 'Ürünü sil',
-        productDetail: 'Ürün detayını görüntüle',
+        productPreview: 'Ürün Önizleme',
+        previewOfferId: 'Ürün Teklif ID',
+        previewOfferName: 'Ürün Teklif Adı',
+        previewSpecId: 'Ürün Spec ID',
+        previewCharacteristics: 'Ürün Özellikleri',
+        previewAddressName: 'Adres Adı',
+        previewBuildingNo: 'Bina / Daire No',
+        previewNoAddress: 'Bu ürün için hizmet adresi tanımlı değil.',
+        previewEmpty: 'Bu ürün için önizleme bilgisi bulunmuyor.',
+        previewClose: 'Önizlemeyi kapat',
         noProducts: 'Bu hesapta ürün bulunmuyor.',
         newSale: 'Yeni Satış Başlat',
         transfer: 'Devret',
         changeServiceAddress: 'Hizmet Adresi Değişikliği',
         pagination: 'Hesap sayfaları',
-        page: 'Sayfa'
+        page: 'Sayfa',
+        createTitle: 'Fatura Hesabı Oluştur',
+        editTitle: 'Fatura Hesabını Düzenle',
+        accountName: 'Hesap Adı',
+        accountDescription: 'Hesap Açıklaması',
+        addressInfo: 'Adres Bilgisi',
+        addAddress: 'Yeni Adres Ekle',
+        formCancel: 'İptal',
+        formCreate: 'Oluştur',
+        formSave: 'Kaydet',
+        deleteConfirm: 'Bu fatura hesabını silmek istediğinize emin misiniz?',
+        confirmYes: 'Evet',
+        confirmNo: 'Hayır'
       },
       addresses: {
         title: 'Adres',
         add: 'Yeni Adres Ekle',
         menu: 'Adres işlemleri',
-        primary: 'Birincil adres yap'
+        primary: 'Birincil adres yap',
+        edit: 'Düzenle',
+        delete: 'Sil',
+        editTitle: 'Adres Düzenle',
+        city: 'Şehir',
+        cityPlaceholder: 'Seçiniz',
+        street: 'Sokak / Cadde',
+        buildingNo: 'Bina / Daire No',
+        description: 'Adres Açıklaması',
+        cancel: 'İptal',
+        save: 'Kaydet'
       },
       contact: {
         title: 'İletişim Kanalı',
@@ -183,9 +221,67 @@ const tr = {
         email: 'E-posta',
         mobilePhone: 'Cep Telefonu',
         homePhone: 'Ev Telefonu',
-        fax: 'Faks'
+        fax: 'Faks',
+        countryCode: 'Ülke kodu',
+        cancel: 'İptal',
+        save: 'Kaydet',
+        emailPlaceholder: 'ornek@etiya.com',
+        mobilePlaceholder: '10 haneli numara'
       }
     }
+  },
+  sales: {
+    subtitle: 'Müşteri Yönetim Sistemi',
+    breadcrumbAccount: 'Müşteri Hesabı',
+    currency: 'TL',
+    offer: {
+      title: 'Teklif Seçimi',
+      catalog: 'Katalog',
+      campaign: 'Kampanya',
+      catalogSelect: 'Katalog Seçimi',
+      campaignSelect: 'Kampanya Seçimi',
+      select: 'Seçiniz',
+      offerId: 'Ürün Teklif ID',
+      offerName: 'Ürün Teklif Adı',
+      campaignId: 'Kampanya ID',
+      campaignName: 'Kampanya Adı',
+      search: 'Ara',
+      addToCart: 'Sepete Ekle'
+    },
+    cart: {
+      title: 'Sepet',
+      empty: 'Sepet boş',
+      total: 'Toplam Tutar',
+      clear: 'Temizle',
+      removeItem: 'Ürünü sepetten çıkar',
+      removeCampaign: 'Kampanyayı sepetten çıkar',
+      campaign: 'Kampanya',
+      groupTotal: 'Ara toplam'
+    },
+    config: {
+      title: 'Ürün Konfigürasyonu',
+      empty: 'Seçilen ürünler için ek konfigürasyon gerekmiyor.',
+      items: 'Seçilen Ürünler',
+      addressInfo: 'Adres Bilgisi',
+      addressHint: 'Mevcut Adreslerden Bir Hizmet Adresi Seçin',
+      addAddress: 'Yeni Adres Ekle'
+    },
+    submit: {
+      title: 'Sipariş Gönder',
+      orderId: 'Sipariş ID',
+      items: 'Sipariş Kalemleri',
+      serviceAddress: 'Hizmet Adresi',
+      total: 'Toplam Tutar',
+      send: 'Gönder'
+    },
+    success: {
+      title: 'Sipariş oluşturuldu!',
+      message: 'Siparişiniz başarıyla oluşturuldu ve işleme alındı.',
+      orderId: 'Sipariş ID',
+      backToSearch: 'Müşteri Aramaya Dön'
+    },
+    next: 'İleri',
+    back: 'Geri'
   }
 };
 
@@ -287,6 +383,8 @@ const en: typeof tr = {
       startsWith: 'Starts with...',
       cancel: 'Cancel',
       next: 'Next',
+      back: 'Back',
+      create: 'Create',
       steps: {
         demographic: 'Demographic Information',
         address: 'Address',
@@ -321,6 +419,11 @@ const en: typeof tr = {
         title: 'Customer Information',
         edit: 'Edit customer information',
         delete: 'Delete customer',
+        save: 'Save',
+        cancel: 'Cancel',
+        deleteConfirm: 'Are you sure to delete this customer?',
+        confirmYes: 'Yes',
+        confirmNo: 'No',
         firstName: 'First Name',
         secondName: 'Middle Name',
         lastName: 'Last Name',
@@ -348,19 +451,50 @@ const en: typeof tr = {
         campaignName: 'Campaign Name',
         campaignId: 'Campaign ID',
         productDelete: 'Delete product',
-        productDetail: 'View product detail',
+        productPreview: 'Product Preview',
+        previewOfferId: 'Product Offer ID',
+        previewOfferName: 'Product Offer Name',
+        previewSpecId: 'Product Spec ID',
+        previewCharacteristics: 'Product Characteristics',
+        previewAddressName: 'Address Name',
+        previewBuildingNo: 'House / Flat No',
+        previewNoAddress: 'No service address is defined for this product.',
+        previewEmpty: 'No preview information is available for this product.',
+        previewClose: 'Close preview',
         noProducts: 'This account has no products.',
         newSale: 'Start New Sale',
         transfer: 'Transfer',
         changeServiceAddress: 'Change Service Address',
         pagination: 'Account pages',
-        page: 'Page'
+        page: 'Page',
+        createTitle: 'Create Billing Account',
+        editTitle: 'Edit Billing Account',
+        accountName: 'Account Name',
+        accountDescription: 'Account Description',
+        addressInfo: 'Address Information',
+        addAddress: 'Add New Address',
+        formCancel: 'Cancel',
+        formCreate: 'Create',
+        formSave: 'Save',
+        deleteConfirm: 'Are you sure to delete this billing account?',
+        confirmYes: 'Yes',
+        confirmNo: 'No'
       },
       addresses: {
         title: 'Address',
         add: 'Add New Address',
         menu: 'Address actions',
-        primary: 'Set as primary address'
+        primary: 'Set as primary address',
+        edit: 'Edit',
+        delete: 'Delete',
+        editTitle: 'Edit Address',
+        city: 'City',
+        cityPlaceholder: 'Select',
+        street: 'Street / Avenue',
+        buildingNo: 'Building / Apartment No',
+        description: 'Address Description',
+        cancel: 'Cancel',
+        save: 'Save'
       },
       contact: {
         title: 'Contact Channel',
@@ -368,9 +502,67 @@ const en: typeof tr = {
         email: 'E-mail',
         mobilePhone: 'Mobile Phone',
         homePhone: 'Home Phone',
-        fax: 'Fax'
+        fax: 'Fax',
+        countryCode: 'Country code',
+        cancel: 'Cancel',
+        save: 'Save',
+        emailPlaceholder: 'example@etiya.com',
+        mobilePlaceholder: '10-digit number'
       }
     }
+  },
+  sales: {
+    subtitle: 'Customer Management System',
+    breadcrumbAccount: 'Customer Account',
+    currency: 'TL',
+    offer: {
+      title: 'Offer Selection',
+      catalog: 'Catalog',
+      campaign: 'Campaign',
+      catalogSelect: 'Catalog Selection',
+      campaignSelect: 'Campaign Selection',
+      select: 'Select',
+      offerId: 'Product Offer ID',
+      offerName: 'Product Offer Name',
+      campaignId: 'Campaign ID',
+      campaignName: 'Campaign Name',
+      search: 'Search',
+      addToCart: 'Add to Cart'
+    },
+    cart: {
+      title: 'Cart',
+      empty: 'Cart is empty',
+      total: 'Total Amount',
+      clear: 'Clear',
+      removeItem: 'Remove product from cart',
+      removeCampaign: 'Remove campaign from cart',
+      campaign: 'Campaign',
+      groupTotal: 'Subtotal'
+    },
+    config: {
+      title: 'Product Configuration',
+      empty: 'The selected products require no additional configuration.',
+      items: 'Selected Products',
+      addressInfo: 'Address Information',
+      addressHint: 'Select a Service Address from Existing Addresses',
+      addAddress: 'Add New Address'
+    },
+    submit: {
+      title: 'Send Order',
+      orderId: 'Order ID',
+      items: 'Order Items',
+      serviceAddress: 'Service Address',
+      total: 'Total Amount',
+      send: 'Send'
+    },
+    success: {
+      title: 'Order created!',
+      message: 'Your order has been created successfully and is being processed.',
+      orderId: 'Order ID',
+      backToSearch: 'Back to Customer Search'
+    },
+    next: 'Next',
+    back: 'Back'
   }
 };
 
