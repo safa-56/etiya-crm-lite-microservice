@@ -50,7 +50,10 @@ VALUES
     (300101, now(), 'Aktif',    'Aktif',    'ACTV', 'ADDRESS',      'ADDRESS'),
     (300102, now(), 'Silinmis', 'Silinmis', 'DEL',  'ADDRESS',      'ADDRESS'),
     (300201, now(), 'Aktif',    'Aktif',    'ACTV', 'CUST_CONTACT', 'CUST_CONTACT'),
-    (300202, now(), 'Silinmis', 'Silinmis', 'DEL',  'CUST_CONTACT', 'CUST_CONTACT')
+    (300202, now(), 'Silinmis', 'Silinmis', 'DEL',  'CUST_CONTACT', 'CUST_CONTACT'),
+    (300301, now(), 'Aktif',    'Aktif',    'ACTV', 'SYS_USER',     'SYS_USER'),
+    (300302, now(), 'Pasif',    'Pasif',    'PASS', 'SYS_USER',     'SYS_USER'),
+    (300303, now(), 'Silinmis', 'Silinmis', 'DEL',  'SYS_USER',     'SYS_USER')
 ON CONFLICT (id) DO NOTHING;
 
 -- --- GNL_TP dilimi: CAM_PARTY_TYPE (party tipi) ------------------------------
@@ -63,10 +66,15 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- --- PARTY_ROLE_TP: party rol tipleri ---------------------------------------
+-- Bir party birden çok rol taşıyabilir: aynı kişi hem müşterimiz (CUST) hem de
+-- sisteme giriş yapan kullanıcımız (USER) olabilir. USER rolü Keycloak'taki bir
+-- kullanıcının domain karşılığıdır ve ilk girişte otomatik oluşturulur
+-- (bkz. SystemUserProvisioningFilter).
 INSERT INTO party_role_types
     (id, created_date, name, description, short_code)
 VALUES
-    (1, now(), 'Müşteri', 'Müşteri rolü', 'CUST')
+    (1, now(), 'Müşteri',  'Müşteri rolü',          'CUST'),
+    (2, now(), 'Kullanıcı', 'Sistem kullanıcısı rolü', 'USER')
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================

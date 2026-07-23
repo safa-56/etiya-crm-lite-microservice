@@ -9,4 +9,11 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface PartyRoleRepository extends JpaRepository<PartyRole, Long> {
+
+    /**
+     * Verilen party'nin, belirtilen rol dışındaki aktif (silinmemiş) rol sayısı.
+     * Bir rol pasifleştirilirken party'nin de pasifleştirilip pasifleştirilmeyeceğine
+     * karar vermek için kullanılır.
+     */
+    long countByPartyIdAndDeletedDateIsNullAndIdNot(Long partyId, Long partyRoleId);
 }

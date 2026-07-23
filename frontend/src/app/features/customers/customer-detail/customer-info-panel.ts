@@ -1,31 +1,22 @@
 import { Component, inject, input, linkedSignal, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
-import { FormField, form, maxLength, required, schema } from '@angular/forms/signals';
+import { FormField, form } from '@angular/forms/signals';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
+import { LettersOnly } from '../../../shared/directives/letters-only';
 import { Button } from '../../../shared/ui/button/button';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
 import { DetailField } from '../../../shared/ui/detail-field/detail-field';
 import { FormFieldShell } from '../../../shared/ui/form-field/form-field';
 import { IconButton } from '../../../shared/ui/icon-button/icon-button';
 import { PanelHeader } from '../../../shared/ui/panel-header/panel-header';
-import { Customer, Gender } from '../customer.model';
+import { Customer } from '../customer.model';
+import { CustomerDraft, customerDemographicSchema } from '../customer-demographic.schema';
 import { CustomerService } from '../customer.service';
 
-/** Düzenleme formunda tutulan, güncellenebilir demografik alanlar. */
-interface CustomerInfoDraft {
-  firstName: string;
-  secondName: string;
-  lastName: string;
-  birthDate: string;
-  gender: Gender;
-  fatherName: string;
-  motherName: string;
-  identityNumber: string;
-}
-
-function toDraft(customer: Customer): CustomerInfoDraft {
+function toDraft(customer: Customer): CustomerDraft {
   return {
     firstName: customer.firstName,
     secondName: customer.secondName ?? '',
@@ -38,14 +29,6 @@ function toDraft(customer: Customer): CustomerInfoDraft {
   };
 }
 
-const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
-  required(draft.firstName);
-  required(draft.lastName);
-  required(draft.birthDate);
-  required(draft.gender);
-  required(draft.identityNumber);
-  maxLength(draft.identityNumber, 11);
-});
 
 /**
  * "Müşteri Bilgisi" sekmesi. Varsayılan olarak salt okunur listeyi gösterir; kalem düğmesine
@@ -61,7 +44,9 @@ const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
     DetailField,
     FormFieldShell,
     IconButton,
-    PanelHeader
+    PanelHeader,
+    DigitsOnly,
+    LettersOnly
   ],
   host: {
     role: 'tabpanel',
@@ -111,6 +96,7 @@ const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
             <input
               id="info-firstName"
               type="text"
+              appLettersOnly
               class="field-control"
               [formField]="infoForm.firstName"
               aria-required="true"
@@ -121,6 +107,7 @@ const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
             <input
               id="info-secondName"
               type="text"
+              appLettersOnly
               class="field-control"
               [formField]="infoForm.secondName"
             />
@@ -134,6 +121,7 @@ const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
             <input
               id="info-lastName"
               type="text"
+              appLettersOnly
               class="field-control"
               [formField]="infoForm.lastName"
               aria-required="true"
@@ -174,6 +162,7 @@ const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
             <input
               id="info-fatherName"
               type="text"
+              appLettersOnly
               class="field-control"
               [formField]="infoForm.fatherName"
             />
@@ -183,6 +172,7 @@ const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
             <input
               id="info-motherName"
               type="text"
+              appLettersOnly
               class="field-control"
               [formField]="infoForm.motherName"
             />
@@ -196,7 +186,7 @@ const customerInfoSchema = schema<CustomerInfoDraft>((draft) => {
             <input
               id="info-identityNumber"
               type="text"
-              inputmode="numeric"
+              appDigitsOnly
               class="field-control"
               [formField]="infoForm.identityNumber"
               aria-required="true"
@@ -278,12 +268,12 @@ export class CustomerInfoPanel {
   });
 
   /** Form kaynağı; müşteri değişince güncel değerlere sıfırlanır. */
-  private readonly draft = linkedSignal<Customer, CustomerInfoDraft>({
+  private readonly draft = linkedSignal<Customer, CustomerDraft>({
     source: this.customer,
     computation: (customer) => toDraft(customer)
   });
 
-  protected readonly infoForm = form(this.draft, customerInfoSchema);
+  protected readonly infoForm = form(this.draft, customerDemographicSchema);
 
   protected startEdit(): void {
     this.draft.set(toDraft(this.customer()));

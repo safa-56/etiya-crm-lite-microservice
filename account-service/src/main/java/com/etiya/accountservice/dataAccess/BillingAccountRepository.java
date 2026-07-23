@@ -31,6 +31,13 @@ public interface BillingAccountRepository extends JpaRepository<BillingAccount, 
     /** Aktif bir fatura hesabının id ile var olup olmadığını kontrol eder. */
     boolean existsByIdAndDeletedDateIsNull(Long id);
 
-    /** Verilen hesap numarası aktif bir kayıtta zaten kullanılıyor mu? */
-    boolean existsByAccountNumberAndDeletedDateIsNull(String accountNumber);
+    /**
+     * Verilen hesap numarası herhangi bir kayıtta kullanılmış mı?
+     *
+     * <p>Soft-delete edilmiş kayıtlar da <b>bilinçli olarak</b> taranır: hesap numarası
+     * kalıcı bir iş kimliğidir, iptal edilmiş bir hesabın numarası yeniden verilemez.
+     * Sorgu, {@code account_number} üzerindeki unique kısıtla aynı kapsamdadır; böylece
+     * kullanıcı ham veritabanı hatası yerine anlamlı bir iş hatası alır.
+     */
+    boolean existsByAccountNumber(String accountNumber);
 }

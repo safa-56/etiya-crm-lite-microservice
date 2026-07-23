@@ -8,7 +8,8 @@ import { Customer, CustomerAddress, CustomerContact } from '../customer.model';
 import { CustomerService } from '../customer.service';
 import { CustomerAddressStep } from './customer-address-step';
 import { ContactStepDraft, CustomerContactStep, emptyContactDraft } from './customer-contact-step';
-import { CustomerDemographicForm, CustomerDraft } from './customer-demographic-form';
+import { CustomerDraft } from '../customer-demographic.schema';
+import { CustomerDemographicForm } from './customer-demographic-form';
 
 /** Etiket için sonda görünen dial kodunu ("+90") çıkarır. */
 function dialCode(countryCodeLabel: string): string {

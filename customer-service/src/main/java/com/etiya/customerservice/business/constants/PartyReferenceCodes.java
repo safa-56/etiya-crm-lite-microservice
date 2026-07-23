@@ -36,6 +36,9 @@ public final class PartyReferenceCodes {
     /** Müşteri iletişim bilgisi dilimi (durum FK'si için). */
     public static final String ENTITY_CONTACT_INFO = "CUST_CONTACT";
 
+    /** Sistem kullanıcısı dilimi (durum FK'si için). */
+    public static final String ENTITY_SYSTEM_USER = "SYS_USER";
+
     /**
      * Party tipi dilimi (legacy {@code GNL_TP.ENT_CODE_NAME = CAM_PARTY_TYPE}).
      *
@@ -68,4 +71,11 @@ public final class PartyReferenceCodes {
 
     /** Müşteri rolü. */
     public static final String PARTY_ROLE_TYPE_CUSTOMER_CODE = "CUST";
+
+    /**
+     * Sistem kullanıcısı rolü. Keycloak'ta tanımlı bir kullanıcının domain
+     * tarafındaki karşılığıdır; aynı party hem {@link #PARTY_ROLE_TYPE_CUSTOMER_CODE}
+     * hem bu rolü taşıyabilir.
+     */
+    public static final String PARTY_ROLE_TYPE_USER_CODE = "USER";
 }

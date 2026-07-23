@@ -1,9 +1,14 @@
 <div class="min-h-dvh bg-etiya-gray">
-  <app-sidebar [pageKey]="pageKey()" />
+  <app-sidebar [pageKey]="pageKey()" (logout)="logout()" />
 
   <!-- Sağ taraf: üst bar + sayfa içeriği -->
   <div class="flex min-h-dvh flex-col lg:pl-60">
-    <app-topbar [title]="page().title" [subtitle]="page().subtitle" [user]="user" />
+    <app-topbar
+      [title]="page().title"
+      [subtitle]="page().subtitle"
+      [user]="user()"
+      (logout)="logout()"
+    />
 
     <main class="flex-1 px-6 py-6">
       <router-outlet />

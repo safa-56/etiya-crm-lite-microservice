@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { Icon, IconName } from '../../shared/ui/icon/icon';
@@ -38,6 +38,7 @@ const BASE =
         type="button"
         [class]="classes(active())"
         [attr.aria-current]="active() ? 'page' : null"
+        (click)="action.emit()"
       >
         @if (active()) {
           <span
@@ -62,6 +63,12 @@ export class SidebarItem {
 
   /** Çıkış gibi vurgulu satırlar turuncu yazılır. */
   readonly accent = input(false);
+
+  /**
+   * `link` verilmeyen satırlara basıldığında tetiklenir. Çıkış gibi gezinme değil
+   * **eylem** olan satırlar için kullanılır; eylemin kendisi kabuğun sorumluluğundadır.
+   */
+  readonly action = output<void>();
 
   protected classes(isActive: boolean): string {
     if (this.accent()) {

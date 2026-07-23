@@ -38,8 +38,12 @@ import java.util.List;
 @Table(name = "orders")
 public class Order extends StatusAwareEntity {
 
-    /** Sistem tarafından üretilen benzersiz sipariş numarası (Order ID). Zorunlu. */
-    @Column(name = "order_number", nullable = false, unique = true, length = 40)
+    /**
+     * Sistem tarafından üretilen benzersiz sipariş numarası (Order ID). Zorunlu.
+     * <b>Yalnızca rakam, tam 8 hane</b> (baştaki sıfırlar anlamlıdır, bu yüzden metin
+     * olarak saklanır — sayısal tipte {@code 04812375} başındaki sıfırı kaybederdi).
+     */
+    @Column(name = "order_number", nullable = false, unique = true, length = 8)
     private String orderNumber;
 
     /** Siparişin kaynağı sepet (cart-service kimliği). Zorunlu. */

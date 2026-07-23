@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -54,8 +54,17 @@ import { SidebarItem } from './sidebar-item';
         <li><app-sidebar-item [label]="t().nav.reports" icon="chart" /></li>
         <li><app-sidebar-item [label]="t().nav.settings" icon="settings" /></li>
 
+        <!--
+          Çıkış bir gezinme değil eylemdir: link verilmez, aksi hâlde oturum
+          temizlenmeden /login'e gidilir ve guestGuard kullanıcıyı geri gönderir.
+        -->
         <li>
-          <app-sidebar-item [label]="t().nav.logout" icon="logout" link="/login" [accent]="true" />
+          <app-sidebar-item
+            [label]="t().nav.logout"
+            icon="logout"
+            [accent]="true"
+            (action)="logout.emit()"
+          />
         </li>
       </ul>
     </nav>
@@ -70,4 +79,7 @@ export class Sidebar {
 
   /** Menüde bağlantısı olmayan sayfaların aktifliğini belirler. */
   readonly pageKey = input.required<PageKey>();
+
+  /** Çıkış isteği; oturumu kapatmak kabuğun (MainLayout) işidir. */
+  readonly logout = output<void>();
 }

@@ -1,15 +1,21 @@
 import { Routes } from '@angular/router';
 
+import { authGuard, guestGuard } from './core/auth/auth.guard';
+
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
+    // Oturumu açık olan kullanıcı giriş ekranında beklemez, uygulamaya alınır.
+    canActivate: [guestGuard],
     title: 'Etiya CRM'
   },
   {
     path: '',
     loadComponent: () => import('./layout/main-layout/main-layout').then((m) => m.MainLayout),
+    // Kabuğun altındaki tüm sayfalar geçerli bir oturum ister.
+    canActivate: [authGuard],
     children: [
       {
         path: 'customers',

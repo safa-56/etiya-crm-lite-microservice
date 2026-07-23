@@ -23,12 +23,12 @@ public record UpdateBillingAccountRequest(
         @NotNull(message = "{validation.addressId.notNull}")
         Long addressId,
 
-        @Size(max = 30, message = "{validation.accountNumber.size}")
-        @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "{validation.accountNumber.pattern}")
+        /** Yalnızca rakam, tam 10 hane, sistemde benzersiz. */
+        @Pattern(regexp = "^\\d{10}$", message = "{validation.accountNumber.pattern}")
         String accountNumber,
 
-        @Size(max = 20, message = "{validation.orderNumber.size}")
-        @Pattern(regexp = "^[a-zA-Z0-9]*$", message = "{validation.orderNumber.pattern}")
+        /** Yalnızca rakam, tam 8 hane (order-service tarafından üretilen sipariş numarası). */
+        @Pattern(regexp = "^\\d{8}$", message = "{validation.orderNumber.pattern}")
         String orderNumber
 ) {
 }

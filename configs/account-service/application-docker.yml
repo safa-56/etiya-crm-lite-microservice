@@ -19,6 +19,10 @@ spring:
   sql:
     init:
       mode: always
+      # Docker ortamı boş veriyle başlar: varsayılan data.sql (dev tam seed dosyası)
+      # yerine, yalnızca referans satırlarını tohumlayan betik okunur.
+      # İş verisi API üzerinden oluşturulur. Bkz. src/main/resources/data-reference.sql
+      data-locations: classpath:data-reference.sql
 
   data:
     redis:

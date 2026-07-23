@@ -20,6 +20,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+  # Şema entity'lerden (Hibernate) üretilir; dev seed'i (data.sql) testte çalışmasın.
+  # Aksi halde script, Hibernate DDL'inden önce koşup "tablo yok" hatası verir.
+  sql:
+    init:
+      mode: never
   # Cache'i basit in-memory yap (Redis'e bağlanmasın)
   cache:
     type: simple

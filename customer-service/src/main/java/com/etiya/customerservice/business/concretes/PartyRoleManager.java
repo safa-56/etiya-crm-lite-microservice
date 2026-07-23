@@ -36,14 +36,27 @@ public class PartyRoleManager implements PartyRoleService {
     @Override
     @Transactional
     public PartyRole createCustomerRoleForIndividual() {
+        return createRoleForNewIndividual(PartyReferenceCodes.PARTY_ROLE_TYPE_CUSTOMER_CODE);
+    }
+
+    @Override
+    @Transactional
+    public PartyRole createUserRoleForIndividual() {
+        return createRoleForNewIndividual(PartyReferenceCodes.PARTY_ROLE_TYPE_USER_CODE);
+    }
+
+    /**
+     * Yeni bir bireysel party açıp verilen tipte aktif bir rol bağlar.
+     * Müşteri ve kullanıcı rolleri yalnızca rol tipinde ayrıştığı için ortak tutulur.
+     */
+    private PartyRole createRoleForNewIndividual(String partyRoleTypeCode) {
         Party party = partyService.createIndividualParty();
         PartyRole partyRole = new PartyRole();
 
         partyRole.setParty(party);
-        
-        partyRole.setPartyRoleType(referenceDataService.getPartyRoleType(
-                PartyReferenceCodes.PARTY_ROLE_TYPE_CUSTOMER_CODE));
-        
+
+        partyRole.setPartyRoleType(referenceDataService.getPartyRoleType(partyRoleTypeCode));
+
         partyRole.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY_ROLE, PartyReferenceCodes.STATUS_ACTIVE_CODE));
 
@@ -58,14 +71,19 @@ public class PartyRoleManager implements PartyRoleService {
         partyRole.setDeletedDate(LocalDateTime.now());
         partyRole.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY_ROLE, PartyReferenceCodes.STATUS_DELETED_CODE));
-        
+
         partyRoleRepository.save(partyRole);
 
-        // Bu projede bir party yalnızca müşteri rolü oynadığından, rol pasifleşince
-        // party de pasifleşir. Party'ye ikinci bir rol eklenirse bu kural gözden
-        // geçirilmelidir (diğer roller aktifken party pasifleştirilmemeli).
+        // Bir party birden çok rol taşıyabilir (ör. aynı kişi hem CUST hem USER).
+        // Party ancak SON aktif rolü de düştüğünde pasifleşir; aksi hâlde müşteri
+        // kaydını silmek, aynı kişinin sisteme girişini de öldürürdü.
+        // Sayım bu rol hariç yapılır: save() henüz flush edilmemiş olabilir.
+        Party party = partyRole.getParty();
+        long remainingActiveRoles =
+                partyRoleRepository.countByPartyIdAndDeletedDateIsNullAndIdNot(party.getId(), partyRole.getId());
 
-        //TODO: silinmeli mi? Bir partinin birden fazla parti rolü olabilir
-        partyService.deactivate(partyRole.getParty());
+        if (remainingActiveRoles == 0) {
+            partyService.deactivate(party);
+        }
     }
 }

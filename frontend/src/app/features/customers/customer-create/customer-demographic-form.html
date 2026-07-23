@@ -9,6 +9,7 @@
     <input
       id="firstName"
       type="text"
+      appLettersOnly
       class="field-control"
       [formField]="customerForm.firstName"
       aria-required="true"
@@ -19,6 +20,7 @@
     <input
       id="secondName"
       type="text"
+      appLettersOnly
       class="field-control"
       [formField]="customerForm.secondName"
     />
@@ -32,6 +34,7 @@
     <input
       id="lastName"
       type="text"
+      appLettersOnly
       class="field-control"
       [formField]="customerForm.lastName"
       aria-required="true"
@@ -68,6 +71,7 @@
     <input
       id="fatherName"
       type="text"
+      appLettersOnly
       class="field-control"
       [formField]="customerForm.fatherName"
     />
@@ -77,6 +81,7 @@
     <input
       id="motherName"
       type="text"
+      appLettersOnly
       class="field-control"
       [formField]="customerForm.motherName"
     />
@@ -90,7 +95,7 @@
     <input
       id="identityNumber"
       type="text"
-      inputmode="numeric"
+      appDigitsOnly
       class="field-control"
       [formField]="customerForm.identityNumber"
       aria-required="true"

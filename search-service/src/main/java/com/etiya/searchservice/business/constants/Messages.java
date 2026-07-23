@@ -29,4 +29,7 @@ public final class Messages {
 
     /** ACC-09: First Name / Last Name en fazla 50 karakter. */
     public static final String INVALID_NAME_LENGTH = "search.nameLength.invalid";
+
+    /** Ad/soyad alanında harf dışı karakter var. */
+    public static final String INVALID_NAME_PATTERN = "search.namePattern.invalid";
 }

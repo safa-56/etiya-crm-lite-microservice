@@ -30,10 +30,17 @@ public class BillingAccountBusinessRules {
         }
     }
 
-    /** Verilen hesap numarası aktif bir kayıtta zaten kullanılıyorsa hata verir. */
+    /**
+     * Verilen hesap numarası daha önce kullanılmışsa hata verir.
+     *
+     * <p>Kontrol soft-delete edilmiş hesapları da kapsar: numara kalıcı bir iş
+     * kimliğidir, iptal edilmiş bir hesabınki yeniden verilemez. Aynı kural
+     * veritabanında unique kısıtla da zorlanır; buradaki kontrol kullanıcıya
+     * okunabilir bir mesaj dönebilmek içindir.
+     */
     public void checkIfAccountNumberAlreadyExists(String accountNumber) {
         if (accountNumber != null && !accountNumber.isBlank()
-                && billingAccountRepository.existsByAccountNumberAndDeletedDateIsNull(accountNumber)) {
+                && billingAccountRepository.existsByAccountNumber(accountNumber)) {
             throw new BusinessException(Messages.ACCOUNT_NUMBER_ALREADY_EXISTS);
         }
     }

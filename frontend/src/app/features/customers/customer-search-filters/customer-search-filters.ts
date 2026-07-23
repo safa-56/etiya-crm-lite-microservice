@@ -2,6 +2,8 @@ import { Component, OnInit, computed, inject, output, signal } from '@angular/co
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
+import { LettersOnly } from '../../../shared/directives/letters-only';
 import { Button } from '../../../shared/ui/button/button';
 import { FormFieldShell } from '../../../shared/ui/form-field/form-field';
 import { Icon } from '../../../shared/ui/icon/icon';
@@ -17,7 +19,15 @@ export interface CustomerSearchRequest {
 /** Arama panelinin tamamı: müşteri tipi, filtre alanları ve aksiyonlar. */
 @Component({
   selector: 'app-customer-search-filters',
-  imports: [ReactiveFormsModule, Button, FormFieldShell, Icon, CustomerTypeToggle],
+  imports: [
+    ReactiveFormsModule,
+    Button,
+    FormFieldShell,
+    Icon,
+    CustomerTypeToggle,
+    DigitsOnly,
+    LettersOnly
+  ],
   templateUrl: './customer-search-filters.html'
 })
 export class CustomerSearchFiltersPanel implements OnInit {

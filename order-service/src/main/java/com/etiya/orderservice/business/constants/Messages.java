@@ -17,6 +17,9 @@ public final class Messages {
     /** Verilen sepet için hâlâ süren bir sipariş var (aynı sepet iki kez submit edilemez). */
     public static final String ORDER_ALREADY_EXISTS_FOR_CART = "order.alreadyExistsForCart";
 
+    /** Ard arda denemelere rağmen boşta bir sipariş numarası bulunamadı. */
+    public static final String ORDER_NUMBER_GENERATION_FAILED = "order.numberGenerationFailed";
+
     /** Beklenen referans veri satırı bulunamadı. Parametreli: {@code {0}} = detay. */
     public static final String REFERENCE_DATA_NOT_FOUND = "reference.data.notFound";
 

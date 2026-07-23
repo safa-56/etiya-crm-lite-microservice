@@ -3,7 +3,7 @@
 > Bu dosya projenin canlı hafızasıdır. Mimari kararlar, standartlar ve ilerleme
 > burada tutulur. Projede ilerledikçe güncellenir.
 
-_Son güncelleme: 2026-07-10_
+_Son güncelleme: 2026-07-23_
 
 ---
 
@@ -437,6 +437,21 @@ product-service artık **üç** consumer taşır: `productSagaConsumer` + `cartS
   `@PrimaryKeyJoinColumn(customer_id)`; 1-1 paylaşılan PK). `Address` ve
   `CustomerContactInfo` müşteriyle N-1 (`customer_id` FK).
 - Billing Account Saga'sında **doğrulayıcı** roldedir (bkz. §7.1).
+- **Party modeli.** Müşteri doğrudan değil, `Party → PartyRole → Customer` zinciri
+  üzerinden modellenir (legacy SID hizası). Durum/tip bilgisi ayrı kolonlarda değil
+  `general_status` / `general_type` referans tablolarına FK ile bağlanır; her servis
+  bu tabloların yalnızca kendi `entity_code_name` dilimine sahiptir
+  (`PartyReferenceCodes`).
+- **Sistem kullanıcısı (`SystemUser`).** Keycloak kullanıcısının domain karşılığıdır ve
+  `Customer` ile **aynı deseni** izler: bir `PartyRole`'e 1-1 bağlanır, farkı yalnızca rol
+  tipidir (`CUST` vs. `USER`). Kullanıcı burada **oluşturulmaz** — otoritesi Keycloak'tır;
+  kayıt yalnızca `keycloak_user_id` (JWT `sub`) ile referans verir, parola/rol kopyalanmaz.
+  Zincir kullanıcının **ilk isteğinde** kurulur (lazy provisioning,
+  `SystemUserProvisioningFilter` → `SystemUserManager` → `SystemUserProvisioner`); okuma
+  yolu JVM içi bir küme + tek indeksli `exists` sorgusuyla ucuz tutulur, yazma yolu
+  party/rol/kullanıcıyı **tek transaction'da** commit eder. Aynı `Party` her iki rolü de
+  taşıyabildiği için (hem müşterimiz hem kullanıcımız olan kişi) `PartyRoleManager.deactivate`
+  party'yi ancak **son aktif rol** düştüğünde pasifleştirir.
 - `Gender`/`Nationality` şimdilik ham referans (`gender_id`/`nationality_id`);
   ilgili lookup servis/tablo eklenince FK'ye bağlanacak (açık madde, bkz. §10).
 
@@ -683,6 +698,100 @@ açıkça kapatır.
   bağlanacak).
 
 ## 11. Değişiklik Günlüğü
+
+- **2026-07-23:** **Docker ortamı artık boş veriyle başlıyor.** `docker compose up` ile
+  ayağa kalkan kurulumda yalnızca **referans/iskelet** tablolar tohumlanır; iş verisi
+  tablolarının tamamı boştur ve API üzerinden doldurulur. Her serviste
+  `src/main/resources/data-reference.sql` eklendi ve `configs/<service>/application-docker.yml`
+  içinde `spring.sql.init.data-locations: classpath:data-reference.sql` ile varsayılan
+  `data.sql` yerine bu betik okunuyor. **Dev profili değişmedi** — tam seed'i (iş verisiyle)
+  `data.sql`'den okumaya devam eder.
+  Tohumlanan tablolar: customer-service → `general_status`, `general_type`,
+  `party_role_types`, `parties`, `party_roles`; account/product/cart/order → yalnızca kendi
+  `general_status` dilimleri. (search-service'in seed'i zaten yoktur.) Referans satırları
+  olmadan servisler açılır ama ilk yazma işleminde `ReferenceDataService` "referans veri
+  bulunamadı" hatası verirdi; bu yüzden bu dosyalar docker'da zorunludur.
+  **İki uyarı:** (1) `configs/**` config-server tarafından **uzak git deposundan** okunur —
+  değişiklik commit + push edilmeden konteynerler görmez. (2) Betikler yalnızca tabloları
+  doldurur, **var olan veriyi silmez**; dolu bir `postgres-data` volume'ünde boş başlangıç
+  için `docker compose down -v` gerekir.
+- **2026-07-23:** **Sol menüdeki "Çıkış Yap" çalışır hâle getirildi.** Satır `link="/login"`
+  ile düz gezinme yapıyordu: oturum temizlenmediği için `guestGuard` kullanıcıyı anında
+  `/customers`'a geri gönderiyordu (yani hiçbir şey olmuyordu). Çıkış artık bir **eylem**:
+  `SidebarItem`'a `action` çıktısı eklendi (bağlantısız satırların düğmesi bunu yayınlar),
+  `Sidebar` bunu `logout` olarak yukarı taşır, `MainLayout` mevcut `logout()` metoduyla
+  `AuthService.logout()` çağırır — token/kullanıcı/refresh token temizlenir, Keycloak
+  oturumu sonlandırılır ve `/login`'e gidilir. Üst bardaki kullanıcı menüsü zaten aynı
+  metodu kullanıyordu; iki giriş noktası tek akışta birleşti.
+- **2026-07-23:** **Ad alanlarına harf doğrulaması eklendi (frontend + backend).**
+  Kabul edilen küme: Türkçe dâhil harfler + boşluk + kesme işareti (`'` ve `’`) + tire;
+  rakam ve diğer özel karakterler reddedilir. Küme **üç yerde birebir aynı** tanımlıdır ve
+  biri değişirse diğerleri de değişmelidir: frontend `NAME_CHARACTERS`
+  (`shared/directives/character-mask.ts`), customer-service `ValidationPatterns.NAME_PATTERN`,
+  search-service `CustomerSearchBusinessRules.NAME_PATTERN`.
+  **Backend:** customer-service Create/Update isteklerinde `firstName`, `secondName`,
+  `lastName`, `fatherName`, `motherName` alanlarına `@Pattern`; search-service'in FR-002
+  filtresine ad/soyad desen kuralı (yeni mesaj `search.namePattern.invalid`).
+  **Frontend:** `CharacterMask` temel direktifi + `LettersOnly` / `DigitsOnly`; **üç ekranda
+  da** uygulandı — müşteri arama (Ad, Soyad, TC Kimlik No), müşteri oluşturma ve müşteri
+  detayındaki **güncelleme** formu (Ad, İkinci Ad, Soyad, Anne Adı, Baba Adı, TC Kimlik No).
+  Maske değeri sentetik bir `input` olayıyla yayınladığından hem **reactive forms** (arama)
+  hem **signal forms** (oluşturma/güncelleme) ile çalışır.
+  Oluşturma ve güncelleme formları aynı alanları taşıdığından tip ve kurallar tek yerde
+  toplandı: `features/customers/customer-demographic.schema.ts` (`CustomerDraft` +
+  `customerDemographicSchema`). Önceden iki ayrı kopya vardı ve güncelleme formundaki kopya
+  geride kalmıştı; kurallar artık ayrışamaz.
+  *Not:* Signal Forms `maxlength`'i şablondan kabul etmez; uzunluk sınırları şemadaki
+  `maxLength()` ile verilir ve backend `@Size` değerleriyle hizalıdır.
+- **2026-07-23:** **Sipariş numarası formatı değişti: `ORD-XXXXXXXX` → 8 hane, yalnızca
+  rakam.** `OrderManager.generateOrderNumber()` artık UUID kırpmak yerine `SecureRandom`
+  ile 8 haneli bir sayı üretir (`%08d` — baştaki sıfırlar korunur, bu yüzden alan metin
+  olarak saklanır). Çakışmaya karşı üretim öncesi `existsByOrderNumber` ile kontrol edilir
+  (5 deneme), son güvence `order_number` üzerindeki mevcut unique kısıttır. Kolon
+  `length` 40 → 8. account-service'teki `orderNumber` alanı (`length` 20 → 8) ve
+  Create/Update doğrulaması (`@Pattern("^\\d{8}$")`), search-service'in ACC-08 filtre
+  kuralı ve tüm seed'ler (`ORD0000000X` → `1000000X`) aynı kurala hizalandı.
+- **2026-07-23:** **Arama panelinde rakam-dışı giriş engellendi.** Yeni `DigitsOnly`
+  direktifi (`shared/directives/digits-only.ts`) iki katmanlı çalışır: `beforeinput` ile
+  klavyeden gelen harf **hiç girilmez** (sonradan silinmez), `input` ile yapıştırma/otomatik
+  doldurma değeri temizlenir (tamamı reddedilmez) ve reactive form kontrolüne yazılır.
+  Hesap Numarası (`maxlength=10`) ve Sipariş Numarası (`maxlength=8`) alanlarına uygulandı.
+- **2026-07-23:** **Hesap numarası kuralı sıkılaştırıldı.** `account_number` artık
+  **yalnızca rakam, tam 10 hane ve benzersiz**: entity'de `length=10` + `unique=true`,
+  Create/Update isteklerinde `@Pattern("^\\d{10}$")` (alan opsiyonel kalır — `null`
+  geçilebilir, boş string geçilemez). Benzersizlik kontrolü artık **soft-delete edilmiş
+  kayıtları da kapsar** (`existsByAccountNumber`); hesap numarası kalıcı bir iş kimliğidir,
+  iptal edilmiş bir hesabınki yeniden verilemez — bu kapsam DB'deki unique kısıtla birebir
+  aynıdır, böylece kullanıcı ham DB hatası yerine iş hatası alır. `search-service`'in
+  FR-002 filtre doğrulaması (ACC-07) da aynı kurala hizalandı (eskiden alfanümerik ≤30);
+  arama zaten tam eşleşme yaptığından kısmi numarayla arama desteklenmez. Seed'lerdeki
+  `ACC00000000X` numaraları `100000000X` olarak güncellendi (hem `data.sql` hem
+  `infra/seed/02_account_seed.sql`). Frontend arama panelindeki yer tutucular yeni kurala
+  göre yazıldı.
+  *Yan düzeltme:* account-service'in `application-test.yml`'ine `spring.sql.init.mode:
+  never` eklendi — §9'daki "hermetik test profili tuzağı" bu serviste de açıktı ve
+  `contextLoads` testi zaten kırıktı (aynı düzeltme customer-service ve cart-service'te
+  mevcut).
+  *Migration notu:* `ddl-auto: update` kolon **daraltmaz** ve unique kısıtı güvenilir
+  şekilde eklemez. Var olan `accountdb` için elle: `ALTER TABLE billing_accounts ALTER
+  COLUMN account_number TYPE varchar(10); ALTER TABLE billing_accounts ADD CONSTRAINT
+  uk_billing_accounts_account_number UNIQUE (account_number);` (önce eski formattaki
+  numaralar güncellenmeli).
+
+- **2026-07-23:** **Keycloak kullanıcısı Party modeline bağlandı.** `party_role_types`'a
+  `USER` rol tipi ve `general_status`'a `SYS_USER` dilimi eklendi; yeni `SystemUser`
+  entity'si (`party_role_id` 1-1 + `keycloak_user_id` unique + `username`) Keycloak
+  kullanıcısına domain kimliği verir — **kopya değil referans**: parola/rol/oturumun tek
+  otoritesi Keycloak'tır. Zincir (`Party → PartyRole(USER) → SystemUser`) kullanıcının ilk
+  kimliği doğrulanmış isteğinde `SystemUserProvisioningFilter` ile kurulur; yaratma
+  `SystemUserProvisioner`'da **tek transaction**, tekrar isteklerde JVM içi küme sayesinde
+  DB'ye hiç gidilmez. Yarış durumunda unique kısıt devreye girer (idempotent).
+  `PartyRoleManager` artık müşteri/kullanıcı rollerini ortak bir yardımcıdan üretir ve
+  **çok-rol güvenli**: party yalnızca son aktif rolü de düştüğünde pasifleşir (önceden
+  müşteri silinince aynı party'nin kullanıcı rolü de kopardı). Bkz. §8.1.
+  *Yan düzeltme:* customer-service'in `application-test.yml`'ine `spring.sql.init.mode:
+  never` eklendi — §9'da belgelenen "hermetik test profili tuzağı" bu serviste açıktı ve
+  `contextLoads` testi bu yüzden zaten kırıktı (cart-service'te aynı düzeltme mevcuttu).
 
 - **2026-07-10:** **search-service** (müşteri arama, n-layered, port 8087, searchdb)
   eklendi: FR-002 "Müşteri Arama ve Görüntüleme". Cross-service arama için bir **CQRS

@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 
 import { LanguageSwitcher } from '../../shared/ui/language-switcher/language-switcher';
@@ -32,7 +32,7 @@ import { CurrentUser, UserMenu } from './user-menu';
 
       <span aria-hidden="true" class="hidden h-8 w-px bg-slate-200 sm:block"></span>
 
-      <app-user-menu [user]="user()" />
+      <app-user-menu [user]="user()" (logout)="logout.emit()" />
     </div>
   `
 })
@@ -40,4 +40,7 @@ export class Topbar {
   readonly title = input.required<string>();
   readonly subtitle = input.required<string>();
   readonly user = input.required<CurrentUser>();
+
+  /** Kullanıcı menüsünden gelen çıkış isteği kabuğa iletilir. */
+  readonly logout = output<void>();
 }

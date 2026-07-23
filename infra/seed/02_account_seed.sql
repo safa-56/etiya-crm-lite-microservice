@@ -42,37 +42,37 @@ INSERT INTO billing_accounts
 VALUES
     -- acc1: müşteri 1, ACTV, 2 aktif ürün (Ev+TV kampanyası)
     (1, now(), NULL,  164,    1, 'Ahmet Ev Hattı',    'Birincil fatura hesabı',
-     1, NULL, 'İstanbul / Bağdat Caddesi No:12 D:4', 'ACC0000000001', 'ORD00000001',
+     1, NULL, 'İstanbul / Bağdat Caddesi No:12 D:4', '1000000001', '10000001',
      'BILLING_ACCOUNT', 2, NULL),
 
     -- acc2: müşteri 1 (ikinci hesap), ACTV, 1 aktif ürün
     (2, now(), NULL,  164,    1, 'Ahmet İş Hattı',    'İkincil fatura hesabı (iş adresi)',
-     2, NULL, 'Ankara / Atatürk Bulvarı No:88', 'ACC0000000002', 'ORD00000002',
+     2, NULL, 'Ankara / Atatürk Bulvarı No:88', '1000000002', '10000002',
      'BILLING_ACCOUNT', 1, NULL),
 
     -- acc3: müşteri 2, ACTV, 1 aktif ürün
     (3, now(), NULL,  164,    2, 'Ayşe Ev Hattı',     'Birincil fatura hesabı',
-     3, NULL, 'İzmir / Kordon No:5 D:2', 'ACC0000000003', 'ORD00000003',
+     3, NULL, 'İzmir / Kordon No:5 D:2', '1000000003', '10000003',
      'BILLING_ACCOUNT', 1, NULL),
 
     -- acc4: müşteri 3, ACTV, 0 ürün → "ürünü yok, silinebilir" senaryosu
     (4, now(), NULL,  164,    3, 'Mehmet Ev Hattı',   'Aktif ama ürünsüz hesap',
-     4, NULL, 'Bursa / Nilüfer Caddesi No:34', 'ACC0000000004', 'ORD00000004',
+     4, NULL, 'Bursa / Nilüfer Caddesi No:34', '1000000004', '10000004',
      'BILLING_ACCOUNT', 0, NULL),
 
     -- acc5: müşteri 4, PNDG → saga doğrulaması sürüyor (adres snapshot boş)
     (5, now(), NULL,  400101, 4, 'Fatma Yeni Hat',    'Oluşturma saga''sı beklemede',
-     6, NULL, '', 'ACC0000000005', 'ORD00000005',
+     6, NULL, '', '1000000005', '10000005',
      'BILLING_ACCOUNT', 0, NULL),
 
     -- acc6: müşteri 5, DEL → soft-delete edilmiş hesap
     (6, now(), now(), 400103, 5, 'Can Eski Hat',      'Pasifleştirilmiş (silinmiş) hesap',
-     7, NULL, 'Ankara / Tunalı Hilmi No:45 D:3', 'ACC0000000006', 'ORD00000006',
+     7, NULL, 'Ankara / Tunalı Hilmi No:45 D:3', '1000000006', '10000006',
      'BILLING_ACCOUNT', 0, NULL),
 
     -- acc7: müşteri 2 (ikinci hesap), CNCL → saga telafisi (doğrulama başarısız)
     (7, now(), now(), 400102, 2, 'Ayşe İptal Hat',    'Saga telafisiyle iptal edilen hesap',
-     NULL, NULL, '', 'ACC0000000007', 'ORD00000007',
+     NULL, NULL, '', '1000000007', '10000007',
      'BILLING_ACCOUNT', 0, 'Adres doğrulaması başarısız (müşteriye ait değil).');
 
 SELECT setval(pg_get_serial_sequence('billing_accounts','id'), (SELECT MAX(id) FROM billing_accounts), true);

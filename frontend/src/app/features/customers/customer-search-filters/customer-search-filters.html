@@ -24,7 +24,8 @@
       <input
         id="identityNumber"
         type="text"
-        inputmode="numeric"
+        appDigitsOnly
+        maxlength="11"
         formControlName="identityNumber"
         class="field-control"
         [placeholder]="
@@ -50,8 +51,8 @@
       <input
         id="accountNumber"
         type="text"
-        inputmode="numeric"
-        maxlength="30"
+        appDigitsOnly
+        maxlength="10"
         formControlName="accountNumber"
         class="field-control"
         [placeholder]="t().customers.filters.accountNumberPlaceholder"
@@ -84,6 +85,8 @@
         <input
           id="firstName"
           type="text"
+          appLettersOnly
+          maxlength="50"
           formControlName="firstName"
           class="field-control"
           [placeholder]="t().customers.filters.startsWith"
@@ -94,6 +97,8 @@
         <input
           id="lastName"
           type="text"
+          appLettersOnly
+          maxlength="50"
           formControlName="lastName"
           class="field-control"
           [placeholder]="t().customers.filters.startsWith"
@@ -105,8 +110,8 @@
       <input
         id="orderNumber"
         type="text"
-        inputmode="numeric"
-        maxlength="20"
+        appDigitsOnly
+        maxlength="8"
         formControlName="orderNumber"
         class="field-control"
         [placeholder]="t().customers.filters.orderNumberPlaceholder"

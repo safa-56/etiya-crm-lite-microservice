@@ -19,13 +19,29 @@ const tr = {
     showPassword: 'Şifreyi göster',
     hidePassword: 'Şifreyi gizle',
     submit: 'Giriş Yap',
-    support: 'Sorun mu yaşıyorsunuz? Sistem yöneticinizle iletişime geçin.'
+    submitting: 'Giriş yapılıyor…',
+    support: 'Sorun mu yaşıyorsunuz? Sistem yöneticinizle iletişime geçin.',
+    errors: {
+      // Keycloak hatalı parolayı ve kilitli hesabı bilinçli olarak ayırmaz
+      // (kullanıcı adı sızdırmamak için); mesaj bu yüzden her ikisini kapsar.
+      invalidCredentials:
+        'Kullanıcı adı veya şifre hatalı. Art arda 5 başarısız denemede hesabınız 15 dakika kilitlenir.',
+      unavailable: 'Kimlik doğrulama sunucusuna ulaşılamıyor. Lütfen daha sonra tekrar deneyin.',
+      unknown: 'Giriş yapılamadı. Lütfen tekrar deneyin.'
+    }
   },
   shell: {
     brand: 'Etiya',
     mainNavigation: 'Ana menü',
     version: 'EtiyaCRM Enterprise · v4.2.1',
-    userMenu: 'Kullanıcı menüsü'
+    userMenu: 'Kullanıcı menüsü',
+    logout: 'Çıkış Yap',
+    // Keycloak realm rollerinin ekranda gösterilen karşılıkları; eşleşmeyen rol
+    // ham kodu ile gösterilir.
+    roles: {
+      crm_admin: 'CRM Yöneticisi',
+      crm_user: 'CRM Kullanıcısı'
+    }
   },
   nav: {
     customerSearch: 'Müşteri Arama',
@@ -63,15 +79,15 @@ const tr = {
       customerId: 'Müşteri ID',
       customerIdPlaceholder: 'Sayısal müşteri ID',
       accountNumber: 'Hesap Numarası',
-      accountNumberPlaceholder: 'Sadece rakam (maks 30)',
+      accountNumberPlaceholder: '10 haneli, sadece rakam',
       gsm: 'GSM Numarası',
-      gsmPlaceholder: '10-15 haneli mobil no.',
+      gsmPlaceholder: 'Sadece rakam (maks 15)',
       firstName: 'Ad',
       lastName: 'Soyad',
       companyName: 'Unvan',
       startsWith: 'İle başlayan...',
       orderNumber: 'Sipariş Numarası',
-      orderNumberPlaceholder: 'Sadece rakam (maks 20)',
+      orderNumberPlaceholder: '8 haneli, sadece rakam',
       clear: 'Temizle',
       search: 'Ara'
     },
@@ -301,13 +317,25 @@ const en: typeof tr = {
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     submit: 'Sign In',
-    support: 'Having trouble? Contact your system administrator.'
+    submitting: 'Signing in…',
+    support: 'Having trouble? Contact your system administrator.',
+    errors: {
+      invalidCredentials:
+        'Invalid username or password. After 5 consecutive failed attempts your account is locked for 15 minutes.',
+      unavailable: 'The authentication server is unreachable. Please try again later.',
+      unknown: 'Sign-in failed. Please try again.'
+    }
   },
   shell: {
     brand: 'Etiya',
     mainNavigation: 'Main navigation',
     version: 'EtiyaCRM Enterprise · v4.2.1',
-    userMenu: 'User menu'
+    userMenu: 'User menu',
+    logout: 'Sign Out',
+    roles: {
+      crm_admin: 'CRM Administrator',
+      crm_user: 'CRM User'
+    }
   },
   nav: {
     customerSearch: 'Customer Search',
@@ -345,15 +373,15 @@ const en: typeof tr = {
       customerId: 'Customer ID',
       customerIdPlaceholder: 'Numeric customer ID',
       accountNumber: 'Account Number',
-      accountNumberPlaceholder: 'Digits only (max 30)',
+      accountNumberPlaceholder: '10 digits, numbers only',
       gsm: 'Mobile Number',
-      gsmPlaceholder: '10-15 digit mobile no.',
+      gsmPlaceholder: 'Digits only (max 15)',
       firstName: 'First Name',
       lastName: 'Last Name',
       companyName: 'Company Name',
       startsWith: 'Starts with...',
       orderNumber: 'Order Number',
-      orderNumberPlaceholder: 'Digits only (max 20)',
+      orderNumberPlaceholder: '8 digits, numbers only',
       clear: 'Clear',
       search: 'Search'
     },

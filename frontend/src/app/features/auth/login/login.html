@@ -26,6 +26,15 @@
           (ngSubmit)="submit()"
           class="mt-8 rounded-2xl border border-slate-100 bg-etiya-gray p-8 shadow-sm"
         >
+          @if (errorMessage(); as message) {
+            <p
+              role="alert"
+              class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {{ message }}
+            </p>
+          }
+
           <app-form-field for="username" [label]="t().login.username">
             <app-input-group icon="user">
               <input
@@ -33,6 +42,7 @@
                 type="text"
                 formControlName="username"
                 autocomplete="username"
+                [maxlength]="maxLength"
                 class="field-control pl-10"
                 [placeholder]="t().login.usernamePlaceholder"
               />
@@ -46,6 +56,7 @@
                 [type]="passwordFieldType()"
                 formControlName="password"
                 autocomplete="current-password"
+                [maxlength]="maxLength"
                 (blur)="hidePassword()"
                 class="field-control pr-11 pl-10"
                 [placeholder]="t().login.passwordPlaceholder"
@@ -68,8 +79,13 @@
           </app-form-field>
 
           <div class="mt-8">
-            <app-button type="submit" size="xl" [full]="true" [disabled]="form.invalid">
-              {{ t().login.submit }}
+            <app-button
+              type="submit"
+              size="xl"
+              [full]="true"
+              [disabled]="form.invalid || submitting()"
+            >
+              {{ submitting() ? t().login.submitting : t().login.submit }}
               <app-icon name="arrow-right" [stroke]="1.8" />
             </app-button>
           </div>

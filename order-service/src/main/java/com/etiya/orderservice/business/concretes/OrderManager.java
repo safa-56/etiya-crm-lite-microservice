@@ -27,10 +27,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Sipariş (Order) iş mantığı (business/concretes) — FR-016 "Siparişin Tamamlanması".
@@ -46,6 +46,15 @@ import java.util.UUID;
  */
 @Service
 public class OrderManager implements OrderService {
+
+    /** Sipariş numarası tam 8 haneli olduğundan üst sınır (dâhil değil) 100.000.000'dur. */
+    private static final int ORDER_NUMBER_BOUND = 100_000_000;
+
+    /** Çakışma hâlinde kaç kez yeni numara denenir. */
+    private static final int ORDER_NUMBER_MAX_ATTEMPTS = 5;
+
+    /** Tahmin edilebilir sipariş numarası üretilmemesi için güvenli rastgelelik. */
+    private static final SecureRandom ORDER_NUMBER_RANDOM = new SecureRandom();
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -148,9 +157,24 @@ public class OrderManager implements OrderService {
                         order.getCartId()));
     }
 
-    /** Sistem tarafından üretilen benzersiz sipariş numarası (Order ID) — FR-016 ACC-02. */
+    /**
+     * Sistem tarafından üretilen benzersiz sipariş numarası (Order ID) — FR-016 ACC-02.
+     *
+     * <p>Format: <b>yalnızca rakam, tam 8 hane</b> (baştaki sıfırlar korunur, ör. {@code 04812375}).
+     * Değer rastgele seçilir ve çakışma ihtimaline karşı veritabanında kontrol edilir;
+     * son güvence {@code order_number} üzerindeki unique kısıttır. 8 hane 100 milyon
+     * kombinasyon verdiğinden birkaç denemede çakışma pratikte tükenmez.
+     */
     private String generateOrderNumber() {
-        return "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        for (int attempt = 0; attempt < ORDER_NUMBER_MAX_ATTEMPTS; attempt++) {
+            String candidate = "%08d".formatted(ORDER_NUMBER_RANDOM.nextInt(ORDER_NUMBER_BOUND));
+
+            if (!orderRepository.existsByOrderNumber(candidate)) {
+                return candidate;
+            }
+        }
+
+        throw new BusinessException(Messages.ORDER_NUMBER_GENERATION_FAILED);
     }
 
     /** Siparişi, satırları ve türetilmiş toplam tutarıyla birlikte yanıta dönüştürür. */

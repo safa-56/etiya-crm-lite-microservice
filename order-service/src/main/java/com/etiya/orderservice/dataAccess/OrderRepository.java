@@ -32,4 +32,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Aynı sepetin ikinci kez submit edilmesini engelleyen iş kuralı buna dayanır.
      */
     boolean existsByCartIdAndDeletedDateIsNull(Long cartId);
+
+    /**
+     * Sipariş numarası daha önce üretilmiş mi? Soft-delete edilmiş siparişler de
+     * taranır: numara kalıcı bir iş kimliğidir, silinmiş bir siparişinki yeniden
+     * verilemez. Kapsam {@code order_number} üzerindeki unique kısıtla aynıdır.
+     */
+    boolean existsByOrderNumber(String orderNumber);
 }

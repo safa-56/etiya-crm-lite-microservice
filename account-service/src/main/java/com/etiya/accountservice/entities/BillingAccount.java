@@ -15,8 +15,8 @@ import lombok.Setter;
  *
  * <p>Bir müşteriye ({@code customerId}) bağlıdır. Kabul kriterleri:
  * <ul>
- *   <li>{@code accountNumber}: alfanümerik, en fazla 30 karakter.</li>
- *   <li>{@code orderNumber}: alfanümerik, en fazla 20 karakter.</li>
+ *   <li>{@code accountNumber}: yalnızca rakam, tam 10 hane, benzersiz.</li>
+ *   <li>{@code orderNumber}: yalnızca rakam, tam 8 hane.</li>
  *   <li>Yeni kayıtta {@code accountType = BILLING_ACCOUNT}; durum {@code CUST_ACCT/PNDG}
  *       açılır, saga sonucuna göre {@code ACTV}/{@code CNCL} olur.</li>
  *   <li>Silme fiziksel değildir: durum {@code CUST_ACCT/DEL} yapılır + {@code deletedDate}
@@ -71,12 +71,24 @@ public class BillingAccount extends StatusAwareEntity {
     @Column(name = "address", nullable = false, length = 500)
     private String address;
 
-    /** Alfanümerik, en fazla 30 karakter. */
-    @Column(name = "account_number", length = 30)
+    /**
+     * Hesap numarası: <b>tam 10 hane, yalnızca rakam ve benzersiz</b>.
+     *
+     * <p>Benzersizlik veritabanı seviyesinde de zorlanır (unique constraint), böylece
+     * eşzamanlı iki istek aynı numarayı yazamaz. Kısıt <b>soft-delete edilmiş kayıtları
+     * da kapsar</b>: bir hesap numarası bir kez kullanıldıysa, hesap iptal/silinmiş olsa
+     * bile yeniden verilemez (kalıcı iş kimliği). Değer opsiyoneldir; verilmediğinde
+     * {@code null} kalır ve Postgres birden çok {@code null}'a izin verdiğinden kısıtla
+     * çakışmaz.
+     */
+    @Column(name = "account_number", length = 10, unique = true)
     private String accountNumber;
 
-    /** Alfanümerik, en fazla 20 karakter. */
-    @Column(name = "order_number", length = 20)
+    /**
+     * İlişkili sipariş numarası: yalnızca rakam, tam 8 hane (order-service üretir).
+     * Baştaki sıfırlar anlamlı olduğundan metin olarak saklanır.
+     */
+    @Column(name = "order_number", length = 8)
     private String orderNumber;
 
     @Enumerated(EnumType.STRING)
