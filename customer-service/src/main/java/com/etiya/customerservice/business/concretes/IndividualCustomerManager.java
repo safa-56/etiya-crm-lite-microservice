@@ -1,5 +1,7 @@
 package com.etiya.customerservice.business.concretes;
 
+import com.etiya.customerservice.business.abstracts.AddressService;
+import com.etiya.customerservice.business.abstracts.CustomerContactInfoService;
 import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.abstracts.OutboxService;
 import com.etiya.customerservice.business.abstracts.PartyRoleService;
@@ -12,6 +14,8 @@ import com.etiya.customerservice.business.dtos.requests.CreateAddressRequest;
 import com.etiya.customerservice.business.dtos.requests.CreateContactInfoRequest;
 import com.etiya.customerservice.business.dtos.requests.CreateIndividualCustomerRequest;
 import com.etiya.customerservice.business.dtos.requests.UpdateIndividualCustomerRequest;
+import com.etiya.customerservice.business.dtos.responses.AddressResponse;
+import com.etiya.customerservice.business.dtos.responses.ContactInfoResponse;
 import com.etiya.customerservice.business.dtos.responses.IndividualCustomerResponse;
 import com.etiya.customerservice.business.mappers.IndividualCustomerMapper;
 import com.etiya.customerservice.business.rules.IndividualCustomerBusinessRules;
@@ -23,7 +27,11 @@ import com.etiya.customerservice.dataAccess.IndividualCustomerRepository;
 import com.etiya.customerservice.entities.Address;
 import com.etiya.customerservice.entities.CustomerContactInfo;
 import com.etiya.customerservice.entities.IndividualCustomer;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -35,60 +43,56 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@RequiredArgsConstructor
 public class IndividualCustomerManager implements IndividualCustomerService {
 
     private final IndividualCustomerRepository repository;
     private final CustomerContactInfoRepository contactInfoRepository;
     private final AddressRepository addressRepository;
-    private final IndividualCustomerMapper mapper;
+    private final IndividualCustomerMapper customerMapper;
     private final IndividualCustomerBusinessRules rules;
     private final OutboxService outboxService;
     private final PartyRoleService partyRoleService;
     private final ReferenceDataService referenceDataService;
 
-    public IndividualCustomerManager(IndividualCustomerRepository repository,
-                                     CustomerContactInfoRepository contactInfoRepository,
-                                     AddressRepository addressRepository,
-                                     IndividualCustomerMapper mapper,
-                                     IndividualCustomerBusinessRules rules,
-                                     OutboxService outboxService,
-                                     PartyRoleService partyRoleService,
-                                     ReferenceDataService referenceDataService) {
-        this.repository = repository;
-        this.contactInfoRepository = contactInfoRepository;
-        this.addressRepository = addressRepository;
-        this.mapper = mapper;
-        this.rules = rules;
-        this.outboxService = outboxService;
-        this.partyRoleService = partyRoleService;
-        this.referenceDataService = referenceDataService;
-    }
+    // Çocuk kayıtlar (iletişim bilgisi/adres) kendi servisleri üzerinden oluşturulur.
+    // Bu servisler IndividualCustomerService'e bağımlı olduğundan oluşan döngüsel
+    // bağımlılığı kırmak için @Lazy ile enjekte edilir (lombok.config bu anotasyonu
+    // üretilen constructor parametresine kopyalar).
+    @Lazy
+    private final CustomerContactInfoService contactInfoService;
+    @Lazy
+    private final AddressService addressService;
 
     @Override
     @Transactional
     @CacheEvict(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST, allEntries = true)
     public IndividualCustomerResponse add(CreateIndividualCustomerRequest request) {
-        // --- iş kuralları ---
         rules.checkIfNationalityIdAlreadyExists(request.nationalityId());
-        rules.checkIfEmailsAlreadyExist(extractEmails(request.contactInfos()));
+        rules.checkIfEmailsAlreadyExist(extractEmails(List.of(request.contactInfo())));
 
-        // --- party zincirini kur: PARTY -> PARTY_ROLE (CUST) -> customers.party_role_id ---
-        IndividualCustomer customer = mapper.toEntity(request);
+        IndividualCustomer customer = customerMapper.toEntity(request);
+
         customer.setPartyRole(partyRoleService.createCustomerRoleForIndividual());
         customer.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_INDIVIDUAL, PartyReferenceCodes.STATUS_ACTIVE_CODE));
 
-        // --- müşteriyi tek başına persist et (cascade yok) ---
         IndividualCustomer saved = repository.save(customer);
 
-        // --- çocuk kayıtları açıkça persist et (kendi repository'leri üzerinden) ---
-        persistContactInfos(saved, request.contactInfos());
-        persistAddresses(saved, request.addresses());
+        // Çocuk kayıtları kendi servisleri üzerinden oluştur (müşteri id'siyle bağla).
+        ContactInfoResponse contact = contactInfoService.add(
+                withCustomerId(request.contactInfo(), saved.getId()));
+        AddressResponse address = addressService.add(
+                withCustomerId(request.address(), saved.getId()));
+        
+        // CustomerCreated olayını servislerden dönen verilerle yayınla: yeni müşterinin
+        // in-memory koleksiyonları bu noktada dolu olmadığından entity'den okunamaz.
+        publishEvent(saved, CustomerEvents.CUSTOMER_CREATED, contact.mobilPhone(),
+                List.of(new CustomerEventPayload.AddressPayload(
+                        address.id(), address.city(), address.street(),
+                        address.houseNumber(), address.addressDescription(), address.isPrimary())));
 
-        // --- outbox olayı (aynı transaction) ---
-        publishEvent(saved, CustomerEvents.CUSTOMER_CREATED);
-
-        return mapper.toResponse(saved);
+        return customerMapper.toResponse(saved);
     }
 
     @Override
@@ -97,7 +101,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     public IndividualCustomerResponse getById(Long id) {
         IndividualCustomer customer = repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.INDIVIDUAL_CUSTOMER_NOT_FOUND));
-        return mapper.toResponse(customer);
+        return customerMapper.toResponse(customer);
     }
 
     @Override
@@ -105,7 +109,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     @Cacheable(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST)
     public List<IndividualCustomerResponse> getAll() {
         return repository.findAllByDeletedDateIsNull().stream()
-                .map(mapper::toResponse)
+                .map(customerMapper::toResponse)
                 .toList();
     }
 
@@ -116,36 +120,25 @@ public class IndividualCustomerManager implements IndividualCustomerService {
             evict = @CacheEvict(value = CacheNames.INDIVIDUAL_CUSTOMER_LIST, allEntries = true)
     )
     public IndividualCustomerResponse update(Long id, UpdateIndividualCustomerRequest request) {
-        // Nationality ID başka bir müşteriye ait olmamalı (kendisi hariç).
         rules.checkIfNationalityIdBelongsToAnotherCustomer(request.nationalityId(), id);
 
         IndividualCustomer customer = rules.checkIndividualCustomerIsExists(id);
 
-        // Skaler alanları güncelle
-        customer.setFirstName(request.firstName());
-        customer.setSecondName(request.secondName());
-        customer.setLastName(request.lastName());
-        customer.setBirthDate(request.birthDate());
-        customer.setFatherName(request.fatherName());
-        customer.setMotherName(request.motherName());
-        customer.setNationalityId(request.nationalityId());
-        customer.setGenderType(request.genderType());
+        // customer.setFirstName(request.firstName());
+        // customer.setSecondName(request.secondName());
+        // customer.setLastName(request.lastName());
+        // customer.setBirthDate(request.birthDate());
+        // customer.setFatherName(request.fatherName());
+        // customer.setMotherName(request.motherName());
+        // customer.setNationalityId(request.nationalityId());
+        // customer.setGenderType(request.genderType());
 
-        // İç içe koleksiyonlar gönderildiyse tamamen değiştir: eskileri pasifleştir
-        // (soft-delete), yenilerini açıkça persist et (cascade/orphanRemoval yok).
-        if (request.contactInfos() != null) {
-            deactivateContactInfos(customer);
-            persistContactInfos(customer, request.contactInfos());
-        }
-        if (request.addresses() != null) {
-            deactivateAddresses(customer);
-            persistAddresses(customer, request.addresses());
-        }
+        customerMapper.updateEntity(customer, request);
 
         IndividualCustomer saved = repository.save(customer);
         publishEvent(saved, CustomerEvents.CUSTOMER_UPDATED);
 
-        return mapper.toResponse(saved);
+        return customerMapper.toResponse(saved);
     }
 
     @Override
@@ -164,6 +157,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         customer.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_INDIVIDUAL, PartyReferenceCodes.STATUS_DELETED_CODE));
         customer.setDeletedDate(LocalDateTime.now());
+        
         repository.save(customer);
 
         deactivateContactInfos(customer);
@@ -183,32 +177,16 @@ public class IndividualCustomerManager implements IndividualCustomerService {
 
     // ------------------------------------------------------------------ yardımcılar
 
-    /** İletişim bilgilerini açıkça persist eder (cascade yok) ve müşteriye bağlar. */
-    private void persistContactInfos(IndividualCustomer customer, List<CreateContactInfoRequest> requests) {
-        if (requests == null) {
-            return;
-        }
-        requests.forEach(req -> {
-            CustomerContactInfo contactInfo = mapper.toContactInfo(req);
-            customer.addContactInfo(contactInfo);     // iki yönlü ilişki + koleksiyon
-            contactInfo.setGeneralStatus(referenceDataService.getStatus(
-                    PartyReferenceCodes.ENTITY_CONTACT_INFO, PartyReferenceCodes.STATUS_ACTIVE_CODE));
-            contactInfoRepository.save(contactInfo);  // açıkça persist
-        });
+    /** Nested create isteğini, oluşturulan müşterinin id'siyle yeniden kurar (servise geçmek için). */
+    private CreateContactInfoRequest withCustomerId(CreateContactInfoRequest request, Long customerId) {
+        return new CreateContactInfoRequest(customerId, request.email(),
+                request.homePhone(), request.mobilPhone(), request.fax());
     }
 
-    /** Adresleri açıkça persist eder (cascade yok) ve müşteriye bağlar. */
-    private void persistAddresses(IndividualCustomer customer, List<CreateAddressRequest> requests) {
-        if (requests == null) {
-            return;
-        }
-        requests.forEach(req -> {
-            Address address = mapper.toAddress(req);
-            customer.addAddress(address);       // iki yönlü ilişki + koleksiyon
-            address.setGeneralStatus(referenceDataService.getStatus(
-                    PartyReferenceCodes.ENTITY_ADDRESS, PartyReferenceCodes.STATUS_ACTIVE_CODE));
-            addressRepository.save(address);    // açıkça persist
-        });
+    /** Nested create isteğini, oluşturulan müşterinin id'siyle yeniden kurar (servise geçmek için). */
+    private CreateAddressRequest withCustomerId(CreateAddressRequest request, Long customerId) {
+        return new CreateAddressRequest(customerId, request.city(), request.street(),
+                request.houseNumber(), request.addressDescription(), request.isPrimary());
     }
 
     /** Müşterinin mevcut iletişim bilgilerini soft-delete ile pasifleştirir. */
@@ -256,10 +234,15 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     }
 
     private void publishEvent(IndividualCustomer customer, String eventType) {
+        publishEvent(customer, eventType, primaryGsmNumber(customer), toAddressPayloads(customer));
+    }
+
+    private void publishEvent(IndividualCustomer customer, String eventType, String gsmNumber,
+                              List<CustomerEventPayload.AddressPayload> addresses) {
         CustomerEventPayload payload = new CustomerEventPayload(
                 customer.getId(), customer.getFirstName(), customer.getSecondName(),
-                customer.getLastName(), customer.getNationalityId(), primaryGsmNumber(customer),
-                CustomerEvents.ROLE_B2C, eventType, toAddressPayloads(customer), LocalDateTime.now());
+                customer.getLastName(), customer.getNationalityId(), gsmNumber,
+                CustomerEvents.ROLE_B2C, eventType, addresses, LocalDateTime.now());
         outboxService.publish(
                 CustomerEvents.AGGREGATE_TYPE, String.valueOf(customer.getId()), eventType, payload);
     }

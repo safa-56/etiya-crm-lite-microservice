@@ -58,12 +58,7 @@ public class IndividualCustomersController {
     @PutMapping("/{id}")
     public IndividualCustomerResponse update(@PathVariable Long id,
                                              @Valid @RequestBody UpdateIndividualCustomerRequest request) {
-        // Yol değişkeni (path) ile gövdedeki id'yi tutarlı hale getir.
-        UpdateIndividualCustomerRequest normalized = new UpdateIndividualCustomerRequest(
-                request.firstName(), request.secondName(), request.lastName(), request.birthDate(),
-                request.fatherName(), request.motherName(), request.nationalityId(),
-                request.genderType(), request.contactInfos(), request.addresses());
-        return individualCustomerService.update(id, normalized);
+        return individualCustomerService.update(id, request);
     }
 
     /** Bireysel müşteriyi soft-delete ile pasifleştirir. */

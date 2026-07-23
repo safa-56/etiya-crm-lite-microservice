@@ -68,9 +68,16 @@ public class BillingAccountSagaParticipantManager implements BillingAccountSagaP
     private void publishValidated(Long accountId, Long customerId, Address address) {
         BillingAccountSagaValidationPayload payload = new BillingAccountSagaValidationPayload(
                 BillingAccountSagaEvents.CUSTOMER_VALIDATED,
-                accountId, customerId, address.getId(), true, null,
-                address.getCity(), address.getStreet(),
-                address.getHouseNumber(), address.getAddressDescription());
+                accountId, 
+                customerId, 
+                address.getId(), 
+                true, 
+                null,
+                address.getCity(), 
+                address.getStreet(),
+                address.getHouseNumber(), 
+                address.getAddressDescription());
+                
         publish(accountId, BillingAccountSagaEvents.CUSTOMER_VALIDATED, payload);
         log.info("Saga doğrulandı. accountId={}, customerId={}", accountId, customerId);
     }
@@ -78,8 +85,16 @@ public class BillingAccountSagaParticipantManager implements BillingAccountSagaP
     private void publishFailed(Long accountId, Long customerId, Long addressId, String reason) {
         BillingAccountSagaValidationPayload payload = new BillingAccountSagaValidationPayload(
                 BillingAccountSagaEvents.CUSTOMER_VALIDATION_FAILED,
-                accountId, customerId, addressId, false, reason,
-                null, null, null, null);
+                accountId, 
+                customerId, 
+                addressId, 
+                false, 
+                reason,
+                null, 
+                null, 
+                null, 
+                null);
+
         publish(accountId, BillingAccountSagaEvents.CUSTOMER_VALIDATION_FAILED, payload);
         log.info("Saga doğrulaması başarısız. accountId={}, neden={}", accountId, reason);
     }

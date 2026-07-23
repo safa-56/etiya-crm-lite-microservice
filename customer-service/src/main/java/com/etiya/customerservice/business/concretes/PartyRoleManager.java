@@ -37,11 +37,13 @@ public class PartyRoleManager implements PartyRoleService {
     @Transactional
     public PartyRole createCustomerRoleForIndividual() {
         Party party = partyService.createIndividualParty();
-
         PartyRole partyRole = new PartyRole();
+
         partyRole.setParty(party);
+        
         partyRole.setPartyRoleType(referenceDataService.getPartyRoleType(
                 PartyReferenceCodes.PARTY_ROLE_TYPE_CUSTOMER_CODE));
+        
         partyRole.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY_ROLE, PartyReferenceCodes.STATUS_ACTIVE_CODE));
 
@@ -51,17 +53,19 @@ public class PartyRoleManager implements PartyRoleService {
     @Override
     @Transactional
     public void deactivate(PartyRole partyRole) {
-        if (partyRole == null) {
-            return;
-        }
+        if (partyRole == null) { return; }
+
         partyRole.setDeletedDate(LocalDateTime.now());
         partyRole.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_PARTY_ROLE, PartyReferenceCodes.STATUS_DELETED_CODE));
+        
         partyRoleRepository.save(partyRole);
 
         // Bu projede bir party yalnızca müşteri rolü oynadığından, rol pasifleşince
         // party de pasifleşir. Party'ye ikinci bir rol eklenirse bu kural gözden
         // geçirilmelidir (diğer roller aktifken party pasifleştirilmemeli).
+
+        //TODO: silinmeli mi? Bir partinin birden fazla parti rolü olabilir
         partyService.deactivate(partyRole.getParty());
     }
 }

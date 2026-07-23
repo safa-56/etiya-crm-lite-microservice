@@ -58,9 +58,8 @@ public class AddressBusinessRules {
      * @param excludedAddressId hariç tutulacak adres (yeni birincil yapılan); yoksa null
      */
     public void demoteExistingPrimaryAddresses(Long customerId, Long excludedAddressId) {
-        if (customerId == null) {
-            return;
-        }
+        if (customerId == null) { return; }
+
         List<Address> toDemote = addressRepository
                 .findByCustomer_IdAndIsPrimaryTrueAndDeletedDateIsNull(customerId).stream()
                 .filter(address -> excludedAddressId == null
@@ -68,6 +67,7 @@ public class AddressBusinessRules {
                 .filter(address -> Boolean.TRUE.equals(address.getIsPrimary()))
                 .peek(address -> address.setIsPrimary(false))
                 .toList();
+                
         if (!toDemote.isEmpty()) {
             addressRepository.saveAll(toDemote);
         }

@@ -12,6 +12,9 @@ import com.etiya.customerservice.business.rules.CustomerContactInfoBusinessRules
 import com.etiya.customerservice.dataAccess.CustomerContactInfoRepository;
 import com.etiya.customerservice.entities.Customer;
 import com.etiya.customerservice.entities.CustomerContactInfo;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,7 @@ import java.util.Objects;
  * tutarsızlık (stale) riskini önlemek için burada bağımsız bir cache kullanılmaz.
  */
 @Service
+@RequiredArgsConstructor
 public class CustomerContactInfoManager implements CustomerContactInfoService {
 
     private final CustomerContactInfoRepository repository;
@@ -39,34 +43,22 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
     private final CustomerContactInfoBusinessRules rules;
     private final ReferenceDataService referenceDataService;
 
-    public CustomerContactInfoManager(CustomerContactInfoRepository repository,
-                                      IndividualCustomerService individualCustomerService,
-                                      CustomerContactInfoMapper mapper,
-                                      CustomerContactInfoBusinessRules rules,
-                                      ReferenceDataService referenceDataService) {
-        this.repository = repository;
-        this.individualCustomerService = individualCustomerService;
-        this.mapper = mapper;
-        this.rules = rules;
-        this.referenceDataService = referenceDataService;
-    }
-
     @Override
     @Transactional
     public ContactInfoResponse add(CreateContactInfoRequest request) {
-        // --- iş kuralları ---
         rules.checkIfCustomerExists(request.customerId());
         rules.checkIfEmailAlreadyExists(request.email());
 
-        // --- dönüşüm + ilişki kurulumu ---
         Customer customer = individualCustomerService.getIndividualCustomerById(request.customerId());
 
         CustomerContactInfo contactInfo = mapper.toEntity(request);
+
         contactInfo.setCustomer(customer);
         contactInfo.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_CONTACT_INFO, PartyReferenceCodes.STATUS_ACTIVE_CODE));
 
         CustomerContactInfo saved = repository.save(contactInfo);
+
         return mapper.toResponse(saved);
     }
 
@@ -91,16 +83,16 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
 
         CustomerContactInfo contactInfo = rules.checkContactInfoIfExists(id);
 
-        // E-posta değişiyorsa benzersizliği tekrar doğrula.
-        if (request.email() != null && !Objects.equals(request.email(), contactInfo.getEmail())) {
+        if (!Objects.equals(request.email(), contactInfo.getEmail())) {
             rules.checkIfEmailAlreadyExists(request.email());
         }
 
-        // Skaler alanları güncelle (müşteri ilişkisi değiştirilmez).
-        contactInfo.setEmail(request.email());
-        contactInfo.setHomePhone(request.homePhone());
-        contactInfo.setMobilPhone(request.mobilPhone());
-        contactInfo.setFax(request.fax());
+        // contactInfo.setEmail(request.email());
+        // contactInfo.setHomePhone(request.homePhone());
+        // contactInfo.setMobilPhone(request.mobilPhone());
+        // contactInfo.setFax(request.fax());
+
+        mapper.updateEntity(contactInfo, request);
 
         return mapper.toResponse(repository.save(contactInfo));
     }
@@ -110,17 +102,10 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
     public void delete(Long id) {
         CustomerContactInfo contactInfo = rules.checkContactInfoIfExists(id);
 
-        // Soft-delete: fiziksel silme yok; durumu DEL yap ve silinme zamanını işaretle.
         contactInfo.setGeneralStatus(referenceDataService.getStatus(
                 PartyReferenceCodes.ENTITY_CONTACT_INFO, PartyReferenceCodes.STATUS_DELETED_CODE));
+        
         contactInfo.setDeletedDate(LocalDateTime.now());
         repository.save(contactInfo);
     }
-
-    // ------------------------------------------------------------------ yardımcılar
-
-//    private CustomerContactInfo findActiveContactInfo(Long id) {
-//        return repository.findByIdAndDeletedDateIsNull(id)
-//                .orElseThrow(() -> new BusinessException(Messages.CONTACT_INFO_NOT_FOUND));
-//    }
 }

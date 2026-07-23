@@ -9,7 +9,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * Bireysel müşteri oluşturma isteği.
@@ -45,9 +44,11 @@ public record CreateIndividualCustomerRequest(
         GenderType genderType,
 
         @Valid
-        List<CreateContactInfoRequest> contactInfos,
+        @NotNull
+        CreateContactInfoRequest contactInfo,
 
         @Valid
-        List<CreateAddressRequest> addresses
+        @NotNull
+        CreateAddressRequest address
 ) {
 }

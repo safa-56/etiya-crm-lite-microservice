@@ -58,11 +58,7 @@ public class AddressesController {
     @PutMapping("/{id}")
     public AddressResponse update(@PathVariable Long id,
                                   @Valid @RequestBody UpdateAddressRequest request) {
-        // Yol değişkeni (path) ile gövdedeki id'yi tutarlı hale getir.
-        UpdateAddressRequest normalized = new UpdateAddressRequest(
-                request.city(), request.street(), request.houseNumber(),
-                request.addressDescription(), request.isPrimary());
-        return addressService.update(id, normalized);
+        return addressService.update(id, request);
     }
 
     /** Adresi soft-delete ile pasifleştirir. */

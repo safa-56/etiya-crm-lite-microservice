@@ -58,9 +58,7 @@ public class CustomerContactInfosController {
     @PutMapping("/{id}")
     public ContactInfoResponse update(@PathVariable Long id,
                                       @Valid @RequestBody UpdateContactInfoRequest request) {
-        UpdateContactInfoRequest normalized = new UpdateContactInfoRequest(
-                request.email(), request.homePhone(), request.mobilPhone(), request.fax());
-        return customerContactInfoService.update(id, normalized);
+        return customerContactInfoService.update(id, request);
     }
 
     /** İletişim bilgisini soft-delete ile pasifleştirir. */

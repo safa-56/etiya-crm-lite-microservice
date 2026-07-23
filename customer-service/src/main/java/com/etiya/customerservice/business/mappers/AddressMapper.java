@@ -1,10 +1,12 @@
 package com.etiya.customerservice.business.mappers;
 
 import com.etiya.customerservice.business.dtos.requests.CreateAddressRequest;
+import com.etiya.customerservice.business.dtos.requests.UpdateAddressRequest;
 import com.etiya.customerservice.business.dtos.responses.AddressResponse;
 import com.etiya.customerservice.entities.Address;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 
 /**
@@ -22,4 +24,6 @@ public interface AddressMapper {
 
     @Mapping(target = "customerId", source = "customer.id")
     AddressResponse toResponse(Address entity);
+
+    void updateEntity(@MappingTarget Address address, UpdateAddressRequest updateAddressRequest);
 }

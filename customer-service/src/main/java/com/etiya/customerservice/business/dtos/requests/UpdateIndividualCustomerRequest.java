@@ -1,11 +1,9 @@
 package com.etiya.customerservice.business.dtos.requests;
 
 import com.etiya.customerservice.entities.enums.GenderType;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public record UpdateIndividualCustomerRequest(
 
@@ -35,12 +33,6 @@ public record UpdateIndividualCustomerRequest(
         String nationalityId,
 
         @NotNull(message = "{validation.genderType.notNull}")
-        GenderType genderType,
-
-        @Valid
-        List<CreateContactInfoRequest> contactInfos,
-
-        @Valid
-        List<CreateAddressRequest> addresses
+        GenderType genderType
 ) {
 }

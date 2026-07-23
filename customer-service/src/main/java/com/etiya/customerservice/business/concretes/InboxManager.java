@@ -29,7 +29,6 @@ public class InboxManager implements InboxService {
     @Transactional
     public boolean process(String messageId, String eventType, Runnable handler) {
         if (inboxMessageRepository.existsByMessageId(messageId)) {
-            // Duplicate consume: bu olay zaten işlenmiş, tekrar işleme.
             return false;
         }
 

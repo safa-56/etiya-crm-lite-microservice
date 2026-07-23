@@ -21,7 +21,6 @@ import org.springframework.cache.annotation.EnableCaching;
  * Cacheleme <b>Redis</b> (Spring Cache) ile sağlanır.
  */
 
-// değişiklik
 @SpringBootApplication
 @EnableCaching
 public class CustomerServiceApplication {

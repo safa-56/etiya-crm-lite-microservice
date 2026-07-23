@@ -7,7 +7,6 @@ import com.etiya.customerservice.dataAccess.IndividualCustomerRepository;
 import com.etiya.customerservice.entities.IndividualCustomer;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
