@@ -1,7 +1,6 @@
 package com.etiya.customerservice.business.concretes;
 
 import com.etiya.customerservice.business.abstracts.CustomerContactInfoService;
-import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.abstracts.ReferenceDataService;
 import com.etiya.customerservice.business.constants.PartyReferenceCodes;
 import com.etiya.customerservice.business.dtos.requests.CreateContactInfoRequest;
@@ -38,7 +37,6 @@ import java.util.Objects;
 public class CustomerContactInfoManager implements CustomerContactInfoService {
 
     private final CustomerContactInfoRepository repository;
-    private final IndividualCustomerService individualCustomerService;
     private final CustomerContactInfoMapper mapper;
     private final CustomerContactInfoBusinessRules rules;
     private final ReferenceDataService referenceDataService;
@@ -46,10 +44,8 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
     @Override
     @Transactional
     public ContactInfoResponse add(CreateContactInfoRequest request) {
-        rules.checkIfCustomerExists(request.customerId());
+        Customer customer = rules.checkIfCustomerExists(request.customerId());
         rules.checkIfEmailAlreadyExists(request.email());
-
-        Customer customer = individualCustomerService.getIndividualCustomerById(request.customerId());
 
         CustomerContactInfo contactInfo = mapper.toEntity(request);
 

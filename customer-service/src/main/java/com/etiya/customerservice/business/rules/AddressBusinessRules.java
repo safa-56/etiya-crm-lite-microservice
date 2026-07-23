@@ -5,6 +5,7 @@ import com.etiya.customerservice.core.crosscutting.exceptions.BusinessException;
 import com.etiya.customerservice.dataAccess.AddressRepository;
 import com.etiya.customerservice.dataAccess.CustomerRepository;
 import com.etiya.customerservice.entities.Address;
+import com.etiya.customerservice.entities.Customer;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,11 +39,17 @@ public class AddressBusinessRules {
         return existsAddress.get();
     }
 
-    /** Adresin bağlanacağı aktif müşteri id ile var olmalı; yoksa iş hatası fırlatılır. */
-    public void checkIfCustomerExists(Long customerId) {
-        if (customerId == null || !customerRepository.existsByIdAndDeletedDateIsNull(customerId)) {
+    /**
+     * Adresin bağlanacağı aktif müşteri id ile var olmalı; yoksa iş hatası
+     * fırlatılır. Bulunan müşteriyi döndürür, böylece çağıran taraf aynı kaydı
+     * ikinci bir sorgu (veya servis bağımlılığı) olmadan kullanabilir.
+     */
+    public Customer checkIfCustomerExists(Long customerId) {
+        if (customerId == null) {
             throw new BusinessException(Messages.CUSTOMER_NOT_FOUND);
         }
+        return customerRepository.findByIdAndDeletedDateIsNull(customerId)
+                .orElseThrow(() -> new BusinessException(Messages.CUSTOMER_NOT_FOUND));
     }
 
     /**

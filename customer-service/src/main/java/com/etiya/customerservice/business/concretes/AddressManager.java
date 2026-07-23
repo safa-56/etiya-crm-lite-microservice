@@ -1,7 +1,6 @@
 package com.etiya.customerservice.business.concretes;
 
 import com.etiya.customerservice.business.abstracts.AddressService;
-import com.etiya.customerservice.business.abstracts.IndividualCustomerService;
 import com.etiya.customerservice.business.abstracts.OutboxService;
 import com.etiya.customerservice.business.abstracts.ReferenceDataService;
 import com.etiya.customerservice.business.constants.CustomerEvents;
@@ -40,7 +39,6 @@ import java.util.List;
 public class AddressManager implements AddressService {
 
     private final AddressRepository repository;
-    private final IndividualCustomerService individualCustomerService;
     private final AddressMapper mapper;
     private final AddressBusinessRules rules;
     private final ReferenceDataService referenceDataService;
@@ -48,9 +46,7 @@ public class AddressManager implements AddressService {
     @Override
     @Transactional
     public AddressResponse add(CreateAddressRequest request) {
-        rules.checkIfCustomerExists(request.customerId());
-
-        Customer customer = individualCustomerService.getIndividualCustomerById(request.customerId());
+        Customer customer = rules.checkIfCustomerExists(request.customerId());
 
         Address address = mapper.toEntity(request);
         address.setCustomer(customer);
