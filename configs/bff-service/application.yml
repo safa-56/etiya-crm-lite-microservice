@@ -4,7 +4,7 @@
 # BFF durumsuzdur: DB/Redis/Kafka yoktur; yalnızca downstream servisleri çağırır.
 # =============================================================================
 server:
-  port: ${SERVER_PORT:8090}
+  port: ${SERVER_PORT:8099}
 
 eureka:
   instance:

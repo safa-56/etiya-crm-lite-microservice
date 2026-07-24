@@ -255,7 +255,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     private String primaryGsmNumber(IndividualCustomer customer) {
         return customer.getContactInfos().stream()
                 .filter(contactInfo -> contactInfo.getDeletedDate() == null)
-                .map(CustomerContactInfo::getMobilPhone)
+                .map(CustomerContactInfo::getMobilePhone)
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
