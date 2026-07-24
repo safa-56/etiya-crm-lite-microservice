@@ -32,6 +32,7 @@ COPY product-service/pom.xml product-service/pom.xml
 COPY cart-service/pom.xml cart-service/pom.xml
 COPY order-service/pom.xml order-service/pom.xml
 COPY search-service/pom.xml search-service/pom.xml
+COPY bff-service/pom.xml bff-service/pom.xml
 RUN mvn -B -pl gateway-server -am dependency:go-offline
 
 # Şimdi kaynak kodu kopyalayıp yalnızca gateway-server modülünü paketliyoruz.
