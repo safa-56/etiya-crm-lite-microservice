@@ -77,16 +77,34 @@ export class CustomerDetail {
 
   protected readonly loadError = computed(() => this.state().status === 'error');
 
-  protected readonly customer = computed<Customer | null>(() => {
-    const current = this.state();
-    return current.status === 'loaded' ? current.customer : null;
+  /**
+   * Ekranda gösterilen müşteri. İlk yükleme {@link state}'ten seed edilir; bir panel backend'e
+   * yazdıktan sonra {@link reload} bu sinyali sessizce (yükleniyor ekranı göstermeden) günceller,
+   * böylece başlık ve tüm paneller otoriter veriyle tazelenir.
+   */
+  protected readonly customer = linkedSignal<DetailState, Customer | null>({
+    source: this.state,
+    computation: (state) => (state.status === 'loaded' ? state.customer : null)
   });
 
-  /** Başka bir müşteriye geçildiğinde sekme başa döner. */
-  protected readonly activeTab = linkedSignal<Customer | null, DetailTab>({
-    source: this.customer,
+  /** Başka bir müşteriye geçildiğinde sekme başa döner (yalnızca id değişince). */
+  protected readonly activeTab = linkedSignal<string, DetailTab>({
+    source: this.id,
     computation: () => 'info'
   });
+
+  /**
+   * Bir panel güncelleme yazdıktan sonra detayı BFF'ten yeniden çeker ve görünümü sessizce
+   * tazeler. Yükleniyor durumuna geçmez (mevcut veri korunur) ve aktif sekme değişmez.
+   */
+  protected reload(): void {
+    this.customers.getDetailById(this.id()).subscribe({
+      next: (customer) => this.customer.set(customer),
+      error: () => {
+        // Sessiz başarısızlık: kayıt zaten backend'e yazıldı, mevcut görünüm korunur.
+      }
+    });
+  }
 
   protected readonly tabs = computed<readonly TabItem[]>(() => {
     const labels = this.t().customers.detail.tabs;

@@ -1,9 +1,10 @@
-import { Component, inject, input, linkedSignal, signal } from '@angular/core';
+import { Component, inject, input, linkedSignal, output, signal } from '@angular/core';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { Icon } from '../../../shared/ui/icon/icon';
 import { PanelHeader } from '../../../shared/ui/panel-header/panel-header';
 import { CustomerAddress } from '../customer.model';
+import { CustomerService } from '../customer.service';
 import { CustomerAddressCard } from './customer-address-card';
 import { AddressFormResult, CustomerAddressForm } from './customer-address-form';
 
@@ -22,6 +23,8 @@ import { AddressFormResult, CustomerAddressForm } from './customer-address-form'
     @if (mode() === 'form') {
       <app-customer-address-form
         [address]="editingAddress()"
+        [saving]="saving()"
+        [saveError]="saveError()"
         (saved)="saveAddress($event)"
         (cancelled)="closeForm()"
       />
@@ -59,9 +62,20 @@ import { AddressFormResult, CustomerAddressForm } from './customer-address-form'
   `
 })
 export class CustomerAddressesPanel {
+  private readonly customers = inject(CustomerService);
+
   protected readonly t = inject(I18nService).t;
 
   readonly addresses = input.required<readonly CustomerAddress[]>();
+
+  /** Başarılı backend güncellemesinden sonra üst bileşenin detayı yeniden çekmesi için. */
+  readonly saved = output<void>();
+
+  /** Adres güncellemesi backend'e yazılırken sürüyor mu? */
+  protected readonly saving = signal(false);
+
+  /** Son güncellemede backend hatası oluştu mu? */
+  protected readonly saveError = signal(false);
 
   /** Ekle/düzenle/sil işlemleri bu yerel liste üzerinde uygulanır. */
   protected readonly addressList = linkedSignal<readonly CustomerAddress[], CustomerAddress[]>({
@@ -70,16 +84,20 @@ export class CustomerAddressesPanel {
   });
 
   /**
-   * Birincil adres seçimi; varsayılan olarak hiçbir adres seçili gelmez, kullanıcı radyo
-   * düğmesiyle kendisi seçer. Seçili adres silinirse seçim boşa döner.
+   * Birincil adres seçimi. Varsayılan olarak backend'de {@code isPrimary} işaretli adres
+   * (birden çok adres varsa kullanıcının birincil yaptığı) seçili gelir; yoksa ilk adres.
+   * Kullanıcı radyo düğmesiyle seçimi değiştirebilir; seçili adres silinirse birincil'e döner.
    */
   protected readonly primaryAddressId = linkedSignal<CustomerAddress[], string | null>({
     source: this.addressList,
     computation: (addresses, previous) => {
       const previousId = previous?.value ?? null;
-      return previousId !== null && addresses.some((address) => address.id === previousId)
-        ? previousId
-        : null;
+      if (previousId !== null && addresses.some((address) => address.id === previousId)) {
+        return previousId;
+      }
+
+      const primary = addresses.find((address) => address.isPrimary);
+      return primary?.id ?? addresses[0]?.id ?? null;
     }
   });
 
@@ -91,19 +109,27 @@ export class CustomerAddressesPanel {
 
   protected openCreate(): void {
     this.editingAddress.set(null);
+    this.saveError.set(false);
     this.mode.set('form');
   }
 
   protected openEdit(address: CustomerAddress): void {
     this.editingAddress.set(address);
+    this.saveError.set(false);
     this.mode.set('form');
   }
 
   protected closeForm(): void {
     this.mode.set('list');
     this.editingAddress.set(null);
+    this.saveError.set(false);
   }
 
+  /**
+   * Düzenlemede adresi customer-service'e (gerçek DB) yazar; başarıda yerel liste iyimser
+   * güncellenir ve form kapanır, hatada form açık kalır. Yeni adres ekleme şu an yalnızca
+   * yerel listede tutulur (backend'e yazılmaz).
+   */
   protected saveAddress(result: AddressFormResult): void {
     const title = `${result.city}, ${result.street}, ${result.buildingNo}`;
     const editing = this.editingAddress();
@@ -116,15 +142,50 @@ export class CustomerAddressesPanel {
         isPrimary: this.addressList().length === 0
       };
       this.addressList.update((addresses) => [...addresses, address]);
-    } else {
-      this.addressList.update((addresses) =>
-        addresses.map((address) =>
-          address.id === editing.id ? { ...address, title, detail: result.description } : address
-        )
-      );
+      this.closeForm();
+      return;
     }
 
-    this.closeForm();
+    if (this.saving()) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.saveError.set(false);
+
+    this.customers
+      .updateAddress(Number(editing.id), {
+        city: result.city,
+        street: result.street,
+        houseNumber: result.buildingNo,
+        addressDescription: result.description,
+        isPrimary: editing.isPrimary
+      })
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.addressList.update((addresses) =>
+            addresses.map((address) =>
+              address.id === editing.id
+                ? {
+                    ...address,
+                    title,
+                    detail: result.description,
+                    city: result.city,
+                    street: result.street,
+                    houseNumber: result.buildingNo
+                  }
+                : address
+            )
+          );
+          this.closeForm();
+          this.saved.emit();
+        },
+        error: () => {
+          this.saving.set(false);
+          this.saveError.set(true);
+        }
+      });
   }
 
   protected deleteAddress(address: CustomerAddress): void {

@@ -71,10 +71,7 @@ public class BillingAccountsController {
     @PutMapping("/{id}")
     public BillingAccountResponse update(@PathVariable Long id,
                                          @Valid @RequestBody UpdateBillingAccountRequest request) {
-        UpdateBillingAccountRequest normalized = new UpdateBillingAccountRequest(
-                request.accountName(), request.accountDescription(), request.addressId(),
-                request.accountNumber(), request.orderNumber());
-        return billingAccountService.update(id, normalized);
+        return billingAccountService.update(id, request);
     }
 
     /**

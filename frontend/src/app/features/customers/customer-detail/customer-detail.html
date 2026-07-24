@@ -32,20 +32,25 @@
 
       @switch (activeTab()) {
         @case ('info') {
-          <app-customer-info-panel [customer]="detail" />
+          <app-customer-info-panel [customer]="detail" (saved)="reload()" />
         }
         @case ('account') {
           <app-customer-accounts-panel
             [customerId]="detail.id"
             [accounts]="detail.accounts"
             [addresses]="detail.addresses"
+            (saved)="reload()"
           />
         }
         @case ('address') {
-          <app-customer-addresses-panel [addresses]="detail.addresses" />
+          <app-customer-addresses-panel [addresses]="detail.addresses" (saved)="reload()" />
         }
         @case ('contact') {
-          <app-customer-contact-panel [contact]="detail.contact" [customerId]="detail.id" />
+          <app-customer-contact-panel
+            [contact]="detail.contact"
+            [customerId]="detail.id"
+            (saved)="reload()"
+          />
         }
       }
     </div>

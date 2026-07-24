@@ -2,7 +2,6 @@ package com.etiya.accountservice.business.dtos.requests;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -19,10 +18,10 @@ import jakarta.validation.constraints.Size;
  * doğrulanır ve adres metni oradan çözülür.
  *
  * <p>{@code accountNumber} (yalnızca rakam, <b>tam 10 hane</b>, sistemde benzersiz) ve
- * {@code orderNumber} (yalnızca rakam, <b>tam 8 hane</b>) opsiyoneldir; verilirse kabul kriterlerindeki
- * kısıtlara uymalıdır. Boş string gönderilmez — alan kullanılmayacaksa hiç gönderilmez
- * ya da {@code null} geçilir. {@code accountType} ve {@code accountStatus} istemciden alınmaz;
- * sistem tarafından atanır (Billing Account / Active).
+ * {@code orderNumber} (yalnızca rakam, <b>tam 8 hane</b>) <b>istemciden alınmaz</b>;
+ * oluşturmada sistem tarafından otomatik üretilir. {@code accountType} ve
+ * {@code accountStatus} da istemciden alınmaz; sistem tarafından atanır
+ * (Billing Account / Active).
  */
 public record CreateBillingAccountRequest(
 
@@ -37,13 +36,6 @@ public record CreateBillingAccountRequest(
         String accountDescription,
 
         @NotNull(message = "{validation.addressId.notNull}")
-        Long addressId,
-
-        @Pattern(regexp = "^\\d{10}$", message = "{validation.accountNumber.pattern}")
-        String accountNumber,
-
-        /** Yalnızca rakam, tam 8 hane (order-service tarafından üretilen sipariş numarası). */
-        @Pattern(regexp = "^\\d{8}$", message = "{validation.orderNumber.pattern}")
-        String orderNumber
+        Long addressId
 ) {
 }

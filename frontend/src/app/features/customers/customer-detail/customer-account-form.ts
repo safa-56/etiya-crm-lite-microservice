@@ -115,12 +115,18 @@ const accountDraftSchema = schema<AccountDraft>((draft) => {
           </div>
         </div>
 
+        @if (saveError()) {
+          <p class="mt-5 text-sm font-medium text-red-600" role="alert">
+            {{ t().customers.detail.accounts.saveError }}
+          </p>
+        }
+
         <div class="mt-8 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
           <app-button type="button" variant="outline" size="lg" (click)="cancelled.emit()">
             {{ t().customers.detail.accounts.formCancel }}
           </app-button>
 
-          <app-button type="submit" size="lg" [disabled]="accountForm().invalid()">
+          <app-button type="submit" size="lg" [disabled]="accountForm().invalid() || saving()">
             {{ submitLabel() }}
           </app-button>
         </div>
@@ -134,6 +140,12 @@ export class CustomerAccountForm {
   /** Düzenlenecek hesap; `null` ise yeni hesap oluşturma modudur. */
   readonly account = input<CustomerAccount | null>(null);
   readonly addresses = input.required<readonly CustomerAddress[]>();
+
+  /** Üst panel backend'e yazarken düğmeyi kilitler. */
+  readonly saving = input(false);
+
+  /** Üst panelde backend hatası oluştuğunda uyarı gösterilir. */
+  readonly saveError = input(false);
 
   readonly saved = output<AccountFormResult>();
   readonly cancelled = output<void>();
@@ -150,10 +162,13 @@ export class CustomerAccountForm {
       : this.t().customers.detail.accounts.formSave
   );
 
-  /** Düzenlenen hesap geldiğinde ad alanı onun değerine dolar. */
+  /** Düzenlenen hesap geldiğinde ad ve açıklama alanları onun değerlerine dolar. */
   private readonly draft = linkedSignal<CustomerAccount | null, AccountDraft>({
     source: this.account,
-    computation: (account) => ({ name: account?.name ?? '', accountDescription: '' })
+    computation: (account) => ({
+      name: account?.name ?? '',
+      accountDescription: account?.accountDescription ?? ''
+    })
   });
 
   protected readonly accountForm = form(this.draft, accountDraftSchema);
@@ -165,16 +180,28 @@ export class CustomerAccountForm {
   });
 
   /**
-   * Birincil adres seçimi; varsayılan olarak hiçbir adres seçili gelmez, kullanıcı
-   * radyo düğmesiyle kendisi seçer.
+   * Seçili adres. Oluşturmada varsayılan seçili gelmez; düzenlemede hesabın mevcut adresi
+   * (varsa) ön-seçili gelir. Kullanıcı radyo düğmesiyle değiştirebilir.
    */
   protected readonly selectedAddressId = linkedSignal<readonly CustomerAddress[], string | null>({
     source: this.addressList,
     computation: (addresses, previous) => {
       const previousId = previous?.value ?? null;
-      return previousId !== null && addresses.some((address) => address.id === previousId)
-        ? previousId
-        : null;
+      if (previousId !== null && addresses.some((address) => address.id === previousId)) {
+        return previousId;
+      }
+
+      const accountAddressId = this.account()?.addressId ?? null;
+      if (accountAddressId !== null) {
+        const match = String(accountAddressId);
+        if (addresses.some((address) => address.id === match)) {
+          return match;
+        }
+      }
+
+      // Oluşturmada (veya hesabın adresi çözülemezse) birincil adres, yoksa ilk adres seçili gelir.
+      const primary = addresses.find((address) => address.isPrimary);
+      return primary?.id ?? addresses[0]?.id ?? null;
     }
   });
 

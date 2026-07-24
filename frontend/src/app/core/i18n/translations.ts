@@ -189,7 +189,11 @@ const tr = {
         gender: 'Cinsiyet',
         fatherName: 'Baba Adı',
         motherName: 'Anne Adı',
-        identityNumber: 'Uyruk / TC No'
+        identityNumber: 'Uyruk / TC No',
+        saveError: 'Müşteri bilgisi güncellenemedi. Lütfen tekrar deneyin.',
+        deleteBlocked:
+          'Müşteri hesabına bağlı aktif ürün olduğu için müşteri silinemez. Önce ilgili ürünleri kaldırın.',
+        deleteError: 'Müşteri silinemedi. Lütfen tekrar deneyin.'
       },
       accounts: {
         title: 'Müşteri Hesapları',
@@ -236,7 +240,8 @@ const tr = {
         formSave: 'Kaydet',
         deleteConfirm: 'Bu fatura hesabını silmek istediğinize emin misiniz?',
         confirmYes: 'Evet',
-        confirmNo: 'Hayır'
+        confirmNo: 'Hayır',
+        saveError: 'Fatura hesabı güncellenemedi. Lütfen tekrar deneyin.'
       },
       addresses: {
         title: 'Adres',
@@ -252,7 +257,8 @@ const tr = {
         buildingNo: 'Bina / Daire No',
         description: 'Adres Açıklaması',
         cancel: 'İptal',
-        save: 'Kaydet'
+        save: 'Kaydet',
+        saveError: 'Adres güncellenemedi. Lütfen tekrar deneyin.'
       },
       contact: {
         title: 'İletişim Kanalı',
@@ -265,7 +271,8 @@ const tr = {
         cancel: 'İptal',
         save: 'Kaydet',
         emailPlaceholder: 'ornek@etiya.com',
-        mobilePlaceholder: '10 haneli numara'
+        mobilePlaceholder: '10 haneli numara',
+        saveError: 'İletişim bilgisi güncellenemedi. Lütfen tekrar deneyin.'
       }
     }
   },
@@ -505,7 +512,11 @@ const en: typeof tr = {
         gender: 'Gender',
         fatherName: "Father's Name",
         motherName: "Mother's Name",
-        identityNumber: 'Nationality / National ID'
+        identityNumber: 'Nationality / National ID',
+        saveError: 'Could not update customer information. Please try again.',
+        deleteBlocked:
+          'This customer cannot be deleted because there is an active product linked to the customer account. Remove the related products first.',
+        deleteError: 'Could not delete the customer. Please try again.'
       },
       accounts: {
         title: 'Customer Accounts',
@@ -552,7 +563,8 @@ const en: typeof tr = {
         formSave: 'Save',
         deleteConfirm: 'Are you sure to delete this billing account?',
         confirmYes: 'Yes',
-        confirmNo: 'No'
+        confirmNo: 'No',
+        saveError: 'Could not update the billing account. Please try again.'
       },
       addresses: {
         title: 'Address',
@@ -568,7 +580,8 @@ const en: typeof tr = {
         buildingNo: 'Building / Apartment No',
         description: 'Address Description',
         cancel: 'Cancel',
-        save: 'Save'
+        save: 'Save',
+        saveError: 'Could not update the address. Please try again.'
       },
       contact: {
         title: 'Contact Channel',
@@ -581,7 +594,8 @@ const en: typeof tr = {
         cancel: 'Cancel',
         save: 'Save',
         emailPlaceholder: 'example@etiya.com',
-        mobilePlaceholder: '10-digit number'
+        mobilePlaceholder: '10-digit number',
+        saveError: 'Could not update the contact information. Please try again.'
       }
     }
   },

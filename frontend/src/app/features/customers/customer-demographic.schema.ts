@@ -1,4 +1,4 @@
-import { maxLength, pattern, required, schema } from '@angular/forms/signals';
+import { maxLength, pattern, required, schema, validate } from '@angular/forms/signals';
 
 import { NAME_CHARACTERS } from '../../shared/directives/character-mask';
 import { Gender } from './customer.model';
@@ -31,6 +31,21 @@ const NAME_PATTERN = new RegExp(`^[${NAME_CHARACTERS}]*$`);
 const IDENTITY_NUMBER_PATTERN = /^\d{11}$/;
 
 /**
+ * Bugünün tarihini yerel saate göre {@code yyyy-MM-dd} biçiminde döndürür.
+ * `type="date"` girişinin `max` özniteliği ve doğum tarihi doğrulaması aynı
+ * eşiği kullansın diye tek yerde üretilir. {@code toISOString()} UTC'ye
+ * çevirdiğinden gece yarısı civarında bir günlük kaymaya yol açar; bu yüzden
+ * bileşen yerel alanlardan kurulur.
+ */
+export function todayIsoDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Demografik alanların doğrulama kuralları.
  *
  * <p>Uzunluk sınırları backend DTO'sundaki {@code @Size} değerleriyle birebir aynıdır;
@@ -49,6 +64,14 @@ export const customerDemographicSchema = schema<CustomerDraft>((draft) => {
   pattern(draft.lastName, NAME_PATTERN);
 
   required(draft.birthDate);
+  // Doğum tarihi ileri tarihli olamaz; bugünden sonrası reddedilir.
+  validate(draft.birthDate, ({ value }) => {
+    const birthDate = value();
+    if (birthDate && birthDate > todayIsoDate()) {
+      return { kind: 'futureBirthDate' };
+    }
+    return undefined;
+  });
   required(draft.gender);
 
   maxLength(draft.fatherName, 100);

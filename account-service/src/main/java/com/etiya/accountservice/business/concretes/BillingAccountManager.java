@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -46,11 +47,15 @@ import java.util.List;
 @Service
 public class BillingAccountManager implements BillingAccountService {
 
+    /** Otomatik numara üretiminde benzersiz numara bulunamazsa denenecek üst sınır. */
+    private static final int ACCOUNT_NUMBER_MAX_ATTEMPTS = 10;
+
     private final BillingAccountRepository repository;
     private final BillingAccountMapper mapper;
     private final BillingAccountBusinessRules rules;
     private final OutboxService outboxService;
     private final ReferenceDataService referenceDataService;
+    private final SecureRandom random = new SecureRandom();
 
     public BillingAccountManager(BillingAccountRepository repository,
                                  BillingAccountMapper mapper,
@@ -66,12 +71,17 @@ public class BillingAccountManager implements BillingAccountService {
 
     @Override
     @Transactional
-    @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true),
+            @CacheEvict(value = CacheNames.BILLING_ACCOUNTS_BY_CUSTOMER, allEntries = true)
+    })
     public BillingAccountResponse add(CreateBillingAccountRequest request) {
-        // --- hesap-lokal kural (senkron) ---
-        rules.checkIfAccountNumberAlreadyExists(request.accountNumber());
-
         BillingAccount account = mapper.toEntity(request);
+
+        // Hesap ve sipariş numarası istemciden alınmaz; sistem otomatik üretir.
+        // (accountNumber: tam 10 hane ve benzersiz; orderNumber: tam 8 hane.)
+        account.setAccountNumber(generateUniqueAccountNumber());
+        account.setOrderNumber(generateOrderNumber());
 
         // --- Saga (choreography) adım 1: hesabı PENDING olarak aç ---
         // Müşteri/adres doğrulaması otoriter olarak customer-service'e bırakılır;
@@ -118,7 +128,7 @@ public class BillingAccountManager implements BillingAccountService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = CacheNames.BILLING_ACCOUNT_LIST, key = "'customer-' + #customerId")
+    @Cacheable(value = CacheNames.BILLING_ACCOUNTS_BY_CUSTOMER, key = "#customerId")
     public List<BillingAccountResponse> getByCustomerId(Long customerId) {
         return repository.findAllByCustomerIdAndDeletedDateIsNull(customerId).stream()
                 .map(mapper::toResponse)
@@ -128,24 +138,21 @@ public class BillingAccountManager implements BillingAccountService {
     @Override
     @Transactional
     @Caching(
-            put = @CachePut(value = CacheNames.BILLING_ACCOUNTS, key = "#request.id"),
-            evict = @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
+            put = @CachePut(value = CacheNames.BILLING_ACCOUNTS, key = "#id"),
+            evict = {
+                    @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true),
+                    @CacheEvict(value = CacheNames.BILLING_ACCOUNTS_BY_CUSTOMER, allEntries = true)
+            }
     )
     public BillingAccountResponse update(Long id, UpdateBillingAccountRequest request) {
         BillingAccount account = repository.findByIdAndDeletedDateIsNull(id)
                 .orElseThrow(() -> new BusinessException(Messages.BILLING_ACCOUNT_NOT_FOUND));
 
-        // Hesap numarası değiştiyse tekilliği doğrula (hesap-lokal kural).
-        if (request.accountNumber() != null
-                && !request.accountNumber().equals(account.getAccountNumber())) {
-            rules.checkIfAccountNumberAlreadyExists(request.accountNumber());
-        }
-
+        // accountNumber/orderNumber sistem-yönetimlidir (oluşturmada üretilir) ve bu ekranda
+        // düzenlenmez; güncellemede korunur (istemciden gelen değerlerle üzerine yazılmaz).
         // Adres dışı alanlar senkron güncellenir.
         account.setAccountName(request.accountName());
         account.setAccountDescription(request.accountDescription());
-        account.setAccountNumber(request.accountNumber());
-        account.setOrderNumber(request.orderNumber());
 
         // Adres değişikliği: otoriter doğrulama Saga ile customer-service'e bırakılır.
         // Eski adres, doğrulama sonucu gelene kadar korunur; yeni adres beklemede tutulur.
@@ -177,7 +184,8 @@ public class BillingAccountManager implements BillingAccountService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = CacheNames.BILLING_ACCOUNTS, key = "#id"),
-            @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true)
+            @CacheEvict(value = CacheNames.BILLING_ACCOUNT_LIST, allEntries = true),
+            @CacheEvict(value = CacheNames.BILLING_ACCOUNTS_BY_CUSTOMER, allEntries = true)
     })
     public void delete(Long id) {
         BillingAccount account = repository.findByIdAndDeletedDateIsNull(id)
@@ -197,6 +205,38 @@ public class BillingAccountManager implements BillingAccountService {
     }
 
     // ------------------------------------------------------------------ yardımcılar
+
+    /**
+     * Benzersiz bir hesap numarası üretir: <b>tam 10 hane, yalnızca rakam</b>.
+     *
+     * <p>Üretilen numara veritabanında (soft-delete edilmişler dahil) yoksa döner.
+     * Nadir çakışmalarda birkaç kez yeniden dener; benzersizlik ayrıca kolon üzerindeki
+     * unique kısıtla da garanti altındadır.
+     */
+    // TODO: oluşturma biçimini değiştir
+    private String generateUniqueAccountNumber() {
+        for (int attempt = 0; attempt < ACCOUNT_NUMBER_MAX_ATTEMPTS; attempt++) {
+            String candidate = randomDigits(10);
+            if (!repository.existsByAccountNumber(candidate)) {
+                return candidate;
+            }
+        }
+        throw new BusinessException(Messages.ACCOUNT_NUMBER_GENERATION_FAILED);
+    }
+
+    /** Sipariş numarası üretir: <b>tam 8 hane, yalnızca rakam</b>. */
+    private String generateOrderNumber() {
+        return randomDigits(8);
+    }
+
+    /** Baştaki sıfırlar korunacak şekilde {@code length} haneli rakam dizisi üretir. */
+    private String randomDigits(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(random.nextInt(10));
+        }
+        return sb.toString();
+    }
 
     private void publishEvent(BillingAccount account, String eventType) {
         BillingAccountEventPayload payload = new BillingAccountEventPayload(

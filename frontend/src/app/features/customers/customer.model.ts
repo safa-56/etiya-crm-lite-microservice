@@ -52,6 +52,17 @@ export interface CustomerAccount {
   readonly accountType: string;
   readonly status: CustomerStatus;
   readonly products: readonly CustomerAccountProduct[];
+  /**
+   * Backend'den yüklenen alanlar (BFF detay yanıtı). Bellek içi mock kayıtlarda
+   * bulunmaz; güncelleme yalnızca backend'den gelen hesaplarda yapılır.
+   */
+  readonly id?: number;
+  readonly accountNumber?: string | null;
+  readonly orderNumber?: string | null;
+  readonly addressId?: number | null;
+  readonly accountDescription?: string | null;
+  /** Hesaba bağlı aktif ürün sayısı; müşteri silme kuralında kullanılır (aktif ürünlü silinemez). */
+  readonly activeProductCount?: number;
 }
 
 export interface CustomerAddress {
@@ -71,6 +82,11 @@ export interface CustomerAddress {
 
 /** İletişim kanalı alanları; müşteride tanımlı değilse null. */
 export interface CustomerContact {
+  /**
+   * Backend iletişim bilgisi id'si; BFF detay yanıtından gelir. Bellek içi mock
+   * kayıtlarda bulunmaz, kayıt yoksa null olur (güncelleme yapılamaz).
+   */
+  readonly id?: number | null;
   readonly email: string | null;
   readonly mobilePhone: string | null;
   readonly homePhone: string | null;

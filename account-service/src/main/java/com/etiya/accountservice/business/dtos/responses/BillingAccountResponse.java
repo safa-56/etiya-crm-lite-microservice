@@ -23,6 +23,8 @@ public record BillingAccountResponse(
         Long pendingAddressId,
         String address,
         String orderNumber,
+        /** Hesaba bağlı aktif ürün sayısı; müşteri/hesap silme kuralında (aktif ürünlü silinemez) kullanılır. */
+        Integer activeProductCount,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

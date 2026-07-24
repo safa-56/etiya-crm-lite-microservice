@@ -20,6 +20,7 @@ import { MOCK_CUSTOMERS } from './customers.mock';
  * Alanlar backend DTO'larıyla birebir; frontend görünüm modeline burada eşlenir.
  */
 interface BffContactInfo {
+  readonly id: number;
   readonly email: string | null;
   readonly homePhone: string | null;
   readonly mobilePhone: string | null;
@@ -56,6 +57,10 @@ interface BffBillingAccount {
   readonly accountNumber: string | null;
   readonly accountName: string;
   readonly accountType: string | null;
+  readonly accountDescription: string | null;
+  readonly addressId: number | null;
+  readonly orderNumber: string | null;
+  readonly activeProductCount: number | null;
   readonly status: string;
 }
 
@@ -93,6 +98,58 @@ export interface CreateIndividualCustomerBody {
   readonly address: CreateAddressBody;
 }
 
+/**
+ * customer-service güncelleme gövdeleri. Backend PUT uçlarının beklediği alanlarla
+ * birebir; boş bırakılabilen alanlar backend'de null kabul edilir.
+ */
+export interface UpdateIndividualCustomerBody {
+  readonly firstName: string;
+  readonly secondName: string | null;
+  readonly lastName: string;
+  readonly birthDate: string;
+  readonly fatherName: string | null;
+  readonly motherName: string | null;
+  readonly nationalityId: string;
+  readonly genderType: 'MALE' | 'FEMALE';
+}
+
+export interface UpdateContactInfoBody {
+  readonly email: string;
+  readonly homePhone: string | null;
+  readonly mobilePhone: string;
+  readonly fax: string | null;
+}
+
+export interface UpdateAddressBody {
+  readonly city: string;
+  readonly street: string;
+  readonly houseNumber: string;
+  readonly addressDescription: string;
+  readonly isPrimary: boolean;
+}
+
+/**
+ * account-service fatura hesabı güncelleme gövdesi. Account Type/Status ve
+ * accountNumber/orderNumber sistemce yönetildiğinden gönderilmez (backend korur).
+ */
+export interface UpdateBillingAccountBody {
+  readonly accountName: string;
+  readonly accountDescription: string | null;
+  readonly addressId: number;
+}
+
+/**
+ * account-service fatura hesabı oluşturma gövdesi. {@code accountNumber}/{@code orderNumber}
+ * ve Account Type/Status istemciden alınmaz; sistem üretir/atar. Hesap saga ile önce PENDING
+ * açılır, adres/müşteri doğrulaması sonrası aktifleşir.
+ */
+export interface CreateBillingAccountBody {
+  readonly customerId: number;
+  readonly accountName: string;
+  readonly accountDescription: string | null;
+  readonly addressId: number;
+}
+
 /** Backend cinsiyet enum'unu görünüm modeline indirger. */
 function toGender(genderType: string): Gender {
   return genderType?.toUpperCase() === 'FEMALE' ? 'female' : 'male';
@@ -122,10 +179,16 @@ function toAddress(address: BffAddress): CustomerAddress {
 /** BFF fatura hesabını görünüm modeline eşler (ürünler product-service kapsamında; şimdilik boş). */
 function toAccount(account: BffBillingAccount): CustomerAccount {
   return {
+    id: account.id,
     number: account.accountNumber ?? String(account.id),
     name: account.accountName,
     accountType: account.accountType ?? '',
     status: toStatus(account.status),
+    accountNumber: account.accountNumber,
+    orderNumber: account.orderNumber,
+    addressId: account.addressId,
+    accountDescription: account.accountDescription,
+    activeProductCount: account.activeProductCount ?? 0,
     products: []
   };
 }
@@ -139,6 +202,7 @@ function toCustomer(detail: BffCustomerDetail): Customer {
   const accounts = detail.accounts.map(toAccount);
 
   const contact: CustomerContact = {
+    id: primaryContact?.id ?? null,
     email: primaryContact?.email ?? null,
     mobilePhone: primaryContact?.mobilePhone ?? null,
     homePhone: primaryContact?.homePhone ?? null,
@@ -252,6 +316,15 @@ export class CustomerService {
   /** Bireysel müşteri CRUD ucu (gateway → customer-service; aggregation gerekmez). */
   private readonly individualCustomersUrl = `${API_BASE_URL}/customer-service/api/v1/individual-customers`;
 
+  /** İletişim bilgisi CRUD ucu (gateway → customer-service). */
+  private readonly contactInfosUrl = `${API_BASE_URL}/customer-service/api/v1/contact-infos`;
+
+  /** Adres CRUD ucu (gateway → customer-service). */
+  private readonly addressesUrl = `${API_BASE_URL}/customer-service/api/v1/addresses`;
+
+  /** Fatura hesabı CRUD ucu (gateway → account-service). */
+  private readonly billingAccountsUrl = `${API_BASE_URL}/account-service/api/v1/billing-accounts`;
+
   /** Müşteri arama ucu (gateway → search-service CQRS read-model'i). Sayfalıdır. */
   private readonly searchUrl = `${API_BASE_URL}/search-service/api/v1/search/customers`;
 
@@ -273,6 +346,54 @@ export class CustomerService {
     return this.http
       .get<BffCustomerDetail>(`${this.detailUrl}/${id}`)
       .pipe(map((detail) => toCustomer(detail)));
+  }
+
+  /**
+   * Bireysel müşterinin demografik alanlarını customer-service'te (gerçek DB) günceller.
+   * Hatalar (400 doğrulama dahil) çağırana propagate edilir.
+   */
+  updateIndividual(id: number, body: UpdateIndividualCustomerBody): Observable<void> {
+    return this.http
+      .put(`${this.individualCustomersUrl}/${id}`, body)
+      .pipe(map(() => undefined));
+  }
+
+  /**
+   * Bireysel müşteriyi customer-service'te soft-delete ile pasifleştirir (204 döner).
+   * Aktif ürün kontrolü çağırandan önce yapılır; bu uç yalnızca silme işlemini yürütür.
+   */
+  deleteIndividual(id: number): Observable<void> {
+    return this.http
+      .delete(`${this.individualCustomersUrl}/${id}`)
+      .pipe(map(() => undefined));
+  }
+
+  /** Müşterinin iletişim bilgisini customer-service'te günceller. */
+  updateContactInfo(contactId: number, body: UpdateContactInfoBody): Observable<void> {
+    return this.http
+      .put(`${this.contactInfosUrl}/${contactId}`, body)
+      .pipe(map(() => undefined));
+  }
+
+  /** Müşterinin adresini customer-service'te günceller. */
+  updateAddress(addressId: number, body: UpdateAddressBody): Observable<void> {
+    return this.http
+      .put(`${this.addressesUrl}/${addressId}`, body)
+      .pipe(map(() => undefined));
+  }
+
+  /** Fatura hesabını account-service'te günceller (adres değişikliği saga ile doğrulanır). */
+  updateBillingAccount(id: number, body: UpdateBillingAccountBody): Observable<void> {
+    return this.http
+      .put(`${this.billingAccountsUrl}/${id}`, body)
+      .pipe(map(() => undefined));
+  }
+
+  /** Yeni fatura hesabını account-service'e yazar (saga ile PENDING açılır, sonra aktifleşir). */
+  createBillingAccount(body: CreateBillingAccountBody): Observable<void> {
+    return this.http
+      .post(this.billingAccountsUrl, body)
+      .pipe(map(() => undefined));
   }
 
   /**

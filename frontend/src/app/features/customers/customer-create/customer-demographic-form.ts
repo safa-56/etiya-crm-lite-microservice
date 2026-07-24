@@ -9,7 +9,7 @@ import { ButtonLink } from '../../../shared/ui/button/button-link';
 import { FormFieldShell } from '../../../shared/ui/form-field/form-field';
 import { Icon } from '../../../shared/ui/icon/icon';
 import { PanelHeader } from '../../../shared/ui/panel-header/panel-header';
-import { CustomerDraft, customerDemographicSchema } from '../customer-demographic.schema';
+import { CustomerDraft, customerDemographicSchema, todayIsoDate } from '../customer-demographic.schema';
 
 /** Sihirbazın 1. adımı: demografik bilgi formu. */
 @Component({
@@ -52,6 +52,9 @@ export class CustomerDemographicForm {
   });
 
   protected readonly customerForm = form(this.draft, customerDemographicSchema);
+
+  /** Doğum tarihi seçicisinin izin verdiği en ileri gün (bugün) — ileri tarih engellenir. */
+  protected readonly maxBirthDate = todayIsoDate();
 
   protected emitNext(): void {
     this.next.emit(this.draft());

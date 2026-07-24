@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { Button } from '../../../shared/ui/button/button';
@@ -10,6 +10,7 @@ import { Pagination } from '../../../shared/ui/pagination/pagination';
 import { PanelHeader } from '../../../shared/ui/panel-header/panel-header';
 import { StatusBadge } from '../../../shared/ui/status-badge/status-badge';
 import { CustomerAccount, CustomerAddress } from '../customer.model';
+import { CustomerService } from '../customer.service';
 import { CustomerAccountProducts } from './customer-account-products';
 import { AccountFormResult, CustomerAccountForm } from './customer-account-form';
 
@@ -41,11 +42,22 @@ const PAGE_SIZE = 4;
   templateUrl: './customer-accounts-panel.html'
 })
 export class CustomerAccountsPanel {
+  private readonly customers = inject(CustomerService);
+
   protected readonly t = inject(I18nService).t;
 
   readonly customerId = input.required<number>();
   readonly accounts = input.required<readonly CustomerAccount[]>();
   readonly addresses = input.required<readonly CustomerAddress[]>();
+
+  /** Başarılı backend yazımından sonra üst bileşenin detayı yeniden çekmesi için. */
+  readonly saved = output<void>();
+
+  /** Hesap güncellemesi backend'e yazılırken sürüyor mu? */
+  protected readonly saving = signal(false);
+
+  /** Son güncellemede backend hatası oluştu mu? */
+  protected readonly saveError = signal(false);
 
   /** Oluştur/düzenle/sil işlemleri bu yerel liste üzerinde uygulanır. */
   protected readonly accountList = linkedSignal<readonly CustomerAccount[], CustomerAccount[]>({
@@ -90,40 +102,97 @@ export class CustomerAccountsPanel {
 
   protected openCreate(): void {
     this.editingAccount.set(null);
+    this.saveError.set(false);
     this.mode.set('form');
   }
 
   protected openEdit(account: CustomerAccount): void {
     this.editingAccount.set(account);
+    this.saveError.set(false);
     this.mode.set('form');
   }
 
   protected closeForm(): void {
     this.mode.set('list');
     this.editingAccount.set(null);
+    this.saveError.set(false);
   }
 
+  /**
+   * Fatura hesabını account-service'e (gerçek DB) yazar. Oluşturmada POST, düzenlemede PUT
+   * çağrılır; başarıda üst bileşen detayı yeniden çeker (yeni/güncel hesap listeye yansır).
+   * {@code addressId} her iki akışta da zorunludur; düzenlemede seçilmezse hesabın mevcut
+   * adresi kullanılır. Hatada form açık kalır ve mesaj gösterilir.
+   */
   protected saveAccount(result: AccountFormResult): void {
-    const editing = this.editingAccount();
-
-    if (editing === null) {
-      const account: CustomerAccount = {
-        number: String(Date.now()),
-        name: result.name,
-        accountType: 'Billing Account',
-        status: 'active',
-        products: []
-      };
-      this.accountList.update((accounts) => [account, ...accounts]);
-    } else {
-      this.accountList.update((accounts) =>
-        accounts.map((account) =>
-          account.number === editing.number ? { ...account, name: result.name } : account
-        )
-      );
+    if (this.saving()) {
+      return;
     }
 
-    this.closeForm();
+    const editing = this.editingAccount();
+
+    // --- Oluşturma (POST) ---
+    if (editing === null) {
+      if (result.addressId === null) {
+        this.saveError.set(true);
+        return;
+      }
+
+      this.saving.set(true);
+      this.saveError.set(false);
+
+      this.customers
+        .createBillingAccount({
+          customerId: this.customerId(),
+          accountName: result.name,
+          accountDescription: result.accountDescription === '' ? null : result.accountDescription,
+          addressId: Number(result.addressId)
+        })
+        .subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.closeForm();
+            this.saved.emit();
+          },
+          error: () => {
+            this.saving.set(false);
+            this.saveError.set(true);
+          }
+        });
+      return;
+    }
+
+    // --- Düzenleme (PUT) ---
+    if (editing.id === undefined) {
+      return;
+    }
+
+    const addressId = result.addressId !== null ? Number(result.addressId) : editing.addressId;
+    if (addressId == null) {
+      this.saveError.set(true);
+      return;
+    }
+
+    this.saving.set(true);
+    this.saveError.set(false);
+
+    this.customers
+      .updateBillingAccount(editing.id, {
+        accountName: result.name,
+        accountDescription: result.accountDescription === '' ? null : result.accountDescription,
+        addressId
+      })
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.closeForm();
+          this.saved.emit();
+        },
+        error: () => {
+          this.saving.set(false);
+          this.saveError.set(true);
+        }
+      });
   }
 
   protected requestDelete(account: CustomerAccount): void {

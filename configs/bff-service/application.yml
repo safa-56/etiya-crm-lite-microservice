@@ -12,6 +12,19 @@ eureka:
   client:
     register-with-eureka: true
     fetch-registry: true
+    # Registry'yi daha sık çek: bir downstream yeniden başladığında (veya eski instance
+    # düştüğünde) BFF'in güncel instance listesini alması ~30sn yerine ~5sn'ye iner.
+    # Böylece "detay bazen açılmıyor" penceresi kısalır.
+    registry-fetch-interval-seconds: 5
+
+# Spring Cloud LoadBalancer, Eureka'dan aldığı instance listesini önbelleğe alır (varsayılan
+# 35sn). Yeniden başlatma sonrası eski/ölü instance'ın seçilme penceresini kısaltmak için
+# TTL düşürülür; aggregator'daki yeniden deneme ile birlikte aralıklı bağlantı hataları giderilir.
+spring:
+  cloud:
+    loadbalancer:
+      cache:
+        ttl: 5s
 
 management:
   endpoints:

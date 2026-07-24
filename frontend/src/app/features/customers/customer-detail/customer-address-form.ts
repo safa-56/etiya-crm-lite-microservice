@@ -200,12 +200,18 @@ function toDraft(address: CustomerAddress | null): AddressDraft {
         </app-form-field>
       </div>
 
+      @if (saveError()) {
+        <p class="mt-5 text-sm font-medium text-red-600" role="alert">
+          {{ t().customers.detail.addresses.saveError }}
+        </p>
+      }
+
       <div class="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
         <app-button type="button" variant="outline" size="lg" (click)="cancelled.emit()">
           {{ t().customers.detail.addresses.cancel }}
         </app-button>
 
-        <app-button type="submit" size="lg" [disabled]="addressForm().invalid()">
+        <app-button type="submit" size="lg" [disabled]="addressForm().invalid() || saving()">
           <app-icon name="save" [stroke]="1.8" />
           {{ t().customers.detail.addresses.save }}
         </app-button>
@@ -218,6 +224,12 @@ export class CustomerAddressForm {
 
   /** Düzenlenecek adres; `null` ise yeni adres ekleme modudur. */
   readonly address = input<CustomerAddress | null>(null);
+
+  /** Üst panel backend'e yazarken düğmeyi kilitler. */
+  readonly saving = input(false);
+
+  /** Üst panelde backend hatası oluştuğunda uyarı gösterilir. */
+  readonly saveError = input(false);
 
   readonly saved = output<AddressFormResult>();
   readonly cancelled = output<void>();

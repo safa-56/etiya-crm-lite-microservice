@@ -18,6 +18,7 @@ public record BillingAccountResponse(
         Long pendingAddressId,
         String address,
         String orderNumber,
+        Integer activeProductCount,
         LocalDateTime createdDate,
         LocalDateTime updatedDate
 ) {

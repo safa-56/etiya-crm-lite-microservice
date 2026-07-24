@@ -2,6 +2,8 @@
   <app-customer-account-form
     [account]="editingAccount()"
     [addresses]="addresses()"
+    [saving]="saving()"
+    [saveError]="saveError()"
     (saved)="saveAccount($event)"
     (cancelled)="closeForm()"
   />

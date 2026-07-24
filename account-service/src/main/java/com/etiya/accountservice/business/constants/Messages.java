@@ -16,6 +16,9 @@ public final class Messages {
     /** Hesap numarası zaten kullanımda. */
     public static final String ACCOUNT_NUMBER_ALREADY_EXISTS = "account.number.alreadyExists";
 
+    /** Benzersiz hesap numarası üretilemedi (nadir; yeniden deneme sınırı aşıldı). */
+    public static final String ACCOUNT_NUMBER_GENERATION_FAILED = "account.number.generationFailed";
+
     /** Beklenen referans veri satırı bulunamadı. Parametreli: {@code {0}} = detay. */
     public static final String REFERENCE_DATA_NOT_FOUND = "reference.data.notFound";
 

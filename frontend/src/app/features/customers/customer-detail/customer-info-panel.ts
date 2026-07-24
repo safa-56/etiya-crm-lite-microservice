@@ -1,4 +1,4 @@
-import { Component, inject, input, linkedSignal, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormField, form } from '@angular/forms/signals';
@@ -19,12 +19,13 @@ import { CustomerService } from '../customer.service';
 function toDraft(customer: Customer): CustomerDraft {
   return {
     firstName: customer.firstName,
+    // Backend'de opsiyonel olan alanlar null gelebilir; form ve trim güvenliği için '' yapılır.
     secondName: customer.secondName ?? '',
     lastName: customer.lastName,
     birthDate: customer.birthDate,
     gender: customer.gender,
-    fatherName: customer.fatherName,
-    motherName: customer.motherName,
+    fatherName: customer.fatherName ?? '',
+    motherName: customer.motherName ?? '',
     identityNumber: customer.identityNumber
   };
 }
@@ -69,11 +70,33 @@ function toDraft(customer: Customer): CustomerDraft {
             icon="trash"
             tone="danger"
             [label]="t().customers.detail.info.delete"
-            (click)="confirmingDelete.set(true)"
+            (click)="requestDelete()"
           />
         }
       </ng-container>
     </app-panel-header>
+
+    @if (deleteBlocked()) {
+      <div
+        role="alert"
+        class="mt-4 flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+      >
+        <span>{{ t().customers.detail.info.deleteBlocked }}</span>
+        <button
+          type="button"
+          class="shrink-0 font-semibold text-amber-900 underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-etiya-orange focus-visible:ring-offset-2"
+          (click)="deleteBlocked.set(false)"
+        >
+          {{ t().customers.detail.info.confirmYes }}
+        </button>
+      </div>
+    }
+
+    @if (deleteError()) {
+      <p class="mt-4 text-sm font-medium text-red-600" role="alert">
+        {{ t().customers.detail.info.deleteError }}
+      </p>
+    }
 
     @if (confirmingDelete()) {
       <app-confirm-dialog
@@ -194,12 +217,18 @@ function toDraft(customer: Customer): CustomerDraft {
           </app-form-field>
         </div>
 
+        @if (saveError()) {
+          <p class="mt-5 text-sm font-medium text-red-600" role="alert">
+            {{ t().customers.detail.info.saveError }}
+          </p>
+        }
+
         <div class="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
           <app-button type="button" variant="outline" size="lg" (click)="cancel()">
             {{ t().customers.detail.info.cancel }}
           </app-button>
 
-          <app-button type="submit" size="lg" [disabled]="infoForm().invalid()">
+          <app-button type="submit" size="lg" [disabled]="infoForm().invalid() || saving()">
             {{ t().customers.detail.info.save }}
           </app-button>
         </div>
@@ -209,42 +238,42 @@ function toDraft(customer: Customer): CustomerDraft {
         <div
           appDetailField
           [label]="t().customers.detail.info.firstName"
-          [value]="customer().firstName"
+          [value]="view().firstName"
         ></div>
         <div
           appDetailField
           [label]="t().customers.detail.info.secondName"
-          [value]="customer().secondName ?? t().common.empty"
+          [value]="view().secondName ?? t().common.empty"
         ></div>
         <div
           appDetailField
           [label]="t().customers.detail.info.lastName"
-          [value]="customer().lastName"
+          [value]="view().lastName"
         ></div>
         <div
           appDetailField
           [label]="t().customers.detail.info.birthDate"
-          [value]="(customer().birthDate | date: 'dd/MM/yyyy') ?? t().common.empty"
+          [value]="(view().birthDate | date: 'dd/MM/yyyy') ?? t().common.empty"
         ></div>
         <div
           appDetailField
           [label]="t().customers.detail.info.gender"
-          [value]="t().customers.gender[customer().gender]"
+          [value]="t().customers.gender[view().gender]"
         ></div>
         <div
           appDetailField
           [label]="t().customers.detail.info.fatherName"
-          [value]="customer().fatherName"
+          [value]="view().fatherName"
         ></div>
         <div
           appDetailField
           [label]="t().customers.detail.info.motherName"
-          [value]="customer().motherName"
+          [value]="view().motherName"
         ></div>
         <div
           appDetailField
           [label]="t().customers.detail.info.identityNumber"
-          [value]="customer().identityNumber"
+          [value]="view().identityNumber"
         ></div>
       </dl>
     }
@@ -258,8 +287,43 @@ export class CustomerInfoPanel {
 
   readonly customer = input.required<Customer>();
 
+  /** Başarılı backend güncellemesinden sonra üst bileşenin detayı yeniden çekmesi için. */
+  readonly saved = output<void>();
+
+  /**
+   * Salt okunur görünümün kaynağı; müşteri değişince input'a sıfırlanır. Kaydetme başarılı
+   * olduğunda üst bileşen yeniden çekmediğinden burada iyimser olarak güncellenir.
+   */
+  protected readonly view = linkedSignal<Customer, Customer>({
+    source: this.customer,
+    computation: (customer) => customer
+  });
+
   /** Silme onayı penceresinin açık olup olmadığını tutar. */
   protected readonly confirmingDelete = signal(false);
+
+  /** Aktif ürün olduğu için silme engellendiğinde uyarı gösterilir. */
+  protected readonly deleteBlocked = signal(false);
+
+  /** Silme sürüyor mu? Çift gönderimi engeller. */
+  protected readonly deleting = signal(false);
+
+  /** Silme backend'de başarısız olursa mesaj gösterilir. */
+  protected readonly deleteError = signal(false);
+
+  /**
+   * Müşterinin herhangi bir fatura hesabında aktif ürünü var mı? Varsa müşteri silinemez
+   * (aktif ürün, hesaba bağlı olduğundan önce ürün/hesap kaldırılmalıdır).
+   */
+  protected readonly hasActiveProducts = computed(() =>
+    this.customer().accounts.some((account) => (account.activeProductCount ?? 0) > 0)
+  );
+
+  /** Kaydetme sürüyor mu? Çift gönderimi engeller ve düğmeyi kilitler. */
+  protected readonly saving = signal(false);
+
+  /** Son kaydetmede backend hatası oluştu mu? */
+  protected readonly saveError = signal(false);
 
   /** Başka bir müşteriye geçildiğinde düzenleme kapanır. */
   protected readonly isEditing = linkedSignal<Customer, boolean>({
@@ -276,33 +340,114 @@ export class CustomerInfoPanel {
   protected readonly infoForm = form(this.draft, customerDemographicSchema);
 
   protected startEdit(): void {
-    this.draft.set(toDraft(this.customer()));
+    this.draft.set(toDraft(this.view()));
+    this.saveError.set(false);
     this.isEditing.set(true);
   }
 
   protected cancel(): void {
-    this.draft.set(toDraft(this.customer()));
+    this.draft.set(toDraft(this.view()));
+    this.saveError.set(false);
     this.isEditing.set(false);
   }
 
+  /**
+   * Demografik alanları customer-service'e (gerçek DB) yazar. Başarıda düzenleme kapanır ve
+   * yerel görünüm iyimser olarak güncellenir; hatada form açık kalır ve mesaj gösterilir.
+   */
   protected save(event: Event): void {
     event.preventDefault();
-    if (this.infoForm().invalid()) {
+    if (this.infoForm().invalid() || this.saving()) {
       return;
     }
 
     const draft = this.draft();
-    this.customers.update(this.customer().id, {
-      ...draft,
-      secondName: draft.secondName.trim() === '' ? null : draft.secondName
-    });
-    this.isEditing.set(false);
+    const secondName = draft.secondName.trim() === '' ? null : draft.secondName.trim();
+    const trimmedOrNull = (value: string): string | null =>
+      value.trim() === '' ? null : value.trim();
+
+    this.saving.set(true);
+    this.saveError.set(false);
+
+    this.customers
+      .updateIndividual(this.customer().id, {
+        firstName: draft.firstName.trim(),
+        secondName,
+        lastName: draft.lastName.trim(),
+        birthDate: draft.birthDate,
+        fatherName: trimmedOrNull(draft.fatherName),
+        motherName: trimmedOrNull(draft.motherName),
+        nationalityId: draft.identityNumber.trim(),
+        genderType: draft.gender === 'female' ? 'FEMALE' : 'MALE'
+      })
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          // Üst bileşen yeniden çekmediğinden salt okunur görünüm iyimser güncellenir.
+          this.view.update((current) => ({
+            ...current,
+            firstName: draft.firstName.trim(),
+            secondName,
+            lastName: draft.lastName.trim(),
+            birthDate: draft.birthDate,
+            gender: draft.gender,
+            fatherName: draft.fatherName.trim(),
+            motherName: draft.motherName.trim(),
+            identityNumber: draft.identityNumber.trim()
+          }));
+          this.isEditing.set(false);
+          this.saved.emit();
+        },
+        error: () => {
+          this.saving.set(false);
+          this.saveError.set(true);
+        }
+      });
   }
 
-  /** Onay sonrası müşteriyi siler ve arama sayfasına döner. */
+  /**
+   * Silme düğmesine basıldığında: müşterinin aktif ürünü varsa silme engellenir ve uyarı
+   * gösterilir; yoksa onay penceresi açılır.
+   */
+  protected requestDelete(): void {
+    this.deleteError.set(false);
+    if (this.hasActiveProducts()) {
+      this.deleteBlocked.set(true);
+      return;
+    }
+    this.deleteBlocked.set(false);
+    this.confirmingDelete.set(true);
+  }
+
+  /**
+   * Onay sonrası müşteriyi customer-service'te soft-delete eder (backend). Başarıda arama
+   * sayfasına döner; hatada mesaj gösterir. Aktif ürün kontrolü {@link requestDelete}'te
+   * yapıldığından burada tekrar doğrulanır (çift güvence).
+   */
   protected deleteCustomer(): void {
-    this.customers.remove(this.customer().id);
-    this.confirmingDelete.set(false);
-    void this.router.navigate(['/customers']);
+    if (this.deleting()) {
+      return;
+    }
+    if (this.hasActiveProducts()) {
+      this.confirmingDelete.set(false);
+      this.deleteBlocked.set(true);
+      return;
+    }
+
+    this.deleting.set(true);
+    this.deleteError.set(false);
+
+    this.customers.deleteIndividual(this.customer().id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.confirmingDelete.set(false);
+        void this.router.navigate(['/customers']);
+      },
+      error: () => {
+        this.deleting.set(false);
+        this.confirmingDelete.set(false);
+        this.deleteError.set(true);
+      }
+    });
   }
 }

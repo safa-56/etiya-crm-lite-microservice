@@ -1,4 +1,4 @@
-import { Component, inject, input, linkedSignal, signal } from '@angular/core';
+import { Component, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { FormField, form, required, schema } from '@angular/forms/signals';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
@@ -132,12 +132,18 @@ const contactDraftSchema = schema<ContactDraft>((draft) => {
           </app-form-field>
         </div>
 
+        @if (saveError()) {
+          <p class="mt-5 text-sm font-medium text-red-600" role="alert">
+            {{ t().customers.detail.contact.saveError }}
+          </p>
+        }
+
         <div class="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
           <app-button type="button" variant="outline" size="lg" (click)="cancel()">
             {{ t().customers.detail.contact.cancel }}
           </app-button>
 
-          <app-button type="submit" size="lg" [disabled]="contactForm().invalid()">
+          <app-button type="submit" size="lg" [disabled]="contactForm().invalid() || saving()">
             <app-icon name="save" [stroke]="1.8" />
             {{ t().customers.detail.contact.save }}
           </app-button>
@@ -178,6 +184,9 @@ export class CustomerContactPanel {
   readonly contact = input.required<CustomerContact>();
   readonly customerId = input.required<number>();
 
+  /** Başarılı backend güncellemesinden sonra üst bileşenin detayı yeniden çekmesi için. */
+  readonly saved = output<void>();
+
   protected readonly countryCodes = COUNTRY_CODES;
 
   /** Kaydedilen değerler bu yerel duruma yazılır; görünüm buradan okur. */
@@ -188,6 +197,12 @@ export class CustomerContactPanel {
 
   protected readonly isEditing = signal(false);
 
+  /** Kaydetme sürüyor mu? Çift gönderimi engeller ve düğmeyi kilitler. */
+  protected readonly saving = signal(false);
+
+  /** Son kaydetmede backend hatası oluştu mu? */
+  protected readonly saveError = signal(false);
+
   private readonly draft = linkedSignal<CustomerContact, ContactDraft>({
     source: this.contactState,
     computation: (contact) => toDraft(contact)
@@ -197,30 +212,67 @@ export class CustomerContactPanel {
 
   protected startEdit(): void {
     this.draft.set(toDraft(this.contactState()));
+    this.saveError.set(false);
     this.isEditing.set(true);
   }
 
   protected cancel(): void {
     this.draft.set(toDraft(this.contactState()));
+    this.saveError.set(false);
     this.isEditing.set(false);
   }
 
+  /**
+   * İletişim bilgisini customer-service'e (gerçek DB) yazar. Kayıtlı bir iletişim id'si yoksa
+   * (backend'de tanımsız) yalnızca yerel görünüm güncellenir. Başarıda düzenleme kapanır;
+   * hatada form açık kalır ve mesaj gösterilir.
+   */
   protected save(event: Event): void {
     event.preventDefault();
-    if (this.contactForm().invalid()) {
+    if (this.contactForm().invalid() || this.saving()) {
       return;
     }
 
     const draft = this.draft();
+    const trimmedOrNull = (value: string): string | null =>
+      value.trim() === '' ? null : value.trim();
     const contact: CustomerContact = {
-      email: draft.email.trim() === '' ? null : draft.email.trim(),
-      homePhone: draft.homePhone.trim() === '' ? null : draft.homePhone.trim(),
-      mobilePhone: draft.mobilePhone.trim() === '' ? null : draft.mobilePhone.trim(),
-      fax: draft.fax.trim() === '' ? null : draft.fax.trim()
+      id: this.contactState().id ?? null,
+      email: trimmedOrNull(draft.email),
+      homePhone: trimmedOrNull(draft.homePhone),
+      mobilePhone: trimmedOrNull(draft.mobilePhone),
+      fax: trimmedOrNull(draft.fax)
     };
 
-    this.contactState.set(contact);
-    this.customers.update(this.customerId(), { contact });
-    this.isEditing.set(false);
+    const contactId = contact.id;
+    if (contactId == null) {
+      // Kayıt yoksa güncellenecek uç yok; yerel görünüm güncellenip kapanır.
+      this.contactState.set(contact);
+      this.isEditing.set(false);
+      return;
+    }
+
+    this.saving.set(true);
+    this.saveError.set(false);
+
+    this.customers
+      .updateContactInfo(contactId, {
+        email: draft.email.trim(),
+        homePhone: trimmedOrNull(draft.homePhone),
+        mobilePhone: draft.mobilePhone.trim(),
+        fax: trimmedOrNull(draft.fax)
+      })
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.contactState.set(contact);
+          this.isEditing.set(false);
+          this.saved.emit();
+        },
+        error: () => {
+          this.saving.set(false);
+          this.saveError.set(true);
+        }
+      });
   }
 }
