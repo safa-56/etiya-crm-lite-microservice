@@ -95,6 +95,7 @@ const tr = {
       title: 'Arama Sonuçları',
       noMatch: 'Arama kriterlerine uygun müşteri bulunamadı.',
       count: 'kayıt bulundu',
+      countBadge: 'kayıt',
       customerId: 'Müşteri ID',
       customer: 'Müşteri',
       type: 'Tip',
@@ -102,7 +103,25 @@ const tr = {
       gsm: 'GSM',
       city: 'Şehir',
       status: 'Durum',
-      openDetail: 'Müşteri detayını aç'
+      openDetail: 'Müşteri detayını aç',
+      firstName: 'Ad',
+      secondName: 'İkinci Ad',
+      lastName: 'Soyad',
+      role: 'Rol',
+      loading: 'Sonuçlar yükleniyor…',
+      loadError: 'Arama sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+      // `{count}` yerine toplam kayıt sayısı geçer.
+      pagedInfo: '{count} sonuç bulundu. Sayfalar halinde listeleniyor.',
+      // `{from}`/`{to}` görünen aralık, `{total}` toplam kayıt sayısıdır.
+      range: '{total} kayıttan {from}–{to} arası',
+      pageNav: 'Sayfa gezinmesi',
+      pageLabel: 'Sayfa',
+      prevPage: 'Önceki sayfa',
+      nextPage: 'Sonraki sayfa',
+      roleLabels: {
+        b2c: 'Müşteri',
+        b2b: 'Kurumsal'
+      }
     },
     status: {
       active: 'Aktif',
@@ -393,6 +412,7 @@ const en: typeof tr = {
       title: 'Search Results',
       noMatch: 'No customer matches the search criteria.',
       count: 'records found',
+      countBadge: 'records',
       customerId: 'Customer ID',
       customer: 'Customer',
       type: 'Type',
@@ -400,7 +420,25 @@ const en: typeof tr = {
       gsm: 'Mobile',
       city: 'City',
       status: 'Status',
-      openDetail: 'Open customer detail'
+      openDetail: 'Open customer detail',
+      firstName: 'First Name',
+      secondName: 'Second Name',
+      lastName: 'Last Name',
+      role: 'Role',
+      loading: 'Loading results…',
+      loadError: 'Something went wrong while searching. Please try again.',
+      // `{count}` is replaced by the total number of records.
+      pagedInfo: '{count} results found. Listed across pages.',
+      // `{from}`/`{to}` are the visible range, `{total}` the total record count.
+      range: '{from}–{to} of {total} records',
+      pageNav: 'Page navigation',
+      pageLabel: 'Page',
+      prevPage: 'Previous page',
+      nextPage: 'Next page',
+      roleLabels: {
+        b2c: 'Customer',
+        b2b: 'Corporate'
+      }
     },
     status: {
       active: 'Active',

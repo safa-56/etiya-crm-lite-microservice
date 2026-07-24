@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
@@ -185,20 +185,57 @@ export interface CustomerSearchFilters {
   readonly orderNumber: string;
 }
 
-/** Boş filtre alanları aramayı daraltmaz. */
-function matchesContains(source: string, term: string): boolean {
-  const needle = term.trim();
-  return needle === '' || source.includes(needle);
+/** search-service `CustomerSearchResponse` satırı (yalnızca sonuç kolonları). */
+interface SearchCustomerRow {
+  readonly customerId: number;
+  readonly firstName: string;
+  readonly secondName: string | null;
+  readonly lastName: string;
+  readonly role: string;
+  readonly nationalityId: string;
 }
 
-function matchesStartsWith(source: string, term: string): boolean {
-  const needle = term.trim().toLocaleLowerCase('tr-TR');
-  return needle === '' || source.toLocaleLowerCase('tr-TR').startsWith(needle);
+/** search-service `PagedResponse<T>` zarfı: içerik + sayfalama üstverisi. */
+interface SearchPagedResponse<T> {
+  readonly content: readonly T[];
+  readonly pageNumber: number;
+  readonly pageSize: number;
+  readonly totalElements: number;
+  readonly totalPages: number;
+  readonly last: boolean;
 }
 
-function hasMatchingOrder(customer: Customer, orderNumber: string): boolean {
-  const needle = orderNumber.trim();
-  return needle === '' || customer.orders.some((order) => order.orderNumber.includes(needle));
+/** Arama sonuç tablosunun satır görünüm modeli; backend kolonlarıyla birebir. */
+export interface CustomerSearchRow {
+  readonly customerId: number;
+  readonly firstName: string;
+  readonly secondName: string | null;
+  readonly lastName: string;
+  readonly role: CustomerType;
+  readonly nationalityId: string;
+}
+
+/** Sayfalı arama sonucu görünüm modeli. */
+export interface CustomerSearchResult {
+  readonly rows: readonly CustomerSearchRow[];
+  /** 0 tabanlı geçerli sayfa indeksi. */
+  readonly pageNumber: number;
+  readonly pageSize: number;
+  readonly totalElements: number;
+  readonly totalPages: number;
+  readonly last: boolean;
+}
+
+/** Backend rol enum'unu ('B2C'/'B2B') görünüm tipine indirger. */
+function toSearchRow(row: SearchCustomerRow): CustomerSearchRow {
+  return {
+    customerId: row.customerId,
+    firstName: row.firstName,
+    secondName: row.secondName,
+    lastName: row.lastName,
+    role: row.role?.toUpperCase() === 'B2B' ? 'B2B' : 'B2C',
+    nationalityId: row.nationalityId
+  };
 }
 
 /**
@@ -214,6 +251,9 @@ export class CustomerService {
 
   /** Bireysel müşteri CRUD ucu (gateway → customer-service; aggregation gerekmez). */
   private readonly individualCustomersUrl = `${API_BASE_URL}/customer-service/api/v1/individual-customers`;
+
+  /** Müşteri arama ucu (gateway → search-service CQRS read-model'i). Sayfalıdır. */
+  private readonly searchUrl = `${API_BASE_URL}/search-service/api/v1/search/customers`;
 
   /**
    * Yeni bireysel müşteriyi customer-service'e yazar (iç içe iletişim + adres, tek POST).
@@ -235,19 +275,54 @@ export class CustomerService {
       .pipe(map((detail) => toCustomer(detail)));
   }
 
-  search(type: CustomerType, filters: CustomerSearchFilters): readonly Customer[] {
-    return MOCK_CUSTOMERS.filter(
-      (customer) =>
-        customer.type === type &&
-        matchesContains(customer.identityNumber, filters.identityNumber) &&
-        matchesContains(String(customer.id), filters.customerId) &&
-        matchesContains(customer.accountNumber, filters.accountNumber) &&
-        matchesContains(customer.gsm, filters.gsm) &&
-        matchesStartsWith(customer.firstName, type === 'B2C' ? filters.firstName : '') &&
-        matchesStartsWith(customer.lastName, type === 'B2C' ? filters.lastName : '') &&
-        matchesStartsWith(customer.companyName ?? '', type === 'B2B' ? filters.companyName : '') &&
-        hasMatchingOrder(customer, filters.orderNumber)
-    );
+  /**
+   * Müşterileri search-service'te (gerçek uç) sayfalı olarak arar. Boş filtre alanları
+   * sorguya eklenmez (aramayı daraltmaz). Backend format ihlallerinde (400) ve diğer
+   * hatalarda observable hata yayar; bileşen yükleme/hata/boş durumlarını yönetir.
+   *
+   * <p>Not: search read-model'i yalnızca bireysel (B2C) müşteri taşır; `companyName`
+   * backend'de arama kriteri değildir ve gönderilmez.
+   */
+  search(
+    type: CustomerType,
+    filters: CustomerSearchFilters,
+    page: number,
+    size: number
+  ): Observable<CustomerSearchResult> {
+    let params = new HttpParams()
+      .set('segment', type)
+      .set('page', page)
+      .set('size', size);
+
+    // Boş olmayan kriterler trim'lenip sorguya eklenir; boşlar aramayı daraltmaz.
+    const criteria: Record<string, string> = {
+      idNumber: filters.identityNumber,
+      customerId: filters.customerId,
+      accountNumber: filters.accountNumber,
+      gsm: filters.gsm,
+      firstName: filters.firstName,
+      lastName: filters.lastName,
+      orderNumber: filters.orderNumber
+    };
+    for (const [key, value] of Object.entries(criteria)) {
+      const trimmed = value.trim();
+      if (trimmed !== '') {
+        params = params.set(key, trimmed);
+      }
+    }
+
+    return this.http
+      .get<SearchPagedResponse<SearchCustomerRow>>(this.searchUrl, { params })
+      .pipe(
+        map((response) => ({
+          rows: response.content.map(toSearchRow),
+          pageNumber: response.pageNumber,
+          pageSize: response.pageSize,
+          totalElements: response.totalElements,
+          totalPages: response.totalPages,
+          last: response.last
+        }))
+      );
   }
 
   /**

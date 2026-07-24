@@ -4,10 +4,16 @@
   </section>
 
   <section class="min-w-0 flex-1">
-    @if (results().length > 0) {
-      <app-customer-results-table [customers]="results()" />
-    } @else {
-      <app-empty-state size="lg" icon="search" [message]="t().customers.results.noMatch" />
+    @if (loading()) {
+      <app-empty-state size="lg" icon="search" [message]="t().customers.results.loading" />
+    } @else if (errorMessage(); as message) {
+      <app-empty-state size="lg" icon="alert" [message]="message" />
+    } @else if (result(); as data) {
+      @if (data.rows.length > 0) {
+        <app-customer-results-table [result]="data" (pageChange)="onPageChange($event)" />
+      } @else {
+        <app-empty-state size="lg" icon="search" [message]="t().customers.results.noMatch" />
+      }
     }
   </section>
 </div>
