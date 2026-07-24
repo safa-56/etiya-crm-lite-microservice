@@ -23,6 +23,12 @@ public class CustomerSearchBusinessRules {
     /** Sipariş numarası order-service'te tam 8 haneli ve yalnızca rakamdır. */
     private static final int ORDER_NUMBER_LENGTH = 8;
     private static final int MAX_NAME_LENGTH = 50;
+    /**
+     * Tek istekte istenebilecek en fazla kayıt sayısı. Spring'in
+     * {@code spring.data.web.pageable.max-page-size} varsayılanı ile aynıdır; ikisi
+     * ayrışırsa büyük {@code size} değerleri hata yerine yine sessizce kırpılır.
+     */
+    private static final int MAX_PAGE_SIZE = 2000;
 
     /**
      * Ad/soyad: Türkçe dâhil harfler, boşluk, kesme işareti ve tire. Rakam ve diğer
@@ -68,6 +74,26 @@ public class CustomerSearchBusinessRules {
         // (customer-service'teki ValidationPatterns.NAME_PATTERN ile aynı küme).
         if (violatesNamePattern(request.firstName()) || violatesNamePattern(request.lastName())) {
             throw new BusinessException(Messages.INVALID_NAME_PATTERN);
+        }
+    }
+
+    /**
+     * Sayfalama parametrelerini doğrular. <b>Ham</b> query değerleriyle çağrılmalıdır:
+     * Spring'in {@code Pageable} çözücüsü negatif {@code page}'i 0'a, {@code size <= 1}
+     * değerlerini varsayılana ve üst sınırı aşan {@code size}'ı {@link #MAX_PAGE_SIZE}'a
+     * sessizce sabitler; dolayısıyla {@code Pageable} nesnesine bakarak geçersiz girdi
+     * anlaşılamaz.
+     *
+     * @param page ham {@code page} parametresi ({@code null} = gönderilmemiş, varsayılan kullanılır)
+     * @param size ham {@code size} parametresi ({@code null} = gönderilmemiş, varsayılan kullanılır)
+     */
+    public void validatePagination(Integer page, Integer size) {
+        if (page != null && page < 0) {
+            throw new BusinessException(Messages.INVALID_PAGE_NUMBER);
+        }
+        if (size != null && (size < 1 || size > MAX_PAGE_SIZE)) {
+            // Sayı MessageFormat'ta binlik ayraç almasın diye metin olarak geçilir.
+            throw new BusinessException(Messages.INVALID_PAGE_SIZE, String.valueOf(MAX_PAGE_SIZE));
         }
     }
 

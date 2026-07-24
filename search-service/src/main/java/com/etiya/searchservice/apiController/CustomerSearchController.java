@@ -4,6 +4,7 @@ import com.etiya.searchservice.business.abstracts.CustomerSearchService;
 import com.etiya.searchservice.business.dtos.requests.CustomerSearchRequest;
 import com.etiya.searchservice.business.dtos.responses.CustomerSearchResponse;
 import com.etiya.searchservice.business.dtos.responses.PagedResponse;
+import com.etiya.searchservice.business.rules.CustomerSearchBusinessRules;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -25,9 +26,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class CustomerSearchController {
 
     private final CustomerSearchService customerSearchService;
+    /**
+     * Sayfalama doğrulaması için. Ham {@code page}/{@code size} query değerleri yalnızca
+     * bu katmanda görülebilir — {@code Pageable} çözücüsü geçersiz değerleri alt katmana
+     * ulaşmadan sabitlediğinden, kontrol iş katmanına devredilemez.
+     */
+    private final CustomerSearchBusinessRules rules;
 
-    public CustomerSearchController(CustomerSearchService customerSearchService) {
+    public CustomerSearchController(CustomerSearchService customerSearchService,
+                                    CustomerSearchBusinessRules rules) {
         this.customerSearchService = customerSearchService;
+        this.rules = rules;
     }
 
     /** Kriterlere göre müşteri arar (eşleşme yoksa boş liste — ACC-24). */
@@ -41,7 +50,13 @@ public class CustomerSearchController {
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName,
             @RequestParam(required = false) String orderNumber,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
             @PageableDefault(size = 50, sort = "customerId", direction = Sort.Direction.ASC) Pageable pageable) {
+
+        // page/size hem burada ham hâliyle hem de pageable içinde çözülmüş hâliyle alınır;
+        // geçersiz değerler pageable'da kaybolduğu için doğrulama ham değerler üzerinden yapılır.
+        rules.validatePagination(page, size);
 
         CustomerSearchRequest request = new CustomerSearchRequest(
                 segment, idNumber, customerId, accountNumber, gsm, firstName, lastName, orderNumber);

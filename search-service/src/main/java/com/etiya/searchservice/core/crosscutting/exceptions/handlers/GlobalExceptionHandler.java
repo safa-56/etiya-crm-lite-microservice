@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -67,6 +68,21 @@ public class GlobalExceptionHandler {
         problem.setType(URI.create("https://etiya.com/crm-lite/errors/validation"));
         problem.setProperty("timestamp", LocalDateTime.now());
         problem.setProperty("validationErrors", validationErrors);
+        return problem;
+    }
+
+    /**
+     * Query/path parametresi hedef tipe cevrilemedi (orn. {@code ?page=abc}) -> 400 Bad Request.
+     * Bu, istemci kaynakli bir girdi hatasidir; 500'e dusmemelidir.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleTypeMismatchException(MethodArgumentTypeMismatchException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST, resolve("error.parameter.type.detail", exception.getName()));
+        problem.setTitle(resolve("error.validation.title"));
+        problem.setType(URI.create("https://etiya.com/crm-lite/errors/validation"));
+        problem.setProperty("timestamp", LocalDateTime.now());
+        problem.setProperty("parameter", exception.getName());
         return problem;
     }
 

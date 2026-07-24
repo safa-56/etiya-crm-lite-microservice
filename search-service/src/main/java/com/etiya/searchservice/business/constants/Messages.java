@@ -32,4 +32,10 @@ public final class Messages {
 
     /** Ad/soyad alanında harf dışı karakter var. */
     public static final String INVALID_NAME_PATTERN = "search.namePattern.invalid";
+
+    /** Sayfa indeksi negatif olamaz (0-tabanlı). */
+    public static final String INVALID_PAGE_NUMBER = "search.page.invalid";
+
+    /** Sayfa boyutu 1 ile üst sınır arasında olmalıdır ({@code {0}} = üst sınır). */
+    public static final String INVALID_PAGE_SIZE = "search.size.invalid";
 }
