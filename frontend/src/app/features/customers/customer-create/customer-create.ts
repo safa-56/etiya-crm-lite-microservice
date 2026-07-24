@@ -1,20 +1,16 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { Breadcrumb, BreadcrumbItem } from '../../../shared/ui/breadcrumb/breadcrumb';
 import { Stepper, StepperItem } from '../../../shared/ui/stepper/stepper';
-import { Customer, CustomerAddress, CustomerContact } from '../customer.model';
-import { CustomerService } from '../customer.service';
+import { CustomerAddress } from '../customer.model';
+import { CreateIndividualCustomerBody, CustomerService } from '../customer.service';
 import { CustomerAddressStep } from './customer-address-step';
 import { ContactStepDraft, CustomerContactStep, emptyContactDraft } from './customer-contact-step';
 import { CustomerDraft } from '../customer-demographic.schema';
 import { CustomerDemographicForm } from './customer-demographic-form';
-
-/** Etiket için sonda görünen dial kodunu ("+90") çıkarır. */
-function dialCode(countryCodeLabel: string): string {
-  return countryCodeLabel.match(/\(([^)]+)\)/)?.[1] ?? '';
-}
 
 /** Müşteri oluşturma sihirbazı; adım durumunu ve toplanan verileri tutar. */
 @Component({
@@ -41,6 +37,12 @@ export class CustomerCreate {
   protected readonly addresses = signal<CustomerAddress[]>([]);
   protected readonly contact = signal<ContactStepDraft>(emptyContactDraft());
 
+  /** Kaydetme durumu: çift gönderimi engeller ve hata mesajını yönetir. */
+  protected readonly submitting = signal(false);
+  protected readonly submitError = signal(false);
+  /** Backend'in 400 ile döndüğü alan bazlı doğrulama mesajları (hangi alan hatalı). */
+  protected readonly submitFieldErrors = signal<readonly string[]>([]);
+
   protected readonly steps = computed<readonly StepperItem[]>(() => {
     const steps = this.t().customers.create.steps;
 
@@ -66,51 +68,86 @@ export class CustomerCreate {
     this.goToStep(2);
   }
 
-  /** 3. adımdaki "Oluştur"; toplanan verilerden müşteriyi kurar ve detayına gider. */
+  /**
+   * 3. adımdaki "Oluştur": toplanan verilerden backend isteğini kurup customer-service'e
+   * (gerçek DB) yazar. Başarıda oluşan müşterinin detayına gider; hatada mesaj gösterir.
+   *
+   * <p>Not: backend tek adres (birincil) kabul eder; birden çok adres eklendiyse birincil
+   * gönderilir. Cep telefonu backend size (11-15) kuralına takılmaması için ülke kodu
+   * öneki olmadan, girilen numarayla gönderilir.
+   */
   protected create(): void {
     const demographic = this.demographic();
-    if (demographic === null) {
+    const primary = this.addresses().find((address) => address.isPrimary) ?? this.addresses()[0] ?? null;
+
+    if (demographic === null || primary === null || this.submitting()) {
       return;
     }
 
     const draft = this.contact();
-    const dial = dialCode(draft.countryCode);
-    const contact: CustomerContact = {
-      email: draft.email.trim() === '' ? null : draft.email.trim(),
-      mobilePhone:
-        draft.mobilePhone.trim() === '' ? null : `${dial} ${draft.mobilePhone.trim()}`.trim(),
-      homePhone: draft.homePhone.trim() === '' ? null : draft.homePhone.trim(),
-      fax: draft.fax.trim() === '' ? null : draft.fax.trim()
-    };
+    const trimmedOrNull = (value: string): string | null =>
+      value.trim() === '' ? null : value.trim();
 
-    const id = Date.now();
-    const firstAddressCity = this.addresses()[0]?.title.split(', ')[0] ?? '';
+    // Yapısal adres alanları oluşturma adımında dolar; eski/eksik kayıt için title'dan türetilir.
+    const [titleCity, titleStreet, titleHouseNumber] = primary.title.split(', ');
 
-    const customer: Customer = {
-      id,
-      code: `C-${id}`,
-      type: 'B2C',
-      firstName: demographic.firstName,
-      secondName: demographic.secondName.trim() === '' ? null : demographic.secondName,
-      lastName: demographic.lastName,
-      companyName: null,
-      identityNumber: demographic.identityNumber,
-      gender: demographic.gender,
+    const body: CreateIndividualCustomerBody = {
+      firstName: demographic.firstName.trim(),
+      secondName: trimmedOrNull(demographic.secondName),
+      lastName: demographic.lastName.trim(),
       birthDate: demographic.birthDate,
-      motherName: demographic.motherName,
-      fatherName: demographic.fatherName,
-      accountNumber: '',
-      gsm: draft.mobilePhone.trim(),
-      city: firstAddressCity,
-      status: 'active',
-      registeredAt: new Date().toISOString().slice(0, 10),
-      contact,
-      addresses: this.addresses(),
-      accounts: [],
-      orders: []
+      fatherName: trimmedOrNull(demographic.fatherName),
+      motherName: trimmedOrNull(demographic.motherName),
+      nationalityId: demographic.identityNumber.trim(),
+      genderType: demographic.gender === 'female' ? 'FEMALE' : 'MALE',
+      contactInfo: {
+        email: draft.email.trim(),
+        homePhone: trimmedOrNull(draft.homePhone),
+        mobilePhone: draft.mobilePhone.trim(),
+        fax: trimmedOrNull(draft.fax)
+      },
+      address: {
+        city: primary.city ?? titleCity ?? '',
+        street: primary.street ?? titleStreet ?? '',
+        houseNumber: primary.houseNumber ?? titleHouseNumber ?? '',
+        addressDescription: primary.detail,
+        isPrimary: true
+      }
     };
 
-    this.customers.create(customer);
-    void this.router.navigate(['/customers', id]);
+    this.submitting.set(true);
+    this.submitError.set(false);
+    this.submitFieldErrors.set([]);
+
+    this.customers.createIndividual(body).subscribe({
+      next: (id) => {
+        this.submitting.set(false);
+        void this.router.navigate(['/customers', id]);
+      },
+      error: (error: unknown) => {
+        this.submitting.set(false);
+        const fieldErrors = this.extractFieldErrors(error);
+        if (fieldErrors.length > 0) {
+          this.submitFieldErrors.set(fieldErrors);
+        } else {
+          this.submitError.set(true);
+        }
+      }
+    });
+  }
+
+  /**
+   * Backend'in 400 doğrulama yanıtından ({@code ProblemDetail.validationErrors})
+   * alan bazlı mesajları çıkarır. Mesajlar backend'de dile göre çözülmüştür.
+   */
+  private extractFieldErrors(error: unknown): readonly string[] {
+    if (error instanceof HttpErrorResponse && error.error && typeof error.error === 'object') {
+      const validationErrors = (error.error as { validationErrors?: Record<string, string> })
+        .validationErrors;
+      if (validationErrors) {
+        return Object.values(validationErrors);
+      }
+    }
+    return [];
   }
 }

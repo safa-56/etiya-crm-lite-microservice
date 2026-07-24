@@ -17,6 +17,27 @@
       />
     }
     @case (3) {
+      @if (submitFieldErrors().length > 0) {
+        <div
+          role="alert"
+          class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          <p class="font-semibold">{{ t().customers.create.validationTitle }}</p>
+          <ul class="mt-1 list-disc pl-5">
+            @for (message of submitFieldErrors(); track message) {
+              <li>{{ message }}</li>
+            }
+          </ul>
+        </div>
+      } @else if (submitError()) {
+        <div
+          role="alert"
+          class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+        >
+          {{ t().customers.create.submitError }}
+        </div>
+      }
+
       <app-customer-contact-step
         [(draft)]="contact"
         (back)="goToStep(2)"

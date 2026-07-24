@@ -34,6 +34,9 @@ import {
           <app-customer-address-card
             [address]="address"
             [canDelete]="true"
+            [showRadio]="true"
+            [isPrimary]="address.isPrimary"
+            (primarySelected)="setPrimary($event)"
             (edit)="openEdit(address)"
             (delete)="deleteAddress(address)"
           />
@@ -104,14 +107,24 @@ export class CustomerAddressStep {
         id: String(Date.now()),
         title,
         detail: result.description,
-        isPrimary: this.addresses().length === 0
+        isPrimary: this.addresses().length === 0,
+        city: result.city,
+        street: result.street,
+        houseNumber: result.buildingNo
       };
       this.addresses.update((addresses) => [...addresses, address]);
     } else {
       this.addresses.update((addresses) =>
         addresses.map((address) =>
           address.id === editing.id
-            ? { ...address, title, detail: result.description }
+            ? {
+                ...address,
+                title,
+                detail: result.description,
+                city: result.city,
+                street: result.street,
+                houseNumber: result.buildingNo
+              }
             : address
         )
       );
@@ -120,7 +133,21 @@ export class CustomerAddressStep {
     this.closeForm();
   }
 
+  /** Seçilen adresi birincil yapar; diğerlerinin birincil işaretini kaldırır. */
+  protected setPrimary(id: string): void {
+    this.addresses.update((addresses) =>
+      addresses.map((address) => ({ ...address, isPrimary: address.id === id }))
+    );
+  }
+
   protected deleteAddress(address: CustomerAddress): void {
-    this.addresses.update((addresses) => addresses.filter((item) => item.id !== address.id));
+    this.addresses.update((addresses) => {
+      const remaining = addresses.filter((item) => item.id !== address.id);
+      // Birincil adres silindiyse ilk kalan adres birincil olur (en az biri birincil kalsın).
+      if (address.isPrimary && remaining.length > 0 && !remaining.some((item) => item.isPrimary)) {
+        return remaining.map((item, index) => ({ ...item, isPrimary: index === 0 }));
+      }
+      return remaining;
+    });
   }
 }

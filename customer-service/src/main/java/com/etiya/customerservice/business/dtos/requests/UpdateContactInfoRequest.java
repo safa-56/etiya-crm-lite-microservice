@@ -16,7 +16,7 @@ public record UpdateContactInfoRequest(
 
         @Size(min = 11, max = 15)
         @NotBlank(message = "{validation.mobilePhone.notBlank}")
-        String mobilPhone,
+        String mobilePhone,
 
         @Size(max = 20)
         String fax

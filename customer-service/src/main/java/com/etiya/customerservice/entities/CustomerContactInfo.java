@@ -34,7 +34,7 @@ public class CustomerContactInfo extends StatusAwareEntity {
     private String homePhone;
 
     @Column(name = "mobil_phone", nullable = false, length = 20)
-    private String mobilPhone;
+    private String mobilePhone;
 
     @Column(name = "fax", length = 20)
     private String fax;

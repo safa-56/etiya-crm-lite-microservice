@@ -1,41 +1,53 @@
-@let detail = customer();
-
-@if (detail === null) {
-  <app-empty-state size="lg" [message]="t().customers.detail.notFound">
+@if (loading()) {
+  <div class="flex items-center justify-center py-16 text-slate-500">
+    {{ t().customers.detail.loading }}
+  </div>
+} @else if (loadError()) {
+  <app-empty-state size="lg" [message]="t().customers.detail.loadError">
     <app-button-link link="/customers" size="sm">
       {{ t().customers.detail.backToSearch }}
     </app-button-link>
   </app-empty-state>
 } @else {
-  <div class="flex flex-col gap-5">
-    <app-breadcrumb [items]="breadcrumb()" [label]="t().customers.detail.breadcrumb" />
+  @let detail = customer();
 
-    <app-customer-detail-header [customer]="detail" />
+  @if (detail === null) {
+    <app-empty-state size="lg" [message]="t().customers.detail.notFound">
+      <app-button-link link="/customers" size="sm">
+        {{ t().customers.detail.backToSearch }}
+      </app-button-link>
+    </app-empty-state>
+  } @else {
+    <div class="flex flex-col gap-5">
+      <app-breadcrumb [items]="breadcrumb()" [label]="t().customers.detail.breadcrumb" />
 
-    <app-tabs
-      [tabs]="tabs()"
-      [active]="activeTab()"
-      [label]="t().customers.detail.tabs.label"
-      (activeChange)="selectTab($event)"
-    />
+      <app-customer-detail-header [customer]="detail" />
 
-    @switch (activeTab()) {
-      @case ('info') {
-        <app-customer-info-panel [customer]="detail" />
+      <app-tabs
+        [tabs]="tabs()"
+        [active]="activeTab()"
+        [label]="t().customers.detail.tabs.label"
+        (activeChange)="selectTab($event)"
+      />
+
+      @switch (activeTab()) {
+        @case ('info') {
+          <app-customer-info-panel [customer]="detail" />
+        }
+        @case ('account') {
+          <app-customer-accounts-panel
+            [customerId]="detail.id"
+            [accounts]="detail.accounts"
+            [addresses]="detail.addresses"
+          />
+        }
+        @case ('address') {
+          <app-customer-addresses-panel [addresses]="detail.addresses" />
+        }
+        @case ('contact') {
+          <app-customer-contact-panel [contact]="detail.contact" [customerId]="detail.id" />
+        }
       }
-      @case ('account') {
-        <app-customer-accounts-panel
-          [customerId]="detail.id"
-          [accounts]="detail.accounts"
-          [addresses]="detail.addresses"
-        />
-      }
-      @case ('address') {
-        <app-customer-addresses-panel [addresses]="detail.addresses" />
-      }
-      @case ('contact') {
-        <app-customer-contact-panel [contact]="detail.contact" [customerId]="detail.id" />
-      }
-    }
-  </div>
+    </div>
+  }
 }

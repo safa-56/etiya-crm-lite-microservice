@@ -87,7 +87,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
         
         // CustomerCreated olayını servislerden dönen verilerle yayınla: yeni müşterinin
         // in-memory koleksiyonları bu noktada dolu olmadığından entity'den okunamaz.
-        publishEvent(saved, CustomerEvents.CUSTOMER_CREATED, contact.mobilPhone(),
+        publishEvent(saved, CustomerEvents.CUSTOMER_CREATED, contact.mobilePhone(),
                 List.of(new CustomerEventPayload.AddressPayload(
                         address.id(), address.city(), address.street(),
                         address.houseNumber(), address.addressDescription(), address.isPrimary())));
@@ -180,7 +180,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     /** Nested create isteğini, oluşturulan müşterinin id'siyle yeniden kurar (servise geçmek için). */
     private CreateContactInfoRequest withCustomerId(CreateContactInfoRequest request, Long customerId) {
         return new CreateContactInfoRequest(customerId, request.email(),
-                request.homePhone(), request.mobilPhone(), request.fax());
+                request.homePhone(), request.mobilePhone(), request.fax());
     }
 
     /** Nested create isteğini, oluşturulan müşterinin id'siyle yeniden kurar (servise geçmek için). */
@@ -250,7 +250,7 @@ public class IndividualCustomerManager implements IndividualCustomerService {
     /**
      * Müşterinin birincil GSM numarasını döndürür (search read-model'i için).
      * İletişim bilgisinde ayrı bir "birincil" bayrağı olmadığından, ilk aktif
-     * iletişim bilgisinin GSM'i ({@code mobilPhone}) birincil kabul edilir.
+     * iletişim bilgisinin GSM'i ({@code mobilePhone}) birincil kabul edilir.
      */
     private String primaryGsmNumber(IndividualCustomer customer) {
         return customer.getContactInfos().stream()

@@ -1,0 +1,36 @@
+# =============================================================================
+# bff-service - ORTAK (profil bağımsız) konfigürasyon
+# Merkezi config server üzerinden sunulur (configs/bff-service/).
+# BFF durumsuzdur: DB/Redis/Kafka yoktur; yalnızca downstream servisleri çağırır.
+# =============================================================================
+server:
+  port: ${SERVER_PORT:8090}
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+---
+# =============================================================================
+# Güvenlik - OAuth2 Resource Server (JWT). Keycloak 'etiya-crm' realm issuer'ı.
+# Host (dev) varsayılanıdır; 'docker' profilinde issuer keycloak:8080 ile override edilir.
+# =============================================================================
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/etiya-crm}

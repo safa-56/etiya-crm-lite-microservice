@@ -156,6 +156,7 @@
         <module>cart-service</module>
         <module>order-service</module>
         <module>search-service</module>
+        <module>bff-service</module>
     </modules>
 
 </project>

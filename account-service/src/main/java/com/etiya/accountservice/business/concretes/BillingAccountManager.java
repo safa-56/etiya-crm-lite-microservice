@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Fatura hesabı iş mantığı (business/concretes).
@@ -113,6 +114,15 @@ public class BillingAccountManager implements BillingAccountService {
     public PagedResponse<BillingAccountResponse> getAll(Pageable pageable) {
         return PagedResponse.of(
                 repository.findAllByDeletedDateIsNull(pageable).map(mapper::toResponse));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = CacheNames.BILLING_ACCOUNT_LIST, key = "'customer-' + #customerId")
+    public List<BillingAccountResponse> getByCustomerId(Long customerId) {
+        return repository.findAllByCustomerIdAndDeletedDateIsNull(customerId).stream()
+                .map(mapper::toResponse)
+                .toList();
     }
 
     @Override

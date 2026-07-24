@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Kök aggregator POM'u parent alıyoruz: Java sürümü, encoding, Spring Boot BOM
+        ve ortak eklentiler buradan iner.
+    -->
+    <parent>
+        <groupId>etiya.com</groupId>
+        <artifactId>crm-lite</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>bff-service</artifactId>
+    <packaging>jar</packaging>
+
+    <name>bff-service</name>
+    <description>Etiya CRM Lite - Backend For Frontend (BFF): ekran bazlı veriyi birden çok servisten toplayıp tek yanıt döner</description>
+
+    <properties>
+        <!-- gateway/eureka/customer ile aynı Spring Cloud release train'i. -->
+        <spring-cloud.version>2025.1.0</spring-cloud.version>
+    </properties>
+
+    <dependencies>
+        <!-- Web (REST apiController + senkron RestClient) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- OAuth2 Resource Server (JWT). Gateway'de doğrulanan token burada da
+             yeniden doğrulanır (defense-in-depth); downstream çağrılara aktarılır. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- Actuator - health/readiness -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Merkezi konfigürasyon: açılışta config-server'dan ayarları çeker -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+
+        <!-- Eureka client - kendini kaydeder VE downstream servisleri keşfeder
+             (RestClient lb:// ile customer-service/account-service'e ulaşır). -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+
+        <!-- Client-side load balancing (@LoadBalanced RestClient.Builder için). -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+    </dependencies>
+
+    <!-- Spring Cloud BOM: config-client, eureka-client, loadbalancer versiyonları. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

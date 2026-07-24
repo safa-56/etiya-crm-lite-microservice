@@ -1,0 +1,11 @@
+# =============================================================================
+# bff-service - 'dev' profili (yerel geliştirme)
+# =============================================================================
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+
+logging:
+  level:
+    com.etiya.bffservice: DEBUG

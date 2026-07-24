@@ -60,6 +60,13 @@ export interface CustomerAddress {
   readonly title: string;
   readonly detail: string;
   readonly isPrimary: boolean;
+  /**
+   * Backend'in ayrı sakladığı yapısal alanlar. Oluşturma/düzenleme akışlarında doldurulur;
+   * salt görüntülemede (title/detail yeterliyken) opsiyoneldir.
+   */
+  readonly city?: string;
+  readonly street?: string;
+  readonly houseNumber?: string;
 }
 
 /** İletişim kanalı alanları; müşteride tanımlı değilse null. */

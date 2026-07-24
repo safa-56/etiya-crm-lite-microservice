@@ -19,6 +19,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtGrantedAuthoritiesConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 /**
  * Etiya CRM Lite - API Gateway güvenlik konfigürasyonu (reaktif / WebFlux).
@@ -63,6 +66,9 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                // Tarayıcı (Angular :4200) çapraz-origin isteklerine izin ver. Preflight
+                // (OPTIONS) zaten permitAll; burada da yanıt CORS başlıkları eklenir.
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchange -> exchange
                         // Preflight CORS istekleri serbest.
                         .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
@@ -74,6 +80,26 @@ public class SecurityConfig {
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(keycloakJwtAuthenticationConverter())));
 
         return http.build();
+    }
+
+    /**
+     * Tarayıcı tabanlı SPA (Angular geliştirme sunucusu :4200) için CORS politikası.
+     *
+     * <p>Bearer token ile çalışıldığından cookie/credential paylaşımı gerekmez
+     * ({@code allowCredentials=false}); origin açıkça listelenir. Tüm iş uçları
+     * ({@code /**}) bu politikayı kullanır.
+     */
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:4200"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     /**

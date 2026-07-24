@@ -119,6 +119,8 @@ const tr = {
       next: 'İleri',
       back: 'Geri',
       create: 'Oluştur',
+      submitError: 'Müşteri oluşturulamadı. Bilgileri kontrol edip tekrar deneyin.',
+      validationTitle: 'Lütfen aşağıdaki alanları düzeltin:',
       steps: {
         demographic: 'Demografik Bilgi',
         address: 'Adres',
@@ -143,6 +145,8 @@ const tr = {
       memberSince: "{date}'den beri",
       notFound: 'Müşteri bulunamadı.',
       backToSearch: 'Müşteri aramaya dön',
+      loading: 'Müşteri yükleniyor…',
+      loadError: 'Müşteri bilgileri yüklenemedi.',
       tabs: {
         label: 'Müşteri detay sekmeleri',
         info: 'Müşteri Bilgisi',
@@ -413,6 +417,8 @@ const en: typeof tr = {
       next: 'Next',
       back: 'Back',
       create: 'Create',
+      submitError: 'Could not create the customer. Check the details and try again.',
+      validationTitle: 'Please fix the following fields:',
       steps: {
         demographic: 'Demographic Information',
         address: 'Address',
@@ -436,6 +442,8 @@ const en: typeof tr = {
       memberSince: 'Customer since {date}',
       notFound: 'Customer not found.',
       backToSearch: 'Back to customer search',
+      loading: 'Loading customer…',
+      loadError: 'Could not load customer information.',
       tabs: {
         label: 'Customer detail tabs',
         info: 'Customer Information',

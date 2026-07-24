@@ -31,52 +31,59 @@ spring:
           # profillerde (prod dahil) geçerlidir; keşif tabanlı locator'a bağlı
           # değildir.
           # -----------------------------------------------------------------
+          # Dış istek '/<servis-adı>/**' önekiyle gelir; StripPrefix=1 öneki atar ve
+          # kalan yolu downstream servise iletir:
+          #   Dış:  http://localhost:8080/customer-service/api/v1/individual-customers
+          #   İç :  lb://customer-service -> /api/v1/individual-customers
+          # (Bu, discovery.locator ile aynı konvansiyondur; prod'da locator kapalıyken de
+          #  aynı deseni açıkça garanti eder.)
           routes:
             - id: customer-service
               uri: lb://customer-service
               predicates:
-                - Path=/api/v1/individual-customers/**
-                - Path=/api/v1/addresses/**
-                - Path=/api/v1/contact-infos/**
+                - Path=/customer-service/**
               filters:
                 - StripPrefix=1
 
             - id: account-service
               uri: lb://account-service
               predicates:
-                - Path=/api/v1/billing-accounts/**
+                - Path=/account-service/**
               filters:
                 - StripPrefix=1
 
             - id: product-service
               uri: lb://product-service
               predicates:
-                - Path=/api/v1/product-specs/**
-                - Path=/api/v1/product-offers/**
-                - Path=/api/v1/catalogs/**
-                - Path=/api/v1/campaigns/**
-                - Path=/api/v1/products/**
+                - Path=/product-service/**
               filters:
                 - StripPrefix=1
 
             - id: cart-service
               uri: lb://cart-service
               predicates:
-                - Path=/api/v1/carts/**
+                - Path=/cart-service/**
               filters:
                 - StripPrefix=1
 
             - id: order-service
               uri: lb://order-service
               predicates:
-                - Path=/api/v1/orders/**
+                - Path=/order-service/**
               filters:
                 - StripPrefix=1
 
             - id: search-service
               uri: lb://search-service
               predicates:
-                - Path=/api/v1/search/**
+                - Path=/search-service/**
+              filters:
+                - StripPrefix=1
+
+            - id: bff-service
+              uri: lb://bff-service
+              predicates:
+                - Path=/bff-service/**
               filters:
                 - StripPrefix=1
 

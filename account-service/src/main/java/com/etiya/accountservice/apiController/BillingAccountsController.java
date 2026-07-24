@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * Fatura hesabı (BillingAccount) REST uçları — apiController katmanı.
  *
@@ -46,6 +48,12 @@ public class BillingAccountsController {
     @GetMapping("/{id}")
     public BillingAccountResponse getById(@PathVariable Long id) {
         return billingAccountService.getById(id);
+    }
+
+    /** Bir müşteriye bağlı tüm aktif fatura hesaplarını listeler (Customer Account ekranı / BFF). */
+    @GetMapping("/by-customer/{customerId}")
+    public List<BillingAccountResponse> getByCustomer(@PathVariable Long customerId) {
+        return billingAccountService.getByCustomerId(customerId);
     }
 
     /**

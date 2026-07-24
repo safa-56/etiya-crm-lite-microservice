@@ -1,4 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, linkedSignal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, map, of, startWith, switchMap } from 'rxjs';
 
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { Breadcrumb, BreadcrumbItem } from '../../../shared/ui/breadcrumb/breadcrumb';
@@ -16,6 +19,12 @@ import { CustomerInfoPanel } from './customer-info-panel';
 type DetailTab = 'info' | 'account' | 'address' | 'contact';
 
 const TAB_ORDER: readonly DetailTab[] = ['info', 'account', 'address', 'contact'];
+
+/** Detay yükleme durumu makinesi: yükleniyor → yüklendi (müşteri veya bulunamadı) / hata. */
+type DetailState =
+  | { readonly status: 'loading' }
+  | { readonly status: 'error' }
+  | { readonly status: 'loaded'; readonly customer: Customer | null };
 
 /** Detay sayfası kabuğu: müşteriyi çözer, aktif sekmeyi tutar, panelleri seçer. */
 @Component({
@@ -41,7 +50,37 @@ export class CustomerDetail {
   /** `customers/:id` route parametresi; component input binding ile bağlanır. */
   readonly id = input.required<string>();
 
-  protected readonly customer = computed<Customer | null>(() => this.customers.getById(this.id()));
+  /**
+   * Detay yükleme durumu. Route parametresi değiştikçe BFF'ten yeniden çekilir;
+   * 404 "bulunamadı" (null müşteri) olarak, diğer hatalar hata durumu olarak ele alınır.
+   */
+  private readonly state = toSignal(
+    toObservable(this.id).pipe(
+      switchMap((id) =>
+        this.customers.getDetailById(id).pipe(
+          map((customer): DetailState => ({ status: 'loaded', customer })),
+          catchError((error: unknown) =>
+            of<DetailState>(
+              error instanceof HttpErrorResponse && error.status === 404
+                ? { status: 'loaded', customer: null }
+                : { status: 'error' }
+            )
+          ),
+          startWith<DetailState>({ status: 'loading' })
+        )
+      )
+    ),
+    { initialValue: { status: 'loading' } as DetailState }
+  );
+
+  protected readonly loading = computed(() => this.state().status === 'loading');
+
+  protected readonly loadError = computed(() => this.state().status === 'error');
+
+  protected readonly customer = computed<Customer | null>(() => {
+    const current = this.state();
+    return current.status === 'loaded' ? current.customer : null;
+  });
 
   /** Başka bir müşteriye geçildiğinde sekme başa döner. */
   protected readonly activeTab = linkedSignal<Customer | null, DetailTab>({

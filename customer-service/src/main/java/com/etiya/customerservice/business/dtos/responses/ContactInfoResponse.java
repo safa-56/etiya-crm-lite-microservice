@@ -8,7 +8,7 @@ public record ContactInfoResponse(
         Long customerId,
         String email,
         String homePhone,
-        String mobilPhone,
+        String mobilePhone,
         String fax
 ) {
 }

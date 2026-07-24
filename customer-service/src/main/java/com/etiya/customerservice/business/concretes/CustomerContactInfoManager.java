@@ -85,7 +85,7 @@ public class CustomerContactInfoManager implements CustomerContactInfoService {
 
         // contactInfo.setEmail(request.email());
         // contactInfo.setHomePhone(request.homePhone());
-        // contactInfo.setMobilPhone(request.mobilPhone());
+        // contactInfo.setMobilePhone(request.mobilePhone());
         // contactInfo.setFax(request.fax());
 
         mapper.updateEntity(contactInfo, request);
