@@ -3,7 +3,7 @@
 > Bu dosya projenin canlı hafızasıdır. Mimari kararlar, standartlar ve ilerleme
 > burada tutulur. Projede ilerledikçe güncellenir.
 
-_Son güncelleme: 2026-07-23_
+_Son güncelleme: 2026-07-24_
 
 ---
 
@@ -13,7 +13,7 @@ Etiya CRM Lite, mikroservis mimarisiyle geliştirilen bir CRM uygulamasıdır. H
 servis bağımsız olarak paketlenir (`jar`) ve çalıştırılır; ortak yapı ve bağımlılık
 yönetimi merkezi bir **parent POM** üzerinden sağlanır.
 
-**Modüller (9):**
+**Modüller (10):**
 
 | Servis             | Port | DB          | Rolü                                                        |
 |--------------------|------|-------------|--------------------------------------------------------------|
@@ -26,12 +26,18 @@ yönetimi merkezi bir **parent POM** üzerinden sağlanır.
 | `cart-service`     | 8085 | `cartdb`    | Sepet (Cart) ve sepet satırları                                |
 | `order-service`    | 8086 | `orderdb`   | Sipariş (Order) — sepetten siparişe geçiş / checkout (FR-016) |
 | `search-service`   | 8087 | `searchdb`  | Müşteri arama (FR-002) — CQRS read-model, olay tüketicisi     |
+| `bff-service`      | 8099 | -           | Backend for Frontend — müşteri detay ekranı için toplama ucu (DB yok) |
 
 İş servisleri (`customer` / `account` / `product` / `cart` / `order`) hepsi aynı
 **n-katmanlı** şablonu izler ve aralarındaki dağıtık işlemler **choreography Saga** ile
 yürür (bkz. §6). `search-service` de aynı n-katmanlı şablonu izler ama saga'ya
 katılmaz: yalnızca customer + account olay akışlarını tüketen bir **CQRS read-model**'dir
-(bkz. §8.6).
+(bkz. §8.6). `bff-service` bir veri sahibi değildir: DB/Redis/Kafka taşımaz, yalnızca
+downstream servisleri senkron çağırıp frontend için tek yanıtta toplar (bkz. §8.9).
+
+Ayrıca repoda **Angular frontend** (`frontend/`, geliştirme sunucusu `localhost:4200`)
+bulunur; tüm HTTP erişimini gateway (`localhost:8080`) üzerinden yapar ve Keycloak ile
+kimlik doğrular (bkz. §8.7 gateway CORS/route notu).
 
 ## 2. Teknoloji Yığını (Tech Stack)
 
@@ -42,7 +48,9 @@ katılmaz: yalnızca customer + account olay akışlarını tüketen bir **CQRS 
 | Build aracı         | Maven                                | 3.9+                                     |
 | Veritabanı          | PostgreSQL                           | per-service DB, `wal_level=logical`      |
 | Servis keşfi        | Netflix Eureka                       | -                                         |
-| API Gateway         | Spring Cloud Gateway (WebFlux)       | -                                         |
+| API Gateway         | Spring Cloud Gateway (WebFlux)       | route: `/<servis>/**` + StripPrefix, CORS |
+| BFF                 | Spring MVC + `RestClient` (Eureka lb)| stateless toplama ucu (bff-service)      |
+| Frontend            | Angular (dev `localhost:4200`)       | `frontend/`, gateway üzerinden erişir     |
 | Merkezi config      | Spring Cloud Config (Git backend)    | bu repo, `main` dalı                     |
 | Asenkron iletişim   | Kafka (local, KRaft, tek node)       | Spring Cloud Stream (Kafka binder)       |
 | Güvenilir yayın     | Transactional Outbox + Debezium      | ghost event yok                          |
@@ -596,17 +604,27 @@ yoktur** (yalnızca tüketici) ve **saga'ya katılmaz**.
 
 ### 8.7. REST API Haritası (gateway üzerinden)
 
-Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir; route'lar
-`configs/gateway-server/application.yml`'de açık (explicit) tanımlıdır
-(`StripPrefix=1`). Her servisin Swagger UI'si de ayağa kalktığında
-`/<servis>/swagger-ui.html` altından erişilebilir.
+Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir. **Route
+konvansiyonu (2026-07-24 değişti):** dış istek artık **servis adı önekiyle** gelir —
+`/<servis-adı>/**` — ve her route `StripPrefix=1` ile bu öneki atıp kalan yolu
+downstream'e iletir (`configs/gateway-server/application.yml`). Örn. dış
+`/customer-service/api/v1/individual-customers` → iç `lb://customer-service` →
+`/api/v1/individual-customers`. Önceden route'lar iç yolun (`/api/v1/...`)
+kendisiyle eşleşiyordu; bu, discovery-locator'ın konvansiyonuyla hizalandı ve
+frontend'in tek, öngörülebilir base URL şeması kullanmasını sağladı. Ayrıca
+gateway'e **CORS** eklendi (yalnızca `http://localhost:4200`, Bearer token ile
+çalışıldığından `allowCredentials=false`). Her servisin Swagger UI'si de ayağa
+kalktığında erişilebilir.
 
-| Servis   | Base path                        | Uçlar (özet)                                                                 |
+Aşağıdaki tablo **iç** yolları (StripPrefix sonrası) gösterir; dış URL bunların
+önüne `/<servis-adı>` ekler (ör. cart için `/cart-service/api/v1/carts`).
+
+| Servis   | İç base path                     | Uçlar (özet)                                                                 |
 |----------|----------------------------------|------------------------------------------------------------------------------|
 | customer | `/api/v1/individual-customers`   | CRUD (POST, GET/{id}, GET list, PUT/{id}, DELETE/{id})                        |
 | customer | `/api/v1/addresses`              | CRUD                                                                          |
 | customer | `/api/v1/contact-infos`          | CRUD                                                                          |
-| account  | `/api/v1/billing-accounts`       | CRUD (create + adres-update **asenkron** saga ile tamamlanır)                 |
+| account  | `/api/v1/billing-accounts`       | CRUD (create + adres-update **asenkron** saga ile); `GET /by-customer/{customerId}` (müşterinin aktif hesapları) |
 | product  | `/api/v1/product-specs`          | CRUD                                                                          |
 | product  | `/api/v1/catalogs`               | CRUD                                                                          |
 | product  | `/api/v1/product-offers`         | CRUD + `?catalogId=` ile kategori araması                                     |
@@ -618,6 +636,7 @@ Tüm dış erişim `gateway-server` (`localhost:8080`) üzerindendir; route'lar
 | cart     | `/api/v1/carts/{cartId}/items/{itemId}` | `DELETE` — satırı çıkar                                                |
 | order    | `/api/v1/orders`                 | `POST` (submit, **asenkron** saga), `GET/{id}`, `GET` list, `GET /customer/{customerId}`, `DELETE/{id}` |
 | search   | `/api/v1/search/customers`       | `GET` — FR-002 müşteri arama (dinamik Specification, sayfalı; olay tüketicili read-model) |
+| bff      | `/api/v1/customer-detail`        | `GET /{id}` — müşteri (kimlik+iletişim+adres) + fatura hesaplarını tek yanıtta toplar |
 
 ### 8.8. Altyapı Hızlı Referansı (infra)
 
@@ -648,6 +667,36 @@ mevcut customer + account connector'larının yaydığı `crm.Customer.events` /
 yalnızca **boş volume'de ilk açılışta** çalışır. Var olan bir kurulumda yeni DB
 elle oluşturulur: `docker exec -it crm-postgres psql -U postgres -c "CREATE
 DATABASE searchdb;"`.
+
+### 8.9. bff-service (Backend for Frontend, port 8099, DB yok)
+
+Frontend'in **müşteri detay ekranı** için birden çok servisten veri toplayan ince
+bir **BFF** katmanıdır. Bir veri sahibi değildir: **DB/Redis/Kafka taşımaz**,
+saga'ya/olay akışına katılmaz — yalnızca downstream servisleri senkron çağırır.
+Diğer servislerle aynı `core/crosscutting/exceptions` + `GlobalExceptionHandler`
+desenini izler ama entity/repository/mapper/rules katmanı yoktur.
+
+- **Toplama.** `CustomerDetailAggregator` müşteriyi (kimlik/iletişim/adres)
+  `customer-service`'ten (`GET /api/v1/individual-customers/{id}`), fatura
+  hesaplarını `account-service`'ten (`GET /api/v1/billing-accounts/by-customer/{customerId}`)
+  çeker ve tek `CustomerDetailResponse`'ta birleştirir. Dış uç: `GET
+  /bff-service/api/v1/customer-detail/{id}` (StripPrefix sonrası iç yol
+  `/api/v1/customer-detail/{id}`).
+- **Senkron erişim = `RestClient` + Eureka load-balancer.** `RestClientConfig`
+  iki iş istemcisi (`customerServiceRestClient`, `accountServiceRestClient`)
+  tanımlar; load-balancer interceptor **yalnızca bunlara elle** eklenir.
+  **Tuzak:** `@LoadBalanced` bir builder bean'i tanımlanmaz — aksi halde o builder
+  Eureka client'ının kendi RestClient'ı olarak da seçilir ve `localhost:8761`'e
+  giderken load-balancer "localhost"u servis sanar (açılışta döngü). Bu yüzden
+  varsayılan builder lb'siz kalır, iş istemcileri `builder.clone()` ile üretilir.
+- **Token relay.** Gelen isteğin `Authorization` başlığı downstream çağrılara
+  aynen kopyalanır; böylece customer/account servisleri çağrıyı yapan **kullanıcıyla**
+  doğrular (BFF ayrıcalıklı bir kimlik taşımaz).
+- **Güvenlik = OAuth2 Resource Server (JWT), defense-in-depth.** Gateway zaten
+  doğrular; BFF token'ı **yeniden doğrular** (`SecurityConfig`, stateless, Keycloak
+  `etiya-crm` realm issuer'ı). Public uç yalnızca actuator health/info.
+- **Konfigürasyon.** `configs/bff-service/` (ortak + dev); yerel `application.yml`
+  yalnızca bootstrap taşır. DB/Kafka/Redis ayarı yoktur.
 
 ## 9. Test Seed Verisi
 
@@ -699,6 +748,35 @@ açıkça kapatır.
 
 ## 11. Değişiklik Günlüğü
 
+- **2026-07-24:** **bff-service (Backend for Frontend) eklendi** (port 8099, DB yok).
+  Frontend'in müşteri detay ekranı için müşteriyi (customer-service) ve fatura
+  hesaplarını (account-service) tek yanıtta toplayan ince, **durumsuz** bir toplama
+  katmanı — DB/Redis/Kafka yok, saga/olay akışına katılmaz. Senkron erişim `RestClient`
+  + Eureka load-balancer (lb interceptor yalnızca iş istemcilerine elle eklenir → Eureka
+  client açılış döngüsü önlenir), gelen `Authorization` başlığı downstream'e **relay**
+  edilir, token BFF'te de yeniden doğrulanır (OAuth2 resource server, defense-in-depth).
+  Yeni dış uç: `GET /bff-service/api/v1/customer-detail/{id}`. Modül sayısı 9→10.
+  Bkz. §8.9.
+- **2026-07-24:** **Gateway route konvansiyonu değişti + CORS + frontend bağlandı.**
+  Route'lar artık iç yol (`/api/v1/...`) yerine **servis adı önekiyle** eşleşir
+  (`/<servis-adı>/**` + `StripPrefix=1`); dış URL `/customer-service/api/v1/...` biçiminde,
+  discovery-locator konvansiyonuyla hizalı ve frontend için tek base URL şeması sağlar.
+  Gateway'e Angular geliştirme sunucusu (`localhost:4200`) için **CORS** eklendi (Bearer
+  token → `allowCredentials=false`). Angular `frontend/` uygulaması müşteri arama/oluşturma/
+  detay ekranlarında backend'e (gateway) bağlandı. Bkz. §8.7.
+- **2026-07-24:** **account-service'e `GET /billing-accounts/by-customer/{customerId}`
+  eklendi** — bir müşterinin aktif fatura hesaplarını listeler (BFF müşteri detay toplaması
+  ve Customer Account ekranı kullanır). Bkz. §8.2, §8.7, §8.9.
+- **2026-07-24:** **search-service FR-002 sayfalama doğrulaması eklendi.** `page < 0` ya da
+  `size` [1..2000] dışıysa iş hatası (`search.pageNumber.invalid` / `search.pageSize.invalid`).
+  **Tuzak:** Spring'in `Pageable` çözücüsü geçersiz `page`/`size`'ı sessizce sabitler; bu
+  yüzden controller ham `page`/`size` query parametrelerini `@RequestParam` ile ayrıca alıp
+  `CustomerSearchBusinessRules.validatePagination` ile **çözülmeden önce** doğrular.
+  `MAX_PAGE_SIZE` (2000) Spring'in `max-page-size` varsayılanıyla hizalı tutulmalıdır.
+- **2026-07-24:** **customer-service ufak refactor'ları** (frontend bağlama sırasında):
+  `Address`/`CustomerContactInfo` iş kurallarındaki `checkIfCustomerExists` artık bulunan
+  `Customer`'ı döndürür (çağıran ikinci sorgu yapmaz). `CustomerContactInfo.mobilPhone`
+  alanı `mobilePhone` olarak düzeltildi (kolon adı `mobil_phone` aynı kaldı).
 - **2026-07-23:** **Docker ortamı artık boş veriyle başlıyor.** `docker compose up` ile
   ayağa kalkan kurulumda yalnızca **referans/iskelet** tablolar tohumlanır; iş verisi
   tablolarının tamamı boştur ve API üzerinden doldurulur. Her serviste
